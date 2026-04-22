@@ -271,7 +271,7 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="bg-muted/30 -m-4 md:-m-6 lg:-m-8 p-4 md:p-6 lg:p-8 min-h-full">
+      <div className="bg-muted/30 -m-4 md:-m-6 lg:-m-8 p-4 md:p-6 lg:p-8 min-h-[calc(100vh-5rem)]">
         <div className="space-y-6 animate-fade-in">
           {/* Greeting Header */}
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-2">
