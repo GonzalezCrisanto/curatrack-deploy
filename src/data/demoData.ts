@@ -32,6 +32,11 @@ export interface Evolution {
   painLevel?: number;
   odor?: OdorLevel;
   evolutionStatus?: EvolutionStatus;
+  woundLength?: number;
+  woundWidth?: number;
+  woundDepth?: number;
+  tissueTypes?: TissueType[];
+  edgeTypes?: EdgeType[];
 }
 
 export const healingFrequencies = [
