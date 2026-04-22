@@ -262,6 +262,8 @@ export default function CaseDetail() {
       ? { ...editingEvo, ...base, photos: evoPhotos } as Evolution
       : { ...base, id: `e${Date.now()}`, photos: evoPhotos } as Evolution;
 
+    const isNew = !editingEvo;
+
     if (editingEvo) {
       updateEvolution(patient.id, woundCase.id, payload);
     } else {
@@ -271,11 +273,21 @@ export default function CaseDetail() {
     if (closeCase) {
       updateCase(patient.id, { ...woundCase, status: 'resuelto' });
       toast.success('Evolución cerrada. Caso marcado como cicatrizado.');
-    } else {
-      toast.success(editingEvo ? 'Evolución actualizada' : 'Evolución registrada');
+      setEvoDialogOpen(false);
+      setCloseConfirmOpen(false);
+      return;
     }
-    setEvoDialogOpen(false);
+
+    toast.success(isNew ? 'Evolución registrada' : 'Evolución actualizada');
     setCloseConfirmOpen(false);
+
+    if (isNew) {
+      // Mark as editing so further saves update the same record, then trigger AI.
+      setEditingEvo(payload);
+      generateAISummary();
+    } else {
+      setEvoDialogOpen(false);
+    }
   };
 
   const handleSaveEvo = () => {
