@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -214,7 +214,7 @@ export default function CaseDetail() {
     };
   };
 
-  const generateAISummary = async () => {
+  const generateAISummary = async (targetEvoId?: string) => {
     setAiLoading(true);
     setAiError(null);
     setAiSummary(null);
@@ -239,6 +239,18 @@ export default function CaseDetail() {
         return;
       }
       setAiSummary(summary);
+      // Persist the summary onto the saved evolution so it appears in the timeline snippet
+      const evoId = targetEvoId ?? editingEvo?.id;
+      if (evoId) {
+        const saved = woundCase.evolutions.find(e => e.id === evoId);
+        const merged: Evolution | undefined = saved
+          ? { ...saved, aiSummary: summary }
+          : (editingEvo ? { ...editingEvo, aiSummary: summary } as Evolution : undefined);
+        if (merged) {
+          updateEvolution(patient.id, woundCase.id, merged);
+          setEditingEvo(merged);
+        }
+      }
       toast.success('Resumen clínico generado');
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Error desconocido';
@@ -271,6 +283,10 @@ export default function CaseDetail() {
     }
 
     if (closeCase) {
+      const closedAt = new Date().toISOString().split('T')[0];
+      // Stamp closedAt on the evolution that closes the case
+      const closedPayload: Evolution = { ...payload, closedAt };
+      updateEvolution(patient.id, woundCase.id, closedPayload);
       updateCase(patient.id, { ...woundCase, status: 'resuelto' });
       toast.success('Evolución cerrada. Caso marcado como cicatrizado.');
       setEvoDialogOpen(false);
@@ -285,7 +301,7 @@ export default function CaseDetail() {
     if (isNew) {
       setEditingEvo(payload);
     }
-    generateAISummary();
+    generateAISummary(payload.id);
   };
 
   const handleSaveEvo = () => {
