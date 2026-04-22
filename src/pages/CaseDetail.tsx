@@ -34,6 +34,12 @@ const emptyEvolution = {
   healingDate: '', painLevel: 0 as number, odor: 'sin_olor' as OdorLevel, evolutionStatus: 'tratamiento_activo' as EvolutionStatus,
   woundLength: '' as number | '', woundWidth: '' as number | '', woundDepth: '' as number | '',
   tissueTypes: [] as TissueType[], edgeTypes: [] as EdgeType[],
+  exudateAmount: undefined as ExudateAmount | undefined,
+  exudateType: undefined as ExudateType | undefined,
+  exudateColor: undefined as ExudateColor | undefined,
+  hasInfectionSigns: false,
+  infMalOlor: false, infEritema: false, infCalor: false, infBiofilm: false, infPurulenta: false, infDolorAumentado: false,
+  bodyTemperature: '' as number | '',
 };
 
 export default function CaseDetail() {
