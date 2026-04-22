@@ -343,11 +343,17 @@ export default function Dashboard() {
 
           {/* Próximos Turnos con Calendario */}
           {(() => {
-            const upcomingDates = upcomingAppointments.map(ap => {
+            const showUpcoming = appointmentFilter === 'all' || appointmentFilter === 'upcoming';
+            const showOverdue = appointmentFilter === 'all' || appointmentFilter === 'overdue';
+
+            const visibleUpcoming = showUpcoming ? upcomingAppointments : [];
+            const visiblePast = showOverdue ? pastAppointments : [];
+
+            const upcomingDates = visibleUpcoming.map(ap => {
               const caseData = allCases.find(c => c.id === ap.caseId);
               return { date: new Date(ap.nextControl + 'T12:00:00'), status: caseData?.status || 'activo' };
             });
-            const pastDates = pastAppointments.map(ap => new Date(ap.nextControl + 'T12:00:00'));
+            const pastDates = visiblePast.map(ap => new Date(ap.nextControl + 'T12:00:00'));
 
             const modifiers = {
               critical: upcomingDates.filter(d => d.status === 'critico').map(d => d.date),
