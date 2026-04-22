@@ -179,7 +179,7 @@ export default function CaseDetail() {
             <div className="flex items-center gap-3 mb-1">
               <h1 className="heading-display text-2xl">{woundCase.woundType}</h1>
               <Badge className={`font-body text-xs ${statusBadgeClass[woundCase.status]}`}>
-                {getStatusLabel(woundCase.status)}
+                {woundCase.status === 'resuelto' ? 'CERRADA ✅' : getStatusLabel(woundCase.status)}
               </Badge>
             </div>
             <p className="font-body text-sm text-muted-foreground">{woundCase.anatomicalLocation} · {patient.firstName} {patient.lastName}</p>
