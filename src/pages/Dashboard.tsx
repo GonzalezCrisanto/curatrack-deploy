@@ -209,6 +209,66 @@ export default function Dashboard() {
     return 'estable';
   };
 
+  // Map of stat key -> patient predicate
+  const filterPredicates: Record<string, (p: typeof patients[number]) => boolean> = {
+    all: () => true,
+    patients: () => true,
+    active: (p) => p.cases.some(c => c.status === 'activo' || c.status === 'critico' || c.status === 'en_mejoria'),
+    critical: (p) => p.cases.some(c => c.status === 'critico'),
+    improving: (p) => p.cases.some(c => c.status === 'en_mejoria'),
+    resolved: (p) => p.cases.length > 0 && p.cases.every(c => c.status === 'resuelto'),
+    evolutions: (p) => p.cases.some(c => c.evolutions.length > 0),
+  };
+
+  // Available wound types from data
+  const availableWoundTypes = useMemo(
+    () => Array.from(new Set(allCases.map(c => c.woundType))).sort(),
+    [allCases]
+  );
+
+  // Last evolution date per patient
+  const lastEvoDate = (p: typeof patients[number]) => {
+    const dates = p.cases.flatMap(c => c.evolutions.map(e => e.date));
+    return dates.length ? dates.sort().slice(-1)[0] : '';
+  };
+
+  const filteredPatients = useMemo(() => {
+    const pred = filterPredicates[activeFilter] || filterPredicates.all;
+    const q = searchQuery.trim().toLowerCase();
+    let list = patients.filter(pred);
+    if (q) {
+      list = list.filter(p =>
+        `${p.firstName} ${p.lastName}`.toLowerCase().includes(q) ||
+        `${p.lastName} ${p.firstName}`.toLowerCase().includes(q)
+      );
+    }
+    if (woundTypeFilter !== 'all') {
+      list = list.filter(p => p.cases.some(c => c.woundType === woundTypeFilter));
+    }
+    if (sortBy === 'lastEvo') {
+      list = [...list].sort((a, b) => lastEvoDate(b).localeCompare(lastEvoDate(a)));
+    } else if (sortBy === 'name') {
+      list = [...list].sort((a, b) => a.lastName.localeCompare(b.lastName));
+    } else if (sortBy === 'cases') {
+      list = [...list].sort((a, b) => b.cases.length - a.cases.length);
+    }
+    return list;
+  }, [patients, activeFilter, searchQuery, woundTypeFilter, sortBy]);
+
+  const handleStatClick = (key: string) => {
+    setActiveFilter(prev => (prev === key ? 'all' : key));
+  };
+
+  const markAlertAttended = (caseId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setAttendedAlerts(prev => {
+      const next = new Set(prev);
+      next.add(caseId);
+      return next;
+    });
+    toast({ title: 'Alerta marcada como atendida', description: 'Se ocultó de la lista de alertas críticas.' });
+  };
+
   return (
     <AppLayout>
       <div className="bg-muted/30 -m-4 md:-m-6 lg:-m-8 p-4 md:p-6 lg:p-8 min-h-full">
