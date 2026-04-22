@@ -28,6 +28,7 @@ export default function Patients() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
   const [form, setForm] = useState(emptyPatient);
+  const [woundPickerPatient, setWoundPickerPatient] = useState<Patient | null>(null);
 
   const filtered = patients.filter(p =>
     `${p.firstName} ${p.lastName} ${p.dni} ${p.diagnosis}`.toLowerCase().includes(search.toLowerCase())
@@ -93,9 +94,14 @@ export default function Patients() {
             const meta = indicatorMeta[indicator];
             const activeCount = getActiveWoundCount(p);
             const lastEvo = getLastEvolutionDate(p);
-            const firstActiveCase = p.cases.find(c => c.status !== 'resuelto');
+            const activeCases = p.cases.filter(c => c.status !== 'resuelto');
+            const firstActiveCase = activeCases[0];
             const handleNewEvo = (e: React.MouseEvent) => {
               e.stopPropagation();
+              if (activeCases.length >= 2) {
+                setWoundPickerPatient(p);
+                return;
+              }
               if (firstActiveCase) {
                 navigate(`/patients/${p.id}/cases/${firstActiveCase.id}?newEvo=1`);
               } else {
@@ -308,6 +314,64 @@ export default function Patients() {
               <Button variant="outline" onClick={() => setDialogOpen(false)} className="font-body">Cancelar</Button>
               <Button onClick={handleSave} className="font-body">{editing ? 'Guardar cambios' : 'Crear paciente'}</Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Wound picker dialog — when patient has 2+ active wounds */}
+        <Dialog open={!!woundPickerPatient} onOpenChange={(open) => !open && setWoundPickerPatient(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="heading-display text-lg">Seleccioná la herida</DialogTitle>
+            </DialogHeader>
+            {woundPickerPatient && (
+              <div className="space-y-3 mt-2">
+                <p className="font-body text-sm text-muted-foreground">
+                  {woundPickerPatient.firstName} {woundPickerPatient.lastName} tiene varias heridas activas. Elegí a cuál corresponde la nueva evolución:
+                </p>
+                <div className="space-y-2">
+                  {woundPickerPatient.cases
+                    .filter(c => c.status !== 'resuelto')
+                    .map(c => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="w-full text-left rounded-lg border border-border/60 hover:border-primary/50 hover:bg-primary/5 transition-colors p-3"
+                        onClick={() => {
+                          const pid = woundPickerPatient.id;
+                          setWoundPickerPatient(null);
+                          navigate(`/patients/${pid}/cases/${c.id}?newEvo=1`);
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-body text-sm font-semibold truncate">{c.woundType}</p>
+                            <p className="font-body text-xs text-muted-foreground truncate">{c.anatomicalLocation}</p>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={`font-body text-xs shrink-0 ${
+                              c.status === 'critico' ? 'text-destructive' :
+                              c.status === 'en_mejoria' ? 'text-success' : 'text-info'
+                            }`}
+                          >
+                            {c.status === 'critico' ? 'Crítico' : c.status === 'en_mejoria' ? 'En mejoría' : 'Activo'}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1.5 text-xs font-body text-muted-foreground">
+                          <span>Inicio: {c.startDate}</span>
+                          {c.size && <span>· {c.size}</span>}
+                          <span>· {c.evolutions.length} evol.</span>
+                        </div>
+                      </button>
+                    ))}
+                </div>
+                <div className="flex justify-end pt-2">
+                  <Button variant="outline" className="font-body" onClick={() => setWoundPickerPatient(null)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
