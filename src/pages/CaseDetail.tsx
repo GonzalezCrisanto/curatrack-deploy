@@ -13,21 +13,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import {
   ArrowLeft, Plus, Edit, Trash2, Clock, Camera, FileText,
-  Stethoscope, Ruler, Droplets, ShieldAlert, Thermometer, Pill, X, Image, Upload, ImagePlus, Package, RefreshCw
+  Stethoscope, Ruler, Droplets, ShieldAlert, Thermometer, Pill, X, Image, Upload, ImagePlus, Package, RefreshCw, CheckCircle2, Save
 } from 'lucide-react';
-import { Evolution, Photo, professionals, getStatusLabel, woundStatuses } from '@/data/demoData';
+import { Evolution, Photo, professionals, getStatusLabel, woundStatuses, healingFrequencies, odorOptions, evolutionStatuses, OdorLevel, EvolutionStatus } from '@/data/demoData';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Slider } from '@/components/ui/slider';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 const statusBadgeClass: Record<string, string> = {
   activo: 'bg-info/10 text-info border-info/30',
   en_mejoria: 'bg-success/10 text-success border-success/30',
   critico: 'bg-destructive/10 text-destructive border-destructive/30',
-  resuelto: 'bg-muted text-muted-foreground border-border',
+  resuelto: 'bg-success/15 text-success border-success/40',
 };
 
 const emptyEvolution = {
   date: '', time: '', professional: '', description: '', procedure: '', materials: '', healingFrequency: '', observations: '', nextControl: '',
+  healingDate: '', painLevel: 0 as number, odor: 'sin_olor' as OdorLevel, evolutionStatus: 'tratamiento_activo' as EvolutionStatus,
 };
 
 export default function CaseDetail() {
