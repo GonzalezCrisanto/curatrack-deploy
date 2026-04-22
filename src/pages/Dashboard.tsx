@@ -451,6 +451,19 @@ export default function Dashboard() {
                   <p className="font-body text-sm font-semibold text-foreground">{patient?.lastName}, {patient?.firstName}</p>
                   <p className="font-body text-xs text-muted-foreground mt-0.5">{ap.woundType}</p>
                   <p className="font-body text-xs text-muted-foreground mt-1">Prof: {ap.professional}</p>
+                  <Button
+                    size="sm"
+                    variant={opts.past ? 'default' : 'outline'}
+                    className={`mt-3 w-full font-body text-xs h-8 ${
+                      opts.past
+                        ? 'bg-success text-white hover:bg-success/90'
+                        : 'border-success/40 text-success hover:bg-success hover:text-white'
+                    }`}
+                    onClick={(e) => markControlDone(ap.patientId, ap.caseId, ap.id, e)}
+                  >
+                    <Check className="mr-1 h-3.5 w-3.5" />
+                    Marcar realizado
+                  </Button>
                 </div>
               );
             };
