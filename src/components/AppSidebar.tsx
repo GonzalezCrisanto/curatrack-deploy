@@ -29,7 +29,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarContent className="pt-2">
+      <SidebarContent className="pt-2 overflow-visible">
         <SidebarGroup>
           <SidebarGroupLabel className="font-body text-xs uppercase tracking-wider">Menú principal</SidebarGroupLabel>
           <SidebarGroupContent>
