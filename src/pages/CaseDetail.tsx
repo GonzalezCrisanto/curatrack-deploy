@@ -121,6 +121,9 @@ export default function CaseDetail() {
       professional: 'Lic. María González',
     });
     setEvoPhotos([]);
+    setAiSummary(null);
+    setAiError(null);
+    setAiLoading(false);
     setEvoDialogOpen(true);
   };
 
