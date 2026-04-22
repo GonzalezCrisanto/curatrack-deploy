@@ -335,7 +335,7 @@ export default function Dashboard() {
           <Separator className="bg-border/60" />
 
           {/* Próximos Turnos con Calendario */}
-          {upcomingAppointments.length > 0 && (() => {
+          {(() => {
             const appointmentDates = upcomingAppointments.map(ap => {
               const caseData = allCases.find(c => c.id === ap.caseId);
               return { date: new Date(ap.nextControl + 'T12:00:00'), status: caseData?.status || 'activo' };
@@ -388,30 +388,40 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    <div className="flex-1 grid sm:grid-cols-2 gap-3 content-start">
-                      {upcomingAppointments.map(ap => {
-                        const patient = patients.find(p => p.id === ap.patientId);
-                        const caseData = allCases.find(c => c.id === ap.caseId);
-                        const dotClass = statusDot[caseData?.status || 'activo'];
-                        return (
-                          <div
-                            key={ap.id + '-apt'}
-                            className="p-4 rounded-xl border border-border/60 hover:shadow-md transition-all cursor-pointer bg-card hover:-translate-y-0.5"
-                            onClick={() => navigate(`/patients/${ap.patientId}/cases/${ap.caseId}`)}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <CalendarClock className="h-4 w-4 text-primary" />
-                                <span className="font-body text-sm font-semibold text-primary">{ap.nextControl}</span>
+                    <div className="flex-1">
+                      {upcomingAppointments.length > 0 ? (
+                        <div className="grid sm:grid-cols-2 gap-3 content-start">
+                          {upcomingAppointments.map(ap => {
+                            const patient = patients.find(p => p.id === ap.patientId);
+                            const caseData = allCases.find(c => c.id === ap.caseId);
+                            const dotClass = statusDot[caseData?.status || 'activo'];
+                            return (
+                              <div
+                                key={ap.id + '-apt'}
+                                className="p-4 rounded-xl border border-border/60 hover:shadow-md transition-all cursor-pointer bg-card hover:-translate-y-0.5"
+                                onClick={() => navigate(`/patients/${ap.patientId}/cases/${ap.caseId}`)}
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <CalendarClock className="h-4 w-4 text-primary" />
+                                    <span className="font-body text-sm font-semibold text-primary">{ap.nextControl}</span>
+                                  </div>
+                                  <span className={`inline-block h-2.5 w-2.5 rounded-full ${dotClass}`} />
+                                </div>
+                                <p className="font-body text-sm font-semibold text-foreground">{patient?.lastName}, {patient?.firstName}</p>
+                                <p className="font-body text-xs text-muted-foreground mt-0.5">{ap.woundType}</p>
+                                <p className="font-body text-xs text-muted-foreground mt-1">Prof: {ap.professional}</p>
                               </div>
-                              <span className={`inline-block h-2.5 w-2.5 rounded-full ${dotClass}`} />
-                            </div>
-                            <p className="font-body text-sm font-semibold text-foreground">{patient?.lastName}, {patient?.firstName}</p>
-                            <p className="font-body text-xs text-muted-foreground mt-0.5">{ap.woundType}</p>
-                            <p className="font-body text-xs text-muted-foreground mt-1">Prof: {ap.professional}</p>
-                          </div>
-                        );
-                      })}
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="h-full min-h-[200px] flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-6">
+                          <CalendarClock className="h-10 w-10 text-muted-foreground/60 mb-3" />
+                          <p className="font-body text-sm font-semibold text-foreground">No hay próximos turnos</p>
+                          <p className="font-body text-xs text-muted-foreground mt-1">Cuando programes controles, aparecerán aquí.</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
