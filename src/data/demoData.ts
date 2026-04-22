@@ -40,6 +40,17 @@ export interface Evolution {
   woundDepth?: number;
   tissueTypes?: TissueType[];
   edgeTypes?: EdgeType[];
+  exudateAmount?: ExudateAmount;
+  exudateType?: ExudateType;
+  exudateColor?: ExudateColor;
+  hasInfectionSigns?: boolean;
+  infMalOlor?: boolean;
+  infEritema?: boolean;
+  infCalor?: boolean;
+  infBiofilm?: boolean;
+  infPurulenta?: boolean;
+  infDolorAumentado?: boolean;
+  bodyTemperature?: number;
 }
 
 export const healingFrequencies = [
