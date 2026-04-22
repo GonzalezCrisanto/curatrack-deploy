@@ -470,7 +470,98 @@ export default function CaseDetail() {
                 </Select>
               </div>
 
-              {/* Dolor — slider 0–10 */}
+              {/* Tamaño de la herida */}
+              <div className="space-y-2 rounded-lg border border-border/60 bg-muted/30 p-3">
+                <div className="flex items-baseline justify-between">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tamaño de la herida (cm)</Label>
+                  {woundArea && (
+                    <span className="font-body text-xs font-semibold text-primary tabular-nums">
+                      Área: {woundArea} cm²
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <Label className="font-body text-[11px] text-muted-foreground">Largo</Label>
+                    <Input
+                      type="number" inputMode="decimal" step="0.1" min="0"
+                      value={evoForm.woundLength}
+                      onChange={e => setEField('woundLength', e.target.value === '' ? '' : Number(e.target.value))}
+                      className="font-body h-11 text-center tabular-nums" placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="font-body text-[11px] text-muted-foreground">Ancho</Label>
+                    <Input
+                      type="number" inputMode="decimal" step="0.1" min="0"
+                      value={evoForm.woundWidth}
+                      onChange={e => setEField('woundWidth', e.target.value === '' ? '' : Number(e.target.value))}
+                      className="font-body h-11 text-center tabular-nums" placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="font-body text-[11px] text-muted-foreground">Profundidad</Label>
+                    <Input
+                      type="number" inputMode="decimal" step="0.1" min="0"
+                      value={evoForm.woundDepth}
+                      onChange={e => setEField('woundDepth', e.target.value === '' ? '' : Number(e.target.value))}
+                      className="font-body h-11 text-center tabular-nums" placeholder="0"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Tipo de tejido — multi-select chips */}
+              <div className="space-y-2">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de tejido presente</Label>
+                <div className="flex flex-wrap gap-2">
+                  {tissueTypeOptions.map(t => {
+                    const active = evoForm.tissueTypes.includes(t.value);
+                    return (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => toggleTissue(t.value)}
+                        className={cn(
+                          "min-h-11 px-4 rounded-full border font-body text-sm font-medium transition-all active:scale-95",
+                          active
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-background text-foreground border-border hover:border-primary/50"
+                        )}
+                      >
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Tipo de borde — multi-select chips */}
+              <div className="space-y-2">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de borde</Label>
+                <div className="flex flex-wrap gap-2">
+                  {edgeTypeOptions.map(t => {
+                    const active = evoForm.edgeTypes.includes(t.value);
+                    return (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => toggleEdge(t.value)}
+                        className={cn(
+                          "min-h-11 px-4 rounded-full border font-body text-sm font-medium transition-all active:scale-95",
+                          active
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-background text-foreground border-border hover:border-primary/50"
+                        )}
+                      >
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+
               <div className="space-y-2">
                 <div className="flex items-baseline justify-between">
                   <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dolor (EVA)</Label>
