@@ -6,6 +6,8 @@ export interface Photo {
 }
 
 export type OdorLevel = 'sin_olor' | 'leve' | 'moderado' | 'intenso';
+export type TissueType = 'epitelizacion' | 'granulacion' | 'fibrina' | 'esfacelo' | 'necrosis' | 'hueso_tendon';
+export type EdgeType = 'regular' | 'irregular' | 'macerado' | 'eritematoso' | 'socavado' | 'enrollado' | 'necrosado';
 export type EvolutionStatus =
   | 'tratamiento_activo'
   | 'mejoria_progresiva'
