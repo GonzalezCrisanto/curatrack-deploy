@@ -15,7 +15,7 @@ import {
   ArrowLeft, Plus, Edit, Trash2, Clock, Camera, FileText,
   Stethoscope, Ruler, Droplets, ShieldAlert, Thermometer, Pill, X, Image, Upload, ImagePlus, Package, RefreshCw, CheckCircle2, Save
 } from 'lucide-react';
-import { Evolution, Photo, professionals, getStatusLabel, woundStatuses, healingFrequencies, odorOptions, evolutionStatuses, OdorLevel, EvolutionStatus } from '@/data/demoData';
+import { Evolution, Photo, professionals, getStatusLabel, woundStatuses, healingFrequencies, odorOptions, evolutionStatuses, OdorLevel, EvolutionStatus, tissueTypeOptions, edgeTypeOptions, TissueType, EdgeType } from '@/data/demoData';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,8 @@ const statusBadgeClass: Record<string, string> = {
 const emptyEvolution = {
   date: '', time: '', professional: '', description: '', procedure: '', materials: '', healingFrequency: '', observations: '', nextControl: '',
   healingDate: '', painLevel: 0 as number, odor: 'sin_olor' as OdorLevel, evolutionStatus: 'tratamiento_activo' as EvolutionStatus,
+  woundLength: '' as number | '', woundWidth: '' as number | '', woundDepth: '' as number | '',
+  tissueTypes: [] as TissueType[], edgeTypes: [] as EdgeType[],
 };
 
 export default function CaseDetail() {
@@ -118,15 +120,27 @@ export default function CaseDetail() {
       painLevel: rest.painLevel ?? 0,
       odor: rest.odor ?? 'sin_olor',
       evolutionStatus: rest.evolutionStatus ?? 'tratamiento_activo',
+      woundLength: rest.woundLength ?? '',
+      woundWidth: rest.woundWidth ?? '',
+      woundDepth: rest.woundDepth ?? '',
+      tissueTypes: rest.tissueTypes ?? [],
+      edgeTypes: rest.edgeTypes ?? [],
     });
     setEvoPhotos([...photos]);
     setEvoDialogOpen(true);
   };
 
   const persistEvo = (closeCase: boolean) => {
+    const numOrUndef = (v: number | '') => (v === '' ? undefined : Number(v));
+    const base = {
+      ...evoForm,
+      woundLength: numOrUndef(evoForm.woundLength),
+      woundWidth: numOrUndef(evoForm.woundWidth),
+      woundDepth: numOrUndef(evoForm.woundDepth),
+    };
     const payload: Evolution = editingEvo
-      ? { ...editingEvo, ...evoForm, photos: evoPhotos }
-      : { ...evoForm, id: `e${Date.now()}`, photos: evoPhotos } as Evolution;
+      ? { ...editingEvo, ...base, photos: evoPhotos } as Evolution
+      : { ...base, id: `e${Date.now()}`, photos: evoPhotos } as Evolution;
 
     if (editingEvo) {
       updateEvolution(patient.id, woundCase.id, payload);
@@ -152,7 +166,23 @@ export default function CaseDetail() {
     persistEvo(false);
   };
 
-  const setEField = (key: string, value: string | number) => setEvoForm(prev => ({ ...prev, [key]: value }));
+  const setEField = (key: string, value: unknown) => setEvoForm(prev => ({ ...prev, [key]: value as never }));
+
+  const toggleTissue = (t: TissueType) => setEvoForm(prev => ({
+    ...prev,
+    tissueTypes: prev.tissueTypes.includes(t) ? prev.tissueTypes.filter(x => x !== t) : [...prev.tissueTypes, t],
+  }));
+  const toggleEdge = (t: EdgeType) => setEvoForm(prev => ({
+    ...prev,
+    edgeTypes: prev.edgeTypes.includes(t) ? prev.edgeTypes.filter(x => x !== t) : [...prev.edgeTypes, t],
+  }));
+
+  const woundArea = (() => {
+    const l = typeof evoForm.woundLength === 'number' ? evoForm.woundLength : parseFloat(String(evoForm.woundLength));
+    const w = typeof evoForm.woundWidth === 'number' ? evoForm.woundWidth : parseFloat(String(evoForm.woundWidth));
+    if (!isFinite(l) || !isFinite(w) || l <= 0 || w <= 0) return null;
+    return (l * w).toFixed(2);
+  })();
 
   const caseDetails = [
     { icon: Stethoscope, label: 'Tipo de herida', value: woundCase.woundType },
@@ -440,7 +470,98 @@ export default function CaseDetail() {
                 </Select>
               </div>
 
-              {/* Dolor — slider 0–10 */}
+              {/* Tamaño de la herida */}
+              <div className="space-y-2 rounded-lg border border-border/60 bg-muted/30 p-3">
+                <div className="flex items-baseline justify-between">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tamaño de la herida (cm)</Label>
+                  {woundArea && (
+                    <span className="font-body text-xs font-semibold text-primary tabular-nums">
+                      Área: {woundArea} cm²
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <Label className="font-body text-[11px] text-muted-foreground">Largo</Label>
+                    <Input
+                      type="number" inputMode="decimal" step="0.1" min="0"
+                      value={evoForm.woundLength}
+                      onChange={e => setEField('woundLength', e.target.value === '' ? '' : Number(e.target.value))}
+                      className="font-body h-11 text-center tabular-nums" placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="font-body text-[11px] text-muted-foreground">Ancho</Label>
+                    <Input
+                      type="number" inputMode="decimal" step="0.1" min="0"
+                      value={evoForm.woundWidth}
+                      onChange={e => setEField('woundWidth', e.target.value === '' ? '' : Number(e.target.value))}
+                      className="font-body h-11 text-center tabular-nums" placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="font-body text-[11px] text-muted-foreground">Profundidad</Label>
+                    <Input
+                      type="number" inputMode="decimal" step="0.1" min="0"
+                      value={evoForm.woundDepth}
+                      onChange={e => setEField('woundDepth', e.target.value === '' ? '' : Number(e.target.value))}
+                      className="font-body h-11 text-center tabular-nums" placeholder="0"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Tipo de tejido — multi-select chips */}
+              <div className="space-y-2">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de tejido presente</Label>
+                <div className="flex flex-wrap gap-2">
+                  {tissueTypeOptions.map(t => {
+                    const active = evoForm.tissueTypes.includes(t.value);
+                    return (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => toggleTissue(t.value)}
+                        className={cn(
+                          "min-h-11 px-4 rounded-full border font-body text-sm font-medium transition-all active:scale-95",
+                          active
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-background text-foreground border-border hover:border-primary/50"
+                        )}
+                      >
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Tipo de borde — multi-select chips */}
+              <div className="space-y-2">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de borde</Label>
+                <div className="flex flex-wrap gap-2">
+                  {edgeTypeOptions.map(t => {
+                    const active = evoForm.edgeTypes.includes(t.value);
+                    return (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => toggleEdge(t.value)}
+                        className={cn(
+                          "min-h-11 px-4 rounded-full border font-body text-sm font-medium transition-all active:scale-95",
+                          active
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-background text-foreground border-border hover:border-primary/50"
+                        )}
+                      >
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+
               <div className="space-y-2">
                 <div className="flex items-baseline justify-between">
                   <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dolor (EVA)</Label>

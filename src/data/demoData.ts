@@ -6,6 +6,8 @@ export interface Photo {
 }
 
 export type OdorLevel = 'sin_olor' | 'leve' | 'moderado' | 'intenso';
+export type TissueType = 'epitelizacion' | 'granulacion' | 'fibrina' | 'esfacelo' | 'necrosis' | 'hueso_tendon';
+export type EdgeType = 'regular' | 'irregular' | 'macerado' | 'eritematoso' | 'socavado' | 'enrollado' | 'necrosado';
 export type EvolutionStatus =
   | 'tratamiento_activo'
   | 'mejoria_progresiva'
@@ -30,6 +32,11 @@ export interface Evolution {
   painLevel?: number;
   odor?: OdorLevel;
   evolutionStatus?: EvolutionStatus;
+  woundLength?: number;
+  woundWidth?: number;
+  woundDepth?: number;
+  tissueTypes?: TissueType[];
+  edgeTypes?: EdgeType[];
 }
 
 export const healingFrequencies = [
@@ -54,6 +61,25 @@ export const evolutionStatuses: { value: EvolutionStatus; label: string; closes?
   { value: 'deterioro', label: 'Deterioro' },
   { value: 'requiere_evaluacion', label: 'Requiere evaluación médica' },
   { value: 'cicatrizada', label: 'Herida cicatrizada — CERRAR EVOLUCIÓN', closes: true },
+];
+
+export const tissueTypeOptions: { value: TissueType; label: string }[] = [
+  { value: 'epitelizacion', label: 'Epitelización' },
+  { value: 'granulacion', label: 'Granulación' },
+  { value: 'fibrina', label: 'Fibrina' },
+  { value: 'esfacelo', label: 'Esfacelo' },
+  { value: 'necrosis', label: 'Necrosis' },
+  { value: 'hueso_tendon', label: 'Hueso o tendón expuesto' },
+];
+
+export const edgeTypeOptions: { value: EdgeType; label: string }[] = [
+  { value: 'regular', label: 'Regular/Definido' },
+  { value: 'irregular', label: 'Irregular' },
+  { value: 'macerado', label: 'Macerado' },
+  { value: 'eritematoso', label: 'Eritematoso' },
+  { value: 'socavado', label: 'Socavado (undermining)' },
+  { value: 'enrollado', label: 'Enrollado (epibole)' },
+  { value: 'necrosado', label: 'Necrosado' },
 ];
 
 export interface WoundCase {
