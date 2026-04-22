@@ -31,6 +31,8 @@ const statusBadgeClass: Record<string, string> = {
 const emptyEvolution = {
   date: '', time: '', professional: '', description: '', procedure: '', materials: '', healingFrequency: '', observations: '', nextControl: '',
   healingDate: '', painLevel: 0 as number, odor: 'sin_olor' as OdorLevel, evolutionStatus: 'tratamiento_activo' as EvolutionStatus,
+  woundLength: '' as number | '', woundWidth: '' as number | '', woundDepth: '' as number | '',
+  tissueTypes: [] as TissueType[], edgeTypes: [] as EdgeType[],
 };
 
 export default function CaseDetail() {
