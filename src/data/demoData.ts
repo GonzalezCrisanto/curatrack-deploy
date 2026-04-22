@@ -63,6 +63,25 @@ export const evolutionStatuses: { value: EvolutionStatus; label: string; closes?
   { value: 'cicatrizada', label: 'Herida cicatrizada — CERRAR EVOLUCIÓN', closes: true },
 ];
 
+export const tissueTypeOptions: { value: TissueType; label: string }[] = [
+  { value: 'epitelizacion', label: 'Epitelización' },
+  { value: 'granulacion', label: 'Granulación' },
+  { value: 'fibrina', label: 'Fibrina' },
+  { value: 'esfacelo', label: 'Esfacelo' },
+  { value: 'necrosis', label: 'Necrosis' },
+  { value: 'hueso_tendon', label: 'Hueso o tendón expuesto' },
+];
+
+export const edgeTypeOptions: { value: EdgeType; label: string }[] = [
+  { value: 'regular', label: 'Regular/Definido' },
+  { value: 'irregular', label: 'Irregular' },
+  { value: 'macerado', label: 'Macerado' },
+  { value: 'eritematoso', label: 'Eritematoso' },
+  { value: 'socavado', label: 'Socavado (undermining)' },
+  { value: 'enrollado', label: 'Enrollado (epibole)' },
+  { value: 'necrosado', label: 'Necrosado' },
+];
+
 export interface WoundCase {
   id: string;
   patientId: string;
