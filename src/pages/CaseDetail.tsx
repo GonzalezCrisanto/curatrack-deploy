@@ -157,7 +157,96 @@ export default function CaseDetail() {
       medicalOrder: rest.medicalOrder ?? '',
     });
     setEvoPhotos([...photos]);
+    setAiSummary(null);
+    setAiError(null);
+    setAiLoading(false);
     setEvoDialogOpen(true);
+  };
+
+  const buildEvolutionPromptData = () => {
+    const labelOf = <T extends string>(arr: { value: T; label: string }[], v?: T) =>
+      v ? arr.find(o => o.value === v)?.label ?? v : undefined;
+
+    return {
+      paciente: `${patient.firstName} ${patient.lastName}`,
+      edad: patient.age,
+      diagnostico_base: patient.diagnosis,
+      herida: {
+        tipo: woundCase.woundType,
+        ubicacion: woundCase.anatomicalLocation,
+        inicio: woundCase.startDate,
+        tratamiento_actual: woundCase.treatment,
+      },
+      evolucion: {
+        fecha_curacion: evoForm.healingDate,
+        profesional: evoForm.professional,
+        frecuencia_curacion: evoForm.healingFrequency,
+        tamaño_cm: {
+          largo: evoForm.woundLength || null,
+          ancho: evoForm.woundWidth || null,
+          profundidad: evoForm.woundDepth || null,
+          area_cm2: woundArea,
+        },
+        tipos_tejido: evoForm.tissueTypes.map(t => labelOf(tissueTypeOptions, t)),
+        tipos_borde: evoForm.edgeTypes.map(t => labelOf(edgeTypeOptions, t)),
+        dolor_eva: evoForm.painLevel,
+        olor: labelOf(odorOptions, evoForm.odor),
+        exudado: {
+          cantidad: labelOf(exudateAmountOptions, evoForm.exudateAmount),
+          tipo: labelOf(exudateTypeOptions, evoForm.exudateType),
+          color: labelOf(exudateColorOptions, evoForm.exudateColor),
+        },
+        infeccion: evoForm.hasInfectionSigns
+          ? {
+              presenta_signos: true,
+              signos: infectionSignFields.filter(f => evoForm[f.key]).map(f => f.label),
+              temperatura_c: evoForm.bodyTemperature || null,
+            }
+          : { presenta_signos: false },
+        estado_evolucion: labelOf(evolutionStatuses, evoForm.evolutionStatus),
+        descripcion: evoForm.description,
+        procedimiento: evoForm.procedure,
+        materiales_usados: evoForm.materials,
+        observaciones: evoForm.observations,
+        proximo_control: evoForm.nextControl,
+        orden_medica: evoForm.requiresMedicalOrder ? evoForm.medicalOrder : null,
+      },
+    };
+  };
+
+  const generateAISummary = async () => {
+    setAiLoading(true);
+    setAiError(null);
+    setAiSummary(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-evolution-summary', {
+        body: { evolutionData: buildEvolutionPromptData() },
+      });
+      if (error) {
+        const msg = (error as { message?: string })?.message || 'Error al generar el resumen';
+        setAiError(msg);
+        toast.error(msg);
+        return;
+      }
+      if ((data as { error?: string })?.error) {
+        setAiError((data as { error: string }).error);
+        toast.error((data as { error: string }).error);
+        return;
+      }
+      const summary = (data as { summary?: string })?.summary?.trim();
+      if (!summary) {
+        setAiError('La IA no devolvió contenido.');
+        return;
+      }
+      setAiSummary(summary);
+      toast.success('Resumen clínico generado');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Error desconocido';
+      setAiError(msg);
+      toast.error(msg);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const persistEvo = (closeCase: boolean) => {
