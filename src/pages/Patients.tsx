@@ -104,6 +104,9 @@ export default function Patients() {
                     {p.cases.some(c => c.status === 'critico') && (
                       <Badge variant="destructive" className="font-body text-xs">Crítico</Badge>
                     )}
+                    {p.cases.length > 0 && p.cases.every(c => c.status === 'resuelto') && (
+                      <Badge className="font-body text-xs bg-success/15 text-success border-success/40 border">CERRADA ✅</Badge>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1 ml-4 shrink-0">

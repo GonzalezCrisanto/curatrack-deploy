@@ -20,7 +20,7 @@ const statusBadgeClass: Record<string, string> = {
   activo: 'bg-info/10 text-info border-info/30',
   en_mejoria: 'bg-success/10 text-success border-success/30',
   critico: 'bg-destructive/10 text-destructive border-destructive/30',
-  resuelto: 'bg-muted text-muted-foreground border-border',
+  resuelto: 'bg-success/15 text-success border-success/40',
 };
 
 const emptyCase: { woundType: string; anatomicalLocation: string; startDate: string; size: string; depth: string; exudate: string; infection: string; pain: string; treatment: string; status: 'activo' | 'en_mejoria' | 'critico' | 'resuelto' } = {
@@ -277,7 +277,9 @@ export default function PatientDetail() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <h3 className="font-body text-sm font-semibold">{c.woundType}</h3>
-                    <Badge className={`font-body text-xs ${statusBadgeClass[c.status]}`}>{getStatusLabel(c.status)}</Badge>
+                    <Badge className={`font-body text-xs ${statusBadgeClass[c.status]}`}>
+                      {c.status === 'resuelto' ? 'CERRADA ✅' : getStatusLabel(c.status)}
+                    </Badge>
                   </div>
                   <p className="font-body text-xs text-muted-foreground">{c.anatomicalLocation}</p>
                   <div className="flex items-center gap-3 mt-2 text-xs font-body text-muted-foreground">

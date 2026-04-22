@@ -5,6 +5,15 @@ export interface Photo {
   date: string;
 }
 
+export type OdorLevel = 'sin_olor' | 'leve' | 'moderado' | 'intenso';
+export type EvolutionStatus =
+  | 'tratamiento_activo'
+  | 'mejoria_progresiva'
+  | 'sin_cambios'
+  | 'deterioro'
+  | 'requiere_evaluacion'
+  | 'cicatrizada';
+
 export interface Evolution {
   id: string;
   date: string;
@@ -17,7 +26,35 @@ export interface Evolution {
   observations: string;
   nextControl: string;
   photos: Photo[];
+  healingDate?: string;
+  painLevel?: number;
+  odor?: OdorLevel;
+  evolutionStatus?: EvolutionStatus;
 }
+
+export const healingFrequencies = [
+  'Diaria',
+  'Cada 48hs',
+  'Cada 72hs',
+  'Semanal',
+  'A demanda',
+];
+
+export const odorOptions: { value: OdorLevel; label: string }[] = [
+  { value: 'sin_olor', label: 'Sin olor' },
+  { value: 'leve', label: 'Leve' },
+  { value: 'moderado', label: 'Moderado' },
+  { value: 'intenso', label: 'Intenso' },
+];
+
+export const evolutionStatuses: { value: EvolutionStatus; label: string; closes?: boolean }[] = [
+  { value: 'tratamiento_activo', label: 'En tratamiento activo' },
+  { value: 'mejoria_progresiva', label: 'Mejoría progresiva' },
+  { value: 'sin_cambios', label: 'Sin cambios' },
+  { value: 'deterioro', label: 'Deterioro' },
+  { value: 'requiere_evaluacion', label: 'Requiere evaluación médica' },
+  { value: 'cicatrizada', label: 'Herida cicatrizada — CERRAR EVOLUCIÓN', closes: true },
+];
 
 export interface WoundCase {
   id: string;
