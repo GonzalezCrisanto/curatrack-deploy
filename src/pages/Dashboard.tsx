@@ -466,18 +466,29 @@ export default function Dashboard() {
                             </p>
                           )}
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="shrink-0 font-body text-xs border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/patients/${c.patientId}`);
-                          }}
-                        >
-                          Ver paciente
-                          <ChevronRight className="ml-1 h-3 w-3" />
-                        </Button>
+                        <div className="flex flex-col gap-1.5 shrink-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="font-body text-xs border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/patients/${c.patientId}`);
+                            }}
+                          >
+                            Ver paciente
+                            <ChevronRight className="ml-1 h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="font-body text-[11px] h-7 text-muted-foreground hover:text-success hover:bg-success/10"
+                            onClick={(e) => markAlertAttended(c.id, e)}
+                          >
+                            <Check className="mr-1 h-3 w-3" />
+                            Marcar atendida
+                          </Button>
+                        </div>
                       </div>
                     );
                   })
