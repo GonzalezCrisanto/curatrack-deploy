@@ -132,6 +132,17 @@ export default function CaseDetail() {
       woundDepth: rest.woundDepth ?? '',
       tissueTypes: rest.tissueTypes ?? [],
       edgeTypes: rest.edgeTypes ?? [],
+      exudateAmount: rest.exudateAmount,
+      exudateType: rest.exudateType,
+      exudateColor: rest.exudateColor,
+      hasInfectionSigns: rest.hasInfectionSigns ?? false,
+      infMalOlor: rest.infMalOlor ?? false,
+      infEritema: rest.infEritema ?? false,
+      infCalor: rest.infCalor ?? false,
+      infBiofilm: rest.infBiofilm ?? false,
+      infPurulenta: rest.infPurulenta ?? false,
+      infDolorAumentado: rest.infDolorAumentado ?? false,
+      bodyTemperature: rest.bodyTemperature ?? '',
     });
     setEvoPhotos([...photos]);
     setEvoDialogOpen(true);
@@ -144,6 +155,7 @@ export default function CaseDetail() {
       woundLength: numOrUndef(evoForm.woundLength),
       woundWidth: numOrUndef(evoForm.woundWidth),
       woundDepth: numOrUndef(evoForm.woundDepth),
+      bodyTemperature: numOrUndef(evoForm.bodyTemperature),
     };
     const payload: Evolution = editingEvo
       ? { ...editingEvo, ...base, photos: evoPhotos } as Evolution
