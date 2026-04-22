@@ -94,9 +94,14 @@ export default function Patients() {
             const meta = indicatorMeta[indicator];
             const activeCount = getActiveWoundCount(p);
             const lastEvo = getLastEvolutionDate(p);
-            const firstActiveCase = p.cases.find(c => c.status !== 'resuelto');
+            const activeCases = p.cases.filter(c => c.status !== 'resuelto');
+            const firstActiveCase = activeCases[0];
             const handleNewEvo = (e: React.MouseEvent) => {
               e.stopPropagation();
+              if (activeCases.length >= 2) {
+                setWoundPickerPatient(p);
+                return;
+              }
               if (firstActiveCase) {
                 navigate(`/patients/${p.id}/cases/${firstActiveCase.id}?newEvo=1`);
               } else {
