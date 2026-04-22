@@ -567,19 +567,28 @@ export default function Dashboard() {
                       </CollapsibleContent>
                     </ul>
                   </Collapsible>
-                  {recentEvolutions.length > 3 && (
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    {recentEvolutions.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllActivity(v => !v)}
+                        className="inline-flex items-center gap-1 font-body text-sm text-primary hover:underline transition-colors"
+                      >
+                        {showAllActivity ? (
+                          <>Ver menos <ChevronUp className="h-3.5 w-3.5" /></>
+                        ) : (
+                          <>Ver toda la actividad <ChevronDown className="h-3.5 w-3.5" /></>
+                        )}
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => setShowAllActivity(v => !v)}
-                      className="mt-3 inline-flex items-center gap-1 font-body text-sm text-primary hover:underline"
+                      onClick={() => navigate('/patients')}
+                      className="inline-flex items-center gap-1 font-body text-sm text-muted-foreground hover:text-primary transition-colors"
                     >
-                      {showAllActivity ? (
-                        <>Ver menos <ChevronUp className="h-3.5 w-3.5" /></>
-                      ) : (
-                        <>Ver toda la actividad <ChevronDown className="h-3.5 w-3.5" /></>
-                      )}
+                      Ver historial completo <ChevronRight className="h-3.5 w-3.5" />
                     </button>
-                  )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
