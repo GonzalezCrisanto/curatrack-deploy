@@ -795,16 +795,64 @@ export default function CaseDetail() {
                 <Textarea value={evoForm.description} onChange={e => setEField('description', e.target.value)} className="font-body" rows={3} />
               </div>
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Procedimiento</Label>
-                <Textarea value={evoForm.procedure} onChange={e => setEField('procedure', e.target.value)} className="font-body" rows={2} />
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Procedimiento realizado</Label>
+                <Textarea
+                  value={evoForm.procedure}
+                  onChange={e => setEField('procedure', e.target.value)}
+                  className="font-body" rows={3}
+                  placeholder="Ej: Desbridamiento cortante, Lavado con SF, Aplicación de colagenasa..."
+                />
               </div>
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Material de curación</Label>
-                <Textarea value={evoForm.materials} onChange={e => setEField('materials', e.target.value)} className="font-body" rows={2} placeholder="Ej: Solución fisiológica, hidrogel..." />
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Package className="h-3.5 w-3.5" /> Material de curación utilizado
+                </Label>
+                <Textarea
+                  value={evoForm.materials}
+                  onChange={e => setEField('materials', e.target.value)}
+                  className="font-body" rows={3}
+                  placeholder="Ej: Apósito de espuma 10x10, Hidrogel, Gasas, Solución fisiológica 500ml..."
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Observaciones</Label>
                 <Textarea value={evoForm.observations} onChange={e => setEField('observations', e.target.value)} className="font-body" rows={2} />
+              </div>
+
+              {/* Orden médica */}
+              <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="req-order" className="font-body text-sm font-semibold flex items-center gap-1.5">
+                    <FileText className={cn("h-4 w-4", evoForm.requiresMedicalOrder ? "text-primary" : "text-muted-foreground")} />
+                    ¿Requiere orden médica?
+                  </Label>
+                  <Switch
+                    id="req-order"
+                    checked={evoForm.requiresMedicalOrder}
+                    onCheckedChange={(v) => setEField('requiresMedicalOrder', v)}
+                  />
+                </div>
+
+                {evoForm.requiresMedicalOrder && (
+                  <div className="space-y-2 pt-1 animate-fade-in">
+                    <Label className="font-body text-[11px] text-muted-foreground">Detalle de la orden médica</Label>
+                    <Textarea
+                      value={evoForm.medicalOrder}
+                      onChange={e => setEField('medicalOrder', e.target.value)}
+                      className="font-body" rows={4}
+                      placeholder="Ej: Solicitud de cultivo, interconsulta con cirugía vascular, ATB sistémico..."
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="font-body w-full h-11 border-primary/40 text-primary hover:bg-primary/5"
+                      onClick={emitMedicalOrder}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Emitir orden profesional
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Fotos */}
