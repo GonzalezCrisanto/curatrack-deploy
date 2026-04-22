@@ -8,6 +8,9 @@ export interface Photo {
 export type OdorLevel = 'sin_olor' | 'leve' | 'moderado' | 'intenso';
 export type TissueType = 'epitelizacion' | 'granulacion' | 'fibrina' | 'esfacelo' | 'necrosis' | 'hueso_tendon';
 export type EdgeType = 'regular' | 'irregular' | 'macerado' | 'eritematoso' | 'socavado' | 'enrollado' | 'necrosado';
+export type ExudateAmount = 'sin_exudado' | 'escaso' | 'moderado' | 'abundante';
+export type ExudateType = 'seroso' | 'serosanguinolento' | 'sanguinolento' | 'purulento' | 'fibrinoso';
+export type ExudateColor = 'transparente' | 'amarillo' | 'verde' | 'rojo' | 'marron';
 export type EvolutionStatus =
   | 'tratamiento_activo'
   | 'mejoria_progresiva'
@@ -37,6 +40,17 @@ export interface Evolution {
   woundDepth?: number;
   tissueTypes?: TissueType[];
   edgeTypes?: EdgeType[];
+  exudateAmount?: ExudateAmount;
+  exudateType?: ExudateType;
+  exudateColor?: ExudateColor;
+  hasInfectionSigns?: boolean;
+  infMalOlor?: boolean;
+  infEritema?: boolean;
+  infCalor?: boolean;
+  infBiofilm?: boolean;
+  infPurulenta?: boolean;
+  infDolorAumentado?: boolean;
+  bodyTemperature?: number;
 }
 
 export const healingFrequencies = [
@@ -80,6 +94,38 @@ export const edgeTypeOptions: { value: EdgeType; label: string }[] = [
   { value: 'socavado', label: 'Socavado (undermining)' },
   { value: 'enrollado', label: 'Enrollado (epibole)' },
   { value: 'necrosado', label: 'Necrosado' },
+];
+
+export const exudateAmountOptions: { value: ExudateAmount; label: string }[] = [
+  { value: 'sin_exudado', label: 'Sin exudado' },
+  { value: 'escaso', label: 'Escaso' },
+  { value: 'moderado', label: 'Moderado' },
+  { value: 'abundante', label: 'Abundante' },
+];
+
+export const exudateTypeOptions: { value: ExudateType; label: string }[] = [
+  { value: 'seroso', label: 'Seroso' },
+  { value: 'serosanguinolento', label: 'Serosanguinolento' },
+  { value: 'sanguinolento', label: 'Sanguinolento' },
+  { value: 'purulento', label: 'Purulento' },
+  { value: 'fibrinoso', label: 'Fibrinoso' },
+];
+
+export const exudateColorOptions: { value: ExudateColor; label: string; swatch: string }[] = [
+  { value: 'transparente', label: 'Transparente', swatch: 'bg-background border-2 border-border' },
+  { value: 'amarillo', label: 'Amarillo', swatch: 'bg-yellow-400' },
+  { value: 'verde', label: 'Verde', swatch: 'bg-green-500' },
+  { value: 'rojo', label: 'Rojo', swatch: 'bg-red-500' },
+  { value: 'marron', label: 'Marrón', swatch: 'bg-amber-800' },
+];
+
+export const infectionSignFields: { key: 'infMalOlor' | 'infEritema' | 'infCalor' | 'infBiofilm' | 'infPurulenta' | 'infDolorAumentado'; label: string }[] = [
+  { key: 'infMalOlor', label: 'Mal olor' },
+  { key: 'infEritema', label: 'Eritema perilesional' },
+  { key: 'infCalor', label: 'Calor local' },
+  { key: 'infBiofilm', label: 'Sospecha de biofilm' },
+  { key: 'infPurulenta', label: 'Secreción purulenta' },
+  { key: 'infDolorAumentado', label: 'Dolor aumentado' },
 ];
 
 export interface WoundCase {
