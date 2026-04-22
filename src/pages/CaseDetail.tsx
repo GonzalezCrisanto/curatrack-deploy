@@ -281,13 +281,11 @@ export default function CaseDetail() {
     toast.success(isNew ? 'Evolución registrada' : 'Evolución actualizada');
     setCloseConfirmOpen(false);
 
+    // Keep dialog open and generate AI summary for both new and edited evolutions
     if (isNew) {
-      // Mark as editing so further saves update the same record, then trigger AI.
       setEditingEvo(payload);
-      generateAISummary();
-    } else {
-      setEvoDialogOpen(false);
     }
+    generateAISummary();
   };
 
   const handleSaveEvo = () => {
