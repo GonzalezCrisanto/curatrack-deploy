@@ -59,6 +59,9 @@ export default function CaseDetail() {
   const [evoPhotos, setEvoPhotos] = useState<Photo[]>([]);
   const [photoViewer, setPhotoViewer] = useState<string | null>(null);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const casePhotoInput = useRef<HTMLInputElement>(null);
   const caseCameraInput = useRef<HTMLInputElement>(null);
