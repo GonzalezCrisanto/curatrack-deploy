@@ -68,7 +68,7 @@ function avatarColor(seed: string) {
 }
 
 export default function Dashboard() {
-  const { patients, currentUser } = useApp();
+  const { patients, currentUser, addEvolution } = useApp();
   const navigate = useNavigate();
   const [showAllActivity, setShowAllActivity] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
