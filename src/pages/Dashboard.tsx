@@ -71,10 +71,15 @@ export default function Dashboard() {
   const { patients, currentUser } = useApp();
   const navigate = useNavigate();
   const [showAllActivity, setShowAllActivity] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [attendedAlerts, setAttendedAlerts] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [woundTypeFilter, setWoundTypeFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('lastEvo');
 
   const allCases = patients.flatMap(p => p.cases);
   const activeCases = allCases.filter(c => c.status === 'activo');
-  const criticalCases = allCases.filter(c => c.status === 'critico');
+  const criticalCases = allCases.filter(c => c.status === 'critico').filter(c => !attendedAlerts.has(c.id));
   const improvingCases = allCases.filter(c => c.status === 'en_mejoria');
   const resolvedCases = allCases.filter(c => c.status === 'resuelto');
   const totalEvolutions = allCases.reduce((sum, c) => sum + c.evolutions.length, 0);
