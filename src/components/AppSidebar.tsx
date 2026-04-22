@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Activity, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, Activity, BarChart3, Settings } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import {
@@ -17,6 +17,7 @@ const items = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Pacientes', url: '/patients', icon: Users },
   { title: 'Casos Activos', url: '/cases', icon: Activity },
+  { title: 'Estadísticas', url: '/statistics', icon: BarChart3 },
   { title: 'Configuración', url: '/settings', icon: Settings },
 ];
 
