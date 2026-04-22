@@ -342,16 +342,18 @@ export default function Dashboard() {
 
           {/* Próximos Turnos con Calendario */}
           {(() => {
-            const appointmentDates = upcomingAppointments.map(ap => {
+            const upcomingDates = upcomingAppointments.map(ap => {
               const caseData = allCases.find(c => c.id === ap.caseId);
               return { date: new Date(ap.nextControl + 'T12:00:00'), status: caseData?.status || 'activo' };
             });
+            const pastDates = pastAppointments.map(ap => new Date(ap.nextControl + 'T12:00:00'));
 
             const modifiers = {
-              critical: appointmentDates.filter(d => d.status === 'critico').map(d => d.date),
-              active: appointmentDates.filter(d => d.status === 'activo').map(d => d.date),
-              improving: appointmentDates.filter(d => d.status === 'en_mejoria').map(d => d.date),
-              resolved: appointmentDates.filter(d => d.status === 'resuelto').map(d => d.date),
+              critical: upcomingDates.filter(d => d.status === 'critico').map(d => d.date),
+              active: upcomingDates.filter(d => d.status === 'activo').map(d => d.date),
+              improving: upcomingDates.filter(d => d.status === 'en_mejoria').map(d => d.date),
+              resolved: upcomingDates.filter(d => d.status === 'resuelto').map(d => d.date),
+              overdue: pastDates,
             };
 
             const modifiersStyles = {
@@ -359,6 +361,48 @@ export default function Dashboard() {
               active: { backgroundColor: 'hsl(var(--warning))', color: 'hsl(var(--warning-foreground))', borderRadius: '9999px' },
               improving: { backgroundColor: 'hsl(var(--success))', color: '#fff', borderRadius: '9999px' },
               resolved: { backgroundColor: 'hsl(var(--muted-foreground))', color: '#fff', borderRadius: '9999px' },
+              overdue: {
+                backgroundColor: 'transparent',
+                color: 'hsl(var(--destructive))',
+                border: '1.5px dashed hsl(var(--destructive))',
+                borderRadius: '9999px',
+                opacity: 0.85,
+              },
+            };
+
+            const renderApt = (ap: typeof upcomingAppointments[number], opts: { past?: boolean } = {}) => {
+              const patient = patients.find(p => p.id === ap.patientId);
+              const caseData = allCases.find(c => c.id === ap.caseId);
+              const dotClass = statusDot[caseData?.status || 'activo'];
+              return (
+                <div
+                  key={ap.id + (opts.past ? '-past' : '-apt')}
+                  className={`p-4 rounded-xl border transition-all cursor-pointer hover:-translate-y-0.5 hover:shadow-md ${
+                    opts.past
+                      ? 'border-destructive/30 bg-destructive/[0.03]'
+                      : 'border-border/60 bg-card'
+                  }`}
+                  onClick={() => navigate(`/patients/${ap.patientId}/cases/${ap.caseId}`)}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <CalendarClock className={`h-4 w-4 ${opts.past ? 'text-destructive' : 'text-primary'}`} />
+                      <span className={`font-body text-sm font-semibold ${opts.past ? 'text-destructive' : 'text-primary'}`}>
+                        {ap.nextControl}
+                      </span>
+                      {opts.past && (
+                        <span className="font-body text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-semibold">
+                          Vencido
+                        </span>
+                      )}
+                    </div>
+                    <span className={`inline-block h-2.5 w-2.5 rounded-full ${dotClass}`} />
+                  </div>
+                  <p className="font-body text-sm font-semibold text-foreground">{patient?.lastName}, {patient?.firstName}</p>
+                  <p className="font-body text-xs text-muted-foreground mt-0.5">{ap.woundType}</p>
+                  <p className="font-body text-xs text-muted-foreground mt-1">Prof: {ap.professional}</p>
+                </div>
+              );
             };
 
             return (
@@ -366,7 +410,7 @@ export default function Dashboard() {
                 <CardHeader className="pb-3">
                   <CardTitle className="heading-display text-lg flex items-center gap-2 text-foreground">
                     <CalendarClock className="h-5 w-5 text-primary" />
-                    Próximos Turnos / Controles
+                    Turnos / Controles
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -374,7 +418,7 @@ export default function Dashboard() {
                     <div className="shrink-0">
                       <Calendar
                         mode="multiple"
-                        selected={appointmentDates.map(d => d.date)}
+                        selected={[...upcomingDates.map(d => d.date), ...pastDates]}
                         className="p-3 pointer-events-auto rounded-xl border border-border/60 bg-background"
                         modifiers={modifiers}
                         modifiersStyles={modifiersStyles}
@@ -391,43 +435,41 @@ export default function Dashboard() {
                             <span className="font-body text-xs text-muted-foreground">{x.l}</span>
                           </div>
                         ))}
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-2.5 w-2.5 rounded-full border border-dashed border-destructive" />
+                          <span className="font-body text-xs text-muted-foreground">Vencido</span>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex-1">
-                      {upcomingAppointments.length > 0 ? (
-                        <div className="grid sm:grid-cols-2 gap-3 content-start">
-                          {upcomingAppointments.map(ap => {
-                            const patient = patients.find(p => p.id === ap.patientId);
-                            const caseData = allCases.find(c => c.id === ap.caseId);
-                            const dotClass = statusDot[caseData?.status || 'activo'];
-                            return (
-                              <div
-                                key={ap.id + '-apt'}
-                                className="p-4 rounded-xl border border-border/60 hover:shadow-md transition-all cursor-pointer bg-card hover:-translate-y-0.5"
-                                onClick={() => navigate(`/patients/${ap.patientId}/cases/${ap.caseId}`)}
-                              >
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <CalendarClock className="h-4 w-4 text-primary" />
-                                    <span className="font-body text-sm font-semibold text-primary">{ap.nextControl}</span>
-                                  </div>
-                                  <span className={`inline-block h-2.5 w-2.5 rounded-full ${dotClass}`} />
-                                </div>
-                                <p className="font-body text-sm font-semibold text-foreground">{patient?.lastName}, {patient?.firstName}</p>
-                                <p className="font-body text-xs text-muted-foreground mt-0.5">{ap.woundType}</p>
-                                <p className="font-body text-xs text-muted-foreground mt-1">Prof: {ap.professional}</p>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="h-full min-h-[200px] flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-6">
-                          <CalendarClock className="h-10 w-10 text-muted-foreground/60 mb-3" />
-                          <p className="font-body text-sm font-semibold text-foreground">No hay próximos turnos</p>
-                          <p className="font-body text-xs text-muted-foreground mt-1">Cuando programes controles, aparecerán aquí.</p>
+                    <div className="flex-1 space-y-5">
+                      {pastAppointments.length > 0 && (
+                        <div>
+                          <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-destructive mb-2">
+                            Controles vencidos ({pastAppointments.length})
+                          </h3>
+                          <div className="grid sm:grid-cols-2 gap-3 content-start">
+                            {pastAppointments.map(ap => renderApt(ap, { past: true }))}
+                          </div>
                         </div>
                       )}
+
+                      <div>
+                        <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                          Próximos turnos ({upcomingAppointments.length})
+                        </h3>
+                        {upcomingAppointments.length > 0 ? (
+                          <div className="grid sm:grid-cols-2 gap-3 content-start">
+                            {upcomingAppointments.map(ap => renderApt(ap))}
+                          </div>
+                        ) : (
+                          <div className="min-h-[140px] flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-6">
+                            <CalendarClock className="h-10 w-10 text-muted-foreground/60 mb-3" />
+                            <p className="font-body text-sm font-semibold text-foreground">No hay próximos turnos</p>
+                            <p className="font-body text-xs text-muted-foreground mt-1">Cuando programes controles, aparecerán aquí.</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
