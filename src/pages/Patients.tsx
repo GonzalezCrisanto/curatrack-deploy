@@ -33,6 +33,12 @@ export default function Patients() {
     `${p.firstName} ${p.lastName} ${p.dni} ${p.diagnosis}`.toLowerCase().includes(search.toLowerCase())
   );
 
+  const isHealedPatient = (p: Patient) =>
+    p.cases.length > 0 && p.cases.every(c => c.status === 'resuelto');
+
+  const activePatients = filtered.filter(p => !isHealedPatient(p));
+  const healedPatients = filtered.filter(isHealedPatient);
+
   const openNew = () => {
     setEditing(null);
     setForm({ ...emptyPatient, admissionDate: new Date().toISOString().split('T')[0] });
