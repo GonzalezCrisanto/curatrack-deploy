@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,9 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import {
   ArrowLeft, Plus, Edit, Trash2, Clock, Camera, FileText,
-  Stethoscope, Ruler, Droplets, ShieldAlert, Thermometer, Pill, X, Image, Upload, ImagePlus, Package, RefreshCw, CheckCircle2, Save
+  Stethoscope, Ruler, Droplets, ShieldAlert, Thermometer, Pill, X, Image, Upload, ImagePlus, Package, RefreshCw, CheckCircle2, Save,
+  TrendingDown, TrendingUp, Minus, Sparkles, Archive
 } from 'lucide-react';
 import { Evolution, Photo, professionals, getStatusLabel, woundStatuses, healingFrequencies, odorOptions, evolutionStatuses, OdorLevel, EvolutionStatus, tissueTypeOptions, edgeTypeOptions, TissueType, EdgeType, exudateAmountOptions, exudateTypeOptions, exudateColorOptions, ExudateAmount, ExudateType, ExudateColor, infectionSignFields } from '@/data/demoData';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getEvolutionArea } from '@/lib/patientStatus';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
@@ -49,6 +52,7 @@ const emptyEvolution = {
 export default function CaseDetail() {
   const { patientId, caseId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { patients, updateCase, addEvolution, updateEvolution, deleteEvolution } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const woundCase = patient?.cases.find(c => c.id === caseId);
@@ -67,6 +71,17 @@ export default function CaseDetail() {
   const caseCameraInput = useRef<HTMLInputElement>(null);
   const evoPhotoInput = useRef<HTMLInputElement>(null);
   const evoCameraInput = useRef<HTMLInputElement>(null);
+
+  // Auto-open the new-evolution dialog when ?newEvo=1 is present (from Patients quick action)
+  useEffect(() => {
+    if (searchParams.get('newEvo') === '1' && patient && woundCase && !evoDialogOpen) {
+      openNewEvo();
+      const next = new URLSearchParams(searchParams);
+      next.delete('newEvo');
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, patient, woundCase]);
 
   if (!patient || !woundCase) {
     return <AppLayout><div className="p-8 text-center font-body text-muted-foreground">Caso no encontrado</div></AppLayout>;
@@ -214,7 +229,7 @@ export default function CaseDetail() {
     };
   };
 
-  const generateAISummary = async () => {
+  const generateAISummary = async (targetEvoId?: string) => {
     setAiLoading(true);
     setAiError(null);
     setAiSummary(null);
@@ -239,6 +254,18 @@ export default function CaseDetail() {
         return;
       }
       setAiSummary(summary);
+      // Persist the summary onto the saved evolution so it appears in the timeline snippet
+      const evoId = targetEvoId ?? editingEvo?.id;
+      if (evoId) {
+        const saved = woundCase.evolutions.find(e => e.id === evoId);
+        const merged: Evolution | undefined = saved
+          ? { ...saved, aiSummary: summary }
+          : (editingEvo ? { ...editingEvo, aiSummary: summary } as Evolution : undefined);
+        if (merged) {
+          updateEvolution(patient.id, woundCase.id, merged);
+          setEditingEvo(merged);
+        }
+      }
       toast.success('Resumen clínico generado');
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Error desconocido';
@@ -271,6 +298,10 @@ export default function CaseDetail() {
     }
 
     if (closeCase) {
+      const closedAt = new Date().toISOString().split('T')[0];
+      // Stamp closedAt on the evolution that closes the case
+      const closedPayload: Evolution = { ...payload, closedAt };
+      updateEvolution(patient.id, woundCase.id, closedPayload);
       updateCase(patient.id, { ...woundCase, status: 'resuelto' });
       toast.success('Evolución cerrada. Caso marcado como cicatrizado.');
       setEvoDialogOpen(false);
@@ -285,7 +316,7 @@ export default function CaseDetail() {
     if (isNew) {
       setEditingEvo(payload);
     }
-    generateAISummary();
+    generateAISummary(payload.id);
   };
 
   const handleSaveEvo = () => {
@@ -559,25 +590,78 @@ export default function CaseDetail() {
           </Button>
         </div>
 
-        <div className="relative">
-          <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
+        {(() => {
+          const sorted = [...woundCase.evolutions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+          const activeEvos = sorted.filter(e => !e.closedAt);
+          const closedEvos = sorted.filter(e => !!e.closedAt);
 
-          <div className="space-y-6">
-            {woundCase.evolutions.map((ev, idx) => (
+          // Map evolution id -> previous (older) area for trend computation
+          const chronAsc = [...sorted].reverse();
+          const trendByEvoId = new Map<string, 'down' | 'up' | 'same' | null>();
+          chronAsc.forEach((e, i) => {
+            const area = getEvolutionArea(e);
+            if (area == null) return trendByEvoId.set(e.id, null);
+            // find latest previous evolution with area
+            let prevArea: number | null = null;
+            for (let j = i - 1; j >= 0; j--) {
+              const p = getEvolutionArea(chronAsc[j]);
+              if (p != null) { prevArea = p; break; }
+            }
+            if (prevArea == null) return trendByEvoId.set(e.id, null);
+            if (area < prevArea) trendByEvoId.set(e.id, 'down');
+            else if (area > prevArea) trendByEvoId.set(e.id, 'up');
+            else trendByEvoId.set(e.id, 'same');
+          });
+
+          const renderEvolution = (ev: Evolution, idx: number, isHistory: boolean) => {
+            const area = getEvolutionArea(ev);
+            const trend = trendByEvoId.get(ev.id) ?? null;
+            const evoStatus = ev.evolutionStatus
+              ? evolutionStatuses.find(s => s.value === ev.evolutionStatus)?.label
+              : null;
+            const tissueLabels = (ev.tissueTypes || [])
+              .map(t => tissueTypeOptions.find(o => o.value === t)?.label)
+              .filter(Boolean) as string[];
+            const exudateLabel = ev.exudateAmount
+              ? exudateAmountOptions.find(o => o.value === ev.exudateAmount)?.label
+              : null;
+            const exudateType = ev.exudateType
+              ? exudateTypeOptions.find(o => o.value === ev.exudateType)?.label
+              : null;
+            const aiSnippet = ev.aiSummary
+              ? ev.aiSummary
+                  .replace(/^#+\s+.*$/gm, '')
+                  .replace(/\*\*?/g, '')
+                  .replace(/^[-*]\s+/gm, '• ')
+                  .split('\n')
+                  .map(s => s.trim())
+                  .filter(Boolean)
+                  .join(' ')
+                  .slice(0, 220)
+              : null;
+
+            return (
               <div key={ev.id} className="relative pl-12 animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
-                <div className="absolute left-2.5 top-1 w-3 h-3 rounded-full bg-primary border-2 border-background" />
-
-                <Card className="border-border/50">
+                <div className={`absolute left-2.5 top-1 w-3 h-3 rounded-full border-2 border-background ${isHistory ? 'bg-muted-foreground' : 'bg-primary'}`} />
+                <Card className={`border-border/50 ${isHistory ? 'bg-muted/20' : ''}`}>
                   <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
+                    <div className="flex items-start justify-between mb-3 gap-2">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-body text-sm font-semibold">{ev.date}</span>
-                          <span className="font-body text-xs text-muted-foreground">{ev.time} hs</span>
+                          {ev.time && <span className="font-body text-xs text-muted-foreground">{ev.time} hs</span>}
                           <Badge variant="outline" className="font-body text-xs">{ev.professional}</Badge>
+                          {evoStatus && (
+                            <Badge variant="secondary" className="font-body text-xs">{evoStatus}</Badge>
+                          )}
+                          {isHistory && ev.closedAt && (
+                            <Badge className="font-body text-xs bg-success/15 text-success border-success/40 border">
+                              Cerrada · {ev.closedAt}
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 shrink-0">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditEvo(ev)}>
                           <Edit className="h-3.5 w-3.5" />
                         </Button>
@@ -601,15 +685,42 @@ export default function CaseDetail() {
                       </div>
                     </div>
 
+                    {/* Quick metrics row */}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-3">
+                      {area != null && (
+                        <span className="inline-flex items-center gap-1 font-body text-xs">
+                          <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="tabular-nums font-medium">{area.toFixed(2)} cm²</span>
+                          {trend === 'down' && <TrendingDown className="h-3.5 w-3.5 text-success" aria-label="Área disminuye" />}
+                          {trend === 'up' && <TrendingUp className="h-3.5 w-3.5 text-destructive" aria-label="Área aumenta" />}
+                          {trend === 'same' && <Minus className="h-3.5 w-3.5 text-muted-foreground" aria-label="Área estable" />}
+                        </span>
+                      )}
+                      {tissueLabels.length > 0 && (
+                        <span className="inline-flex items-center gap-1 font-body text-xs text-muted-foreground">
+                          <Stethoscope className="h-3.5 w-3.5" /> {tissueLabels.slice(0, 3).join(', ')}{tissueLabels.length > 3 ? '…' : ''}
+                        </span>
+                      )}
+                      {exudateLabel && (
+                        <span className="inline-flex items-center gap-1 font-body text-xs text-muted-foreground">
+                          <Droplets className="h-3.5 w-3.5" /> {exudateLabel}{exudateType ? ` · ${exudateType}` : ''}
+                        </span>
+                      )}
+                    </div>
+
                     <div className="space-y-3">
-                      <div>
-                        <p className="font-body text-xs text-muted-foreground mb-0.5">Descripción clínica</p>
-                        <p className="font-body text-sm">{ev.description}</p>
-                      </div>
-                      <div>
-                        <p className="font-body text-xs text-muted-foreground mb-0.5">Procedimiento</p>
-                        <p className="font-body text-sm">{ev.procedure}</p>
-                      </div>
+                      {ev.description && (
+                        <div>
+                          <p className="font-body text-xs text-muted-foreground mb-0.5">Descripción clínica</p>
+                          <p className="font-body text-sm">{ev.description}</p>
+                        </div>
+                      )}
+                      {ev.procedure && (
+                        <div>
+                          <p className="font-body text-xs text-muted-foreground mb-0.5">Procedimiento</p>
+                          <p className="font-body text-sm">{ev.procedure}</p>
+                        </div>
+                      )}
                       {ev.materials && (
                         <div>
                           <p className="font-body text-xs text-muted-foreground mb-0.5 flex items-center gap-1"><Package className="h-3 w-3" /> Material de curación</p>
@@ -628,9 +739,19 @@ export default function CaseDetail() {
                           <p className="font-body text-sm">{ev.observations}</p>
                         </div>
                       )}
-                      <div className="flex items-center gap-1 text-xs font-body text-muted-foreground">
-                        <Clock className="h-3.5 w-3.5" /> Próximo control: {ev.nextControl}
-                      </div>
+                      {aiSnippet && (
+                        <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5">
+                          <p className="font-body text-[11px] uppercase tracking-wide text-primary/80 mb-1 flex items-center gap-1">
+                            <Sparkles className="h-3 w-3" /> Resumen IA
+                          </p>
+                          <p className="font-body text-xs leading-relaxed text-foreground/85 line-clamp-3">{aiSnippet}</p>
+                        </div>
+                      )}
+                      {ev.nextControl && (
+                        <div className="flex items-center gap-1 text-xs font-body text-muted-foreground">
+                          <Clock className="h-3.5 w-3.5" /> Próximo control: {ev.nextControl}
+                        </div>
+                      )}
 
                       {ev.photos.length > 0 && (
                         <div className="flex gap-2 mt-2 flex-wrap">
@@ -649,18 +770,54 @@ export default function CaseDetail() {
                   </CardContent>
                 </Card>
               </div>
-            ))}
-          </div>
+            );
+          };
 
-          {woundCase.evolutions.length === 0 && (
-            <div className="pl-12 text-center py-12 border border-dashed border-border rounded-lg">
-              <p className="font-body text-muted-foreground">No hay evoluciones registradas</p>
-              <Button variant="outline" className="font-body mt-3" onClick={openNewEvo}>
-                <Plus className="mr-2 h-4 w-4" /> Registrar primera evolución
-              </Button>
+          const TimelineList = ({ items, isHistory }: { items: Evolution[]; isHistory: boolean }) => (
+            <div className="relative">
+              <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
+              <div className="space-y-6">
+                {items.map((ev, idx) => renderEvolution(ev, idx, isHistory))}
+              </div>
+              {items.length === 0 && (
+                <div className="pl-12 text-center py-12 border border-dashed border-border rounded-lg">
+                  <p className="font-body text-muted-foreground">
+                    {isHistory ? 'No hay evoluciones cerradas.' : 'No hay evoluciones registradas'}
+                  </p>
+                  {!isHistory && (
+                    <Button variant="outline" className="font-body mt-3" onClick={openNewEvo}>
+                      <Plus className="mr-2 h-4 w-4" /> Registrar primera evolución
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          );
+
+          if (closedEvos.length === 0) {
+            return <TimelineList items={activeEvos} isHistory={false} />;
+          }
+
+          return (
+            <Tabs defaultValue="active" className="w-full">
+              <TabsList className="font-body">
+                <TabsTrigger value="active" className="font-body">
+                  Activas <Badge variant="secondary" className="ml-2 font-body text-xs">{activeEvos.length}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="history" className="font-body">
+                  <Archive className="mr-1.5 h-3.5 w-3.5" />
+                  Historial <Badge variant="secondary" className="ml-2 font-body text-xs">{closedEvos.length}</Badge>
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="active" className="mt-4">
+                <TimelineList items={activeEvos} isHistory={false} />
+              </TabsContent>
+              <TabsContent value="history" className="mt-4">
+                <TimelineList items={closedEvos} isHistory={true} />
+              </TabsContent>
+            </Tabs>
+          );
+        })()}
 
         {/* Evolution Form Dialog — mobile-first */}
         <Dialog open={evoDialogOpen} onOpenChange={setEvoDialogOpen}>

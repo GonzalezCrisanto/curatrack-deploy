@@ -53,6 +53,8 @@ export interface Evolution {
   bodyTemperature?: number;
   requiresMedicalOrder?: boolean;
   medicalOrder?: string;
+  aiSummary?: string;
+  closedAt?: string;
 }
 
 export const healingFrequencies = [
