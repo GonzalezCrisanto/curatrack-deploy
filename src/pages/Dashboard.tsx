@@ -102,10 +102,16 @@ export default function Dashboard() {
     .slice(0, 6);
 
   const today = new Date().toISOString().split('T')[0];
-  const upcomingAppointments = allCases
+  const allAppointments = allCases
     .flatMap(c => c.evolutions.map(e => ({ ...e, caseId: c.id, patientId: c.patientId, woundType: c.woundType })))
-    .filter(e => e.nextControl && e.nextControl.trim() !== '' && e.nextControl >= today)
+    .filter(e => e.nextControl && e.nextControl.trim() !== '');
+  const upcomingAppointments = allAppointments
+    .filter(e => e.nextControl >= today)
     .sort((a, b) => a.nextControl.localeCompare(b.nextControl))
+    .slice(0, 6);
+  const pastAppointments = allAppointments
+    .filter(e => e.nextControl < today)
+    .sort((a, b) => b.nextControl.localeCompare(a.nextControl))
     .slice(0, 6);
 
   // Stat cards config — clinical palette with semantic tokens
