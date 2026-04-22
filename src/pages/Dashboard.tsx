@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,9 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import {
   Users, Activity, AlertTriangle, CheckCircle2, TrendingUp, Clock,
-  ChevronRight, CalendarClock, ArrowUp, ArrowDown, ArrowRight,
+  ChevronRight, CalendarClock, ArrowUp, ArrowDown, ArrowRight, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import AppLayout from '@/components/AppLayout';
@@ -64,6 +66,7 @@ function avatarColor(seed: string) {
 export default function Dashboard() {
   const { patients, currentUser } = useApp();
   const navigate = useNavigate();
+  const [showAllActivity, setShowAllActivity] = useState(false);
 
   const allCases = patients.flatMap(p => p.cases);
   const activeCases = allCases.filter(c => c.status === 'activo');
@@ -339,7 +342,7 @@ export default function Dashboard() {
             );
           })()}
 
-          <div className="grid lg:grid-cols-2 gap-6">
+          <div className="grid lg:grid-cols-2 gap-6 items-start">
             {/* Critical alerts */}
             <Card className={`rounded-xl border shadow-sm ${criticalCases.length > 0 ? 'border-destructive/40 bg-destructive/[0.03]' : 'border-border/60 bg-card'}`}>
               <CardHeader className="pb-3">
@@ -413,35 +416,82 @@ export default function Dashboard() {
               <CardContent>
                 <div className="relative pl-6">
                   <span className="absolute left-2 top-1 bottom-1 w-px bg-border" aria-hidden />
-                  <ul className="space-y-1">
-                    {recentEvolutions.map((ev, i) => {
-                      const patient = patients.find(p => p.id === ev.patientId);
-                      const dot = statusDot[ev.status as string] || 'bg-muted-foreground';
-                      return (
-                        <li
-                          key={ev.id}
-                          className={`relative cursor-pointer rounded-lg px-3 py-2.5 -ml-3 hover:bg-secondary/60 transition-colors ${i % 2 === 0 ? 'bg-secondary/30' : ''}`}
-                          onClick={() => navigate(`/patients/${ev.patientId}/cases/${ev.caseId}`)}
-                        >
-                          <span
-                            className={`absolute -left-[18px] top-3.5 h-2.5 w-2.5 rounded-full ring-2 ring-card ${dot}`}
-                            aria-hidden
-                          />
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="font-body text-sm font-semibold text-foreground truncate">
-                                {patient?.firstName} {patient?.lastName} <span className="text-muted-foreground font-normal">— {ev.woundType}</span>
-                              </p>
-                              <p className="font-body text-[11px] text-muted-foreground mt-0.5">
-                                {relativeDate(ev.date)} · {ev.professional}
-                              </p>
+                  <Collapsible open={showAllActivity} onOpenChange={setShowAllActivity}>
+                    <ul className="space-y-1">
+                      {recentEvolutions.slice(0, 3).map((ev, i) => {
+                        const patient = patients.find(p => p.id === ev.patientId);
+                        const dot = statusDot[ev.status as string] || 'bg-muted-foreground';
+                        return (
+                          <li
+                            key={ev.id}
+                            className={`relative cursor-pointer rounded-lg px-3 py-2.5 -ml-3 hover:bg-secondary/60 transition-colors ${i % 2 === 0 ? 'bg-secondary/30' : ''}`}
+                            onClick={() => navigate(`/patients/${ev.patientId}/cases/${ev.caseId}`)}
+                          >
+                            <span
+                              className={`absolute -left-[18px] top-3.5 h-2.5 w-2.5 rounded-full ring-2 ring-card ${dot}`}
+                              aria-hidden
+                            />
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-body text-sm font-semibold text-foreground truncate">
+                                  {patient?.firstName} {patient?.lastName} <span className="text-muted-foreground font-normal">— {ev.woundType}</span>
+                                </p>
+                                <p className="font-body text-[11px] text-muted-foreground mt-0.5">
+                                  {relativeDate(ev.date)} · {ev.professional}
+                                </p>
+                              </div>
+                              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                             </div>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                          </li>
+                        );
+                      })}
+                      <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+                        <ul className="space-y-1">
+                          {recentEvolutions.slice(3).map((ev, idx) => {
+                            const i = idx + 3;
+                            const patient = patients.find(p => p.id === ev.patientId);
+                            const dot = statusDot[ev.status as string] || 'bg-muted-foreground';
+                            return (
+                              <li
+                                key={ev.id}
+                                className={`relative cursor-pointer rounded-lg px-3 py-2.5 -ml-3 hover:bg-secondary/60 transition-colors ${i % 2 === 0 ? 'bg-secondary/30' : ''}`}
+                                onClick={() => navigate(`/patients/${ev.patientId}/cases/${ev.caseId}`)}
+                              >
+                                <span
+                                  className={`absolute -left-[18px] top-3.5 h-2.5 w-2.5 rounded-full ring-2 ring-card ${dot}`}
+                                  aria-hidden
+                                />
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <p className="font-body text-sm font-semibold text-foreground truncate">
+                                      {patient?.firstName} {patient?.lastName} <span className="text-muted-foreground font-normal">— {ev.woundType}</span>
+                                    </p>
+                                    <p className="font-body text-[11px] text-muted-foreground mt-0.5">
+                                      {relativeDate(ev.date)} · {ev.professional}
+                                    </p>
+                                  </div>
+                                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </CollapsibleContent>
+                    </ul>
+                  </Collapsible>
+                  {recentEvolutions.length > 3 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllActivity(v => !v)}
+                      className="mt-3 inline-flex items-center gap-1 font-body text-sm text-primary hover:underline"
+                    >
+                      {showAllActivity ? (
+                        <>Ver menos <ChevronUp className="h-3.5 w-3.5" /></>
+                      ) : (
+                        <>Ver toda la actividad <ChevronDown className="h-3.5 w-3.5" /></>
+                      )}
+                    </button>
+                  )}
                 </div>
               </CardContent>
             </Card>
