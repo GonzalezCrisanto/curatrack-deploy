@@ -120,15 +120,27 @@ export default function CaseDetail() {
       painLevel: rest.painLevel ?? 0,
       odor: rest.odor ?? 'sin_olor',
       evolutionStatus: rest.evolutionStatus ?? 'tratamiento_activo',
+      woundLength: rest.woundLength ?? '',
+      woundWidth: rest.woundWidth ?? '',
+      woundDepth: rest.woundDepth ?? '',
+      tissueTypes: rest.tissueTypes ?? [],
+      edgeTypes: rest.edgeTypes ?? [],
     });
     setEvoPhotos([...photos]);
     setEvoDialogOpen(true);
   };
 
   const persistEvo = (closeCase: boolean) => {
+    const numOrUndef = (v: number | '') => (v === '' ? undefined : Number(v));
+    const base = {
+      ...evoForm,
+      woundLength: numOrUndef(evoForm.woundLength),
+      woundWidth: numOrUndef(evoForm.woundWidth),
+      woundDepth: numOrUndef(evoForm.woundDepth),
+    };
     const payload: Evolution = editingEvo
-      ? { ...editingEvo, ...evoForm, photos: evoPhotos }
-      : { ...evoForm, id: `e${Date.now()}`, photos: evoPhotos } as Evolution;
+      ? { ...editingEvo, ...base, photos: evoPhotos } as Evolution
+      : { ...base, id: `e${Date.now()}`, photos: evoPhotos } as Evolution;
 
     if (editingEvo) {
       updateEvolution(patient.id, woundCase.id, payload);
@@ -154,7 +166,23 @@ export default function CaseDetail() {
     persistEvo(false);
   };
 
-  const setEField = (key: string, value: string | number) => setEvoForm(prev => ({ ...prev, [key]: value }));
+  const setEField = (key: string, value: unknown) => setEvoForm(prev => ({ ...prev, [key]: value as never }));
+
+  const toggleTissue = (t: TissueType) => setEvoForm(prev => ({
+    ...prev,
+    tissueTypes: prev.tissueTypes.includes(t) ? prev.tissueTypes.filter(x => x !== t) : [...prev.tissueTypes, t],
+  }));
+  const toggleEdge = (t: EdgeType) => setEvoForm(prev => ({
+    ...prev,
+    edgeTypes: prev.edgeTypes.includes(t) ? prev.edgeTypes.filter(x => x !== t) : [...prev.edgeTypes, t],
+  }));
+
+  const woundArea = (() => {
+    const l = typeof evoForm.woundLength === 'number' ? evoForm.woundLength : parseFloat(String(evoForm.woundLength));
+    const w = typeof evoForm.woundWidth === 'number' ? evoForm.woundWidth : parseFloat(String(evoForm.woundWidth));
+    if (!isFinite(l) || !isFinite(w) || l <= 0 || w <= 0) return null;
+    return (l * w).toFixed(2);
+  })();
 
   const caseDetails = [
     { icon: Stethoscope, label: 'Tipo de herida', value: woundCase.woundType },
