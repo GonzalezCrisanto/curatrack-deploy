@@ -69,6 +69,17 @@ export default function CaseDetail() {
   const evoPhotoInput = useRef<HTMLInputElement>(null);
   const evoCameraInput = useRef<HTMLInputElement>(null);
 
+  // Auto-open the new-evolution dialog when ?newEvo=1 is present (from Patients quick action)
+  useEffect(() => {
+    if (searchParams.get('newEvo') === '1' && patient && woundCase && !evoDialogOpen) {
+      openNewEvo();
+      const next = new URLSearchParams(searchParams);
+      next.delete('newEvo');
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, patient, woundCase]);
+
   if (!patient || !woundCase) {
     return <AppLayout><div className="p-8 text-center font-body text-muted-foreground">Caso no encontrado</div></AppLayout>;
   }
