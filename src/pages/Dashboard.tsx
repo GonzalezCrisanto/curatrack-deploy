@@ -276,6 +276,49 @@ export default function Dashboard() {
     toast({ title: 'Alerta marcada como atendida', description: 'Se ocultó de la lista de alertas críticas.' });
   };
 
+  const markControlDone = (
+    patientId: string,
+    caseId: string,
+    sourceEvolutionId: string,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    const patient = patients.find(p => p.id === patientId);
+    const caseData = patient?.cases.find(c => c.id === caseId);
+    const sourceEvo = caseData?.evolutions.find(ev => ev.id === sourceEvolutionId);
+    if (!patient || !caseData || !sourceEvo) return;
+
+    const intervalDays = patient.controlIntervalDays && patient.controlIntervalDays > 0
+      ? patient.controlIntervalDays
+      : 7;
+
+    const todayDate = new Date();
+    const todayStr = todayDate.toISOString().split('T')[0];
+    const nextDate = new Date(todayDate);
+    nextDate.setDate(nextDate.getDate() + intervalDays);
+    const nextStr = nextDate.toISOString().split('T')[0];
+
+    const newEvolution = {
+      ...sourceEvo,
+      id: `evo-${Date.now()}`,
+      date: todayStr,
+      time: `${String(todayDate.getHours()).padStart(2, '0')}:${String(todayDate.getMinutes()).padStart(2, '0')}`,
+      professional: currentUser,
+      description: `Control realizado (programado para ${sourceEvo.nextControl}).`,
+      observations: 'Control marcado como realizado desde el panel.',
+      nextControl: nextStr,
+      photos: [],
+      aiSummary: undefined,
+      closedAt: undefined,
+    };
+
+    addEvolution(patientId, caseId, newEvolution);
+    toast({
+      title: 'Control marcado como realizado',
+      description: `Próximo control programado para ${nextStr} (en ${intervalDays} días).`,
+    });
+  };
+
   return (
     <AppLayout>
       <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
