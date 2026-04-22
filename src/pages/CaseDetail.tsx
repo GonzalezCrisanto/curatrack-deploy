@@ -1100,6 +1100,17 @@ export default function CaseDetail() {
                   </div>
                 )}
               </div>
+
+              {/* AI Summary Card — appears after saving a new evolution */}
+              {(aiLoading || aiSummary || aiError) && (
+                <AISummaryCard
+                  summary={aiSummary}
+                  loading={aiLoading}
+                  error={aiError}
+                  onRegenerate={generateAISummary}
+                  onEmitOrder={emitMedicalOrder}
+                />
+              )}
             </div>
 
             {/* Sticky footer */}
