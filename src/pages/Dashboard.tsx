@@ -66,6 +66,7 @@ function avatarColor(seed: string) {
 export default function Dashboard() {
   const { patients, currentUser } = useApp();
   const navigate = useNavigate();
+  const [showAllActivity, setShowAllActivity] = useState(false);
 
   const allCases = patients.flatMap(p => p.cases);
   const activeCases = allCases.filter(c => c.status === 'activo');
