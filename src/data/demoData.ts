@@ -128,6 +128,7 @@ export const infectionSignFields: { key: 'infMalOlor' | 'infEritema' | 'infCalor
   { key: 'infDolorAumentado', label: 'Dolor aumentado' },
 ];
 
+export interface WoundCase {
   id: string;
   patientId: string;
   woundType: string;
