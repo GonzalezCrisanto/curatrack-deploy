@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,9 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from '@/hooks/use-toast';
 import {
   Users, Activity, AlertTriangle, CheckCircle2, TrendingUp, Clock,
   ChevronRight, CalendarClock, ArrowUp, ArrowDown, ArrowRight, ChevronDown, ChevronUp,
+  Search, X, Check,
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import AppLayout from '@/components/AppLayout';
@@ -67,10 +71,15 @@ export default function Dashboard() {
   const { patients, currentUser } = useApp();
   const navigate = useNavigate();
   const [showAllActivity, setShowAllActivity] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [attendedAlerts, setAttendedAlerts] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [woundTypeFilter, setWoundTypeFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('lastEvo');
 
   const allCases = patients.flatMap(p => p.cases);
   const activeCases = allCases.filter(c => c.status === 'activo');
-  const criticalCases = allCases.filter(c => c.status === 'critico');
+  const criticalCases = allCases.filter(c => c.status === 'critico').filter(c => !attendedAlerts.has(c.id));
   const improvingCases = allCases.filter(c => c.status === 'en_mejoria');
   const resolvedCases = allCases.filter(c => c.status === 'resuelto');
   const totalEvolutions = allCases.reduce((sum, c) => sum + c.evolutions.length, 0);
@@ -200,6 +209,66 @@ export default function Dashboard() {
     return 'estable';
   };
 
+  // Map of stat key -> patient predicate
+  const filterPredicates: Record<string, (p: typeof patients[number]) => boolean> = {
+    all: () => true,
+    patients: () => true,
+    active: (p) => p.cases.some(c => c.status === 'activo' || c.status === 'critico' || c.status === 'en_mejoria'),
+    critical: (p) => p.cases.some(c => c.status === 'critico'),
+    improving: (p) => p.cases.some(c => c.status === 'en_mejoria'),
+    resolved: (p) => p.cases.length > 0 && p.cases.every(c => c.status === 'resuelto'),
+    evolutions: (p) => p.cases.some(c => c.evolutions.length > 0),
+  };
+
+  // Available wound types from data
+  const availableWoundTypes = useMemo(
+    () => Array.from(new Set(allCases.map(c => c.woundType))).sort(),
+    [allCases]
+  );
+
+  // Last evolution date per patient
+  const lastEvoDate = (p: typeof patients[number]) => {
+    const dates = p.cases.flatMap(c => c.evolutions.map(e => e.date));
+    return dates.length ? dates.sort().slice(-1)[0] : '';
+  };
+
+  const filteredPatients = useMemo(() => {
+    const pred = filterPredicates[activeFilter] || filterPredicates.all;
+    const q = searchQuery.trim().toLowerCase();
+    let list = patients.filter(pred);
+    if (q) {
+      list = list.filter(p =>
+        `${p.firstName} ${p.lastName}`.toLowerCase().includes(q) ||
+        `${p.lastName} ${p.firstName}`.toLowerCase().includes(q)
+      );
+    }
+    if (woundTypeFilter !== 'all') {
+      list = list.filter(p => p.cases.some(c => c.woundType === woundTypeFilter));
+    }
+    if (sortBy === 'lastEvo') {
+      list = [...list].sort((a, b) => lastEvoDate(b).localeCompare(lastEvoDate(a)));
+    } else if (sortBy === 'name') {
+      list = [...list].sort((a, b) => a.lastName.localeCompare(b.lastName));
+    } else if (sortBy === 'cases') {
+      list = [...list].sort((a, b) => b.cases.length - a.cases.length);
+    }
+    return list;
+  }, [patients, activeFilter, searchQuery, woundTypeFilter, sortBy]);
+
+  const handleStatClick = (key: string) => {
+    setActiveFilter(prev => (prev === key ? 'all' : key));
+  };
+
+  const markAlertAttended = (caseId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setAttendedAlerts(prev => {
+      const next = new Set(prev);
+      next.add(caseId);
+      return next;
+    });
+    toast({ title: 'Alerta marcada como atendida', description: 'Se ocultó de la lista de alertas críticas.' });
+  };
+
   return (
     <AppLayout>
       <div className="bg-muted/30 -m-4 md:-m-6 lg:-m-8 p-4 md:p-6 lg:p-8 min-h-full">
@@ -228,16 +297,24 @@ export default function Dashboard() {
                 : s.trend?.dir === 'down'
                   ? 'text-destructive'
                   : 'text-muted-foreground';
+              const isActive = activeFilter === s.key;
               return (
                 <Card
                   key={s.key}
-                  className={`rounded-xl border border-border/60 border-l-4 ${s.accent} bg-card shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleStatClick(s.key)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleStatClick(s.key); } }}
+                  className={`rounded-xl border border-border/60 border-l-4 ${s.accent} bg-card shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring ${isActive ? 'ring-2 ring-primary/60 shadow-md -translate-y-0.5 bg-primary/[0.03]' : ''}`}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                       <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${s.iconBg}`}>
                         <s.icon className={`h-4.5 w-4.5 ${s.iconColor}`} />
                       </div>
+                      {isActive && (
+                        <span className="font-body text-[10px] uppercase tracking-wide text-primary font-semibold">Filtro</span>
+                      )}
                     </div>
                     <div className="mt-3">
                       <div className="heading-display text-3xl text-foreground leading-none">{s.value}</div>
@@ -389,18 +466,29 @@ export default function Dashboard() {
                             </p>
                           )}
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="shrink-0 font-body text-xs border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/patients/${c.patientId}`);
-                          }}
-                        >
-                          Ver paciente
-                          <ChevronRight className="ml-1 h-3 w-3" />
-                        </Button>
+                        <div className="flex flex-col gap-1.5 shrink-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="font-body text-xs border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/patients/${c.patientId}`);
+                            }}
+                          >
+                            Ver paciente
+                            <ChevronRight className="ml-1 h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="font-body text-[11px] h-7 text-muted-foreground hover:text-success hover:bg-success/10"
+                            onClick={(e) => markAlertAttended(c.id, e)}
+                          >
+                            <Check className="mr-1 h-3 w-3" />
+                            Marcar atendida
+                          </Button>
+                        </div>
                       </div>
                     );
                   })
@@ -479,19 +567,28 @@ export default function Dashboard() {
                       </CollapsibleContent>
                     </ul>
                   </Collapsible>
-                  {recentEvolutions.length > 3 && (
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    {recentEvolutions.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllActivity(v => !v)}
+                        className="inline-flex items-center gap-1 font-body text-sm text-primary hover:underline transition-colors"
+                      >
+                        {showAllActivity ? (
+                          <>Ver menos <ChevronUp className="h-3.5 w-3.5" /></>
+                        ) : (
+                          <>Ver toda la actividad <ChevronDown className="h-3.5 w-3.5" /></>
+                        )}
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => setShowAllActivity(v => !v)}
-                      className="mt-3 inline-flex items-center gap-1 font-body text-sm text-primary hover:underline"
+                      onClick={() => navigate('/patients')}
+                      className="inline-flex items-center gap-1 font-body text-sm text-muted-foreground hover:text-primary transition-colors"
                     >
-                      {showAllActivity ? (
-                        <>Ver menos <ChevronUp className="h-3.5 w-3.5" /></>
-                      ) : (
-                        <>Ver toda la actividad <ChevronDown className="h-3.5 w-3.5" /></>
-                      )}
+                      Ver historial completo <ChevronRight className="h-3.5 w-3.5" />
                     </button>
-                  )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -499,48 +596,135 @@ export default function Dashboard() {
 
           {/* Quick access patients */}
           <Card className="rounded-xl border border-border/60 bg-card shadow-sm">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="heading-display text-lg text-foreground">Pacientes</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/patients')} className="font-body text-sm">
+            <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
+                <CardTitle className="heading-display text-lg text-foreground">Pacientes</CardTitle>
+                {activeFilter !== 'all' && (
+                  <Badge
+                    variant="secondary"
+                    className="font-body text-[11px] gap-1 cursor-pointer hover:bg-secondary/80"
+                    onClick={() => setActiveFilter('all')}
+                  >
+                    Filtro: {stats.find(s => s.key === activeFilter)?.label}
+                    <X className="h-3 w-3" />
+                  </Badge>
+                )}
+                <span className="font-body text-xs text-muted-foreground">
+                  {filteredPatients.length} resultado{filteredPatients.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/patients')} className="font-body text-sm self-start sm:self-auto">
                 Ver todos <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {patients.slice(0, 6).map(p => {
-                  const sev = patientSeverity(p);
-                  return (
-                    <div
-                      key={p.id}
-                      className="group p-4 rounded-xl border border-border/60 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer bg-card"
-                      onClick={() => navigate(`/patients/${p.id}`)}
+              {/* Filter toolbar */}
+              <div className="flex flex-col md:flex-row gap-2 mb-4">
+                <div className="relative flex-1 min-w-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Buscar por nombre..."
+                    className="pl-9 font-body"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted text-muted-foreground"
+                      aria-label="Limpiar búsqueda"
                     >
-                      <div className="flex items-start gap-3">
-                        <Avatar className={`h-10 w-10 ${avatarColor(p.id)}`}>
-                          <AvatarFallback className={`${avatarColor(p.id)} font-body font-semibold text-sm`}>
-                            {getInitials(p.firstName, p.lastName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-body text-sm font-semibold text-foreground truncate">
-                            {p.lastName}, {p.firstName}
-                          </p>
-                          <p className="font-body text-xs text-muted-foreground truncate mt-0.5">
-                            {p.diagnosis}
-                          </p>
-                          <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-                            <Badge variant="outline" className="font-body text-[10px]">
-                              {p.cases.length} caso{p.cases.length !== 1 ? 's' : ''}
-                            </Badge>
-                            {statusBadge(sev)}
-                          </div>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                      </div>
-                    </div>
-                  );
-                })}
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                <Select value={woundTypeFilter} onValueChange={setWoundTypeFilter}>
+                  <SelectTrigger className="md:w-[200px] font-body">
+                    <SelectValue placeholder="Tipo de herida" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las heridas</SelectItem>
+                    {availableWoundTypes.map(t => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="md:w-[200px] font-body">
+                    <SelectValue placeholder="Ordenar por" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="lastEvo">Última evolución</SelectItem>
+                    <SelectItem value="name">Nombre (A-Z)</SelectItem>
+                    <SelectItem value="cases">Cantidad de casos</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+
+              {filteredPatients.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
+                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                    <Users className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <p className="font-body text-sm font-semibold text-foreground">No hay pacientes en este estado</p>
+                  <p className="font-body text-xs text-muted-foreground mt-1">
+                    Probá ajustar los filtros o limpiar la búsqueda.
+                  </p>
+                  {(activeFilter !== 'all' || searchQuery || woundTypeFilter !== 'all') && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-4 font-body"
+                      onClick={() => { setActiveFilter('all'); setSearchQuery(''); setWoundTypeFilter('all'); }}
+                    >
+                      Limpiar filtros
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-fade-in">
+                  {filteredPatients.map(p => {
+                    const sev = patientSeverity(p);
+                    const lastEvo = lastEvoDate(p);
+                    return (
+                      <div
+                        key={p.id}
+                        className="group p-4 rounded-xl border border-border/60 hover:shadow-md hover:-translate-y-0.5 hover:border-primary/40 transition-all duration-200 cursor-pointer bg-card"
+                        onClick={() => navigate(`/patients/${p.id}`)}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Avatar className={`h-10 w-10 ${avatarColor(p.id)}`}>
+                            <AvatarFallback className={`${avatarColor(p.id)} font-body font-semibold text-sm`}>
+                              {getInitials(p.firstName, p.lastName)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-body text-sm font-semibold text-foreground truncate">
+                              {p.lastName}, {p.firstName}
+                            </p>
+                            <p className="font-body text-xs text-muted-foreground truncate mt-0.5">
+                              {p.diagnosis}
+                            </p>
+                            <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                              <Badge variant="outline" className="font-body text-[10px]">
+                                {p.cases.length} caso{p.cases.length !== 1 ? 's' : ''}
+                              </Badge>
+                              {statusBadge(sev)}
+                            </div>
+                            {lastEvo && (
+                              <p className="font-body text-[11px] text-muted-foreground mt-2">
+                                Última evolución: {relativeDate(lastEvo)}
+                              </p>
+                            )}
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
