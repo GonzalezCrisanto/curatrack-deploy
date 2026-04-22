@@ -76,6 +76,7 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [woundTypeFilter, setWoundTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('lastEvo');
+  const [appointmentFilter, setAppointmentFilter] = useState<'all' | 'upcoming' | 'overdue'>('all');
 
   const allCases = patients.flatMap(p => p.cases);
   const activeCases = allCases.filter(c => c.status === 'activo');
@@ -342,11 +343,17 @@ export default function Dashboard() {
 
           {/* Próximos Turnos con Calendario */}
           {(() => {
-            const upcomingDates = upcomingAppointments.map(ap => {
+            const showUpcoming = appointmentFilter === 'all' || appointmentFilter === 'upcoming';
+            const showOverdue = appointmentFilter === 'all' || appointmentFilter === 'overdue';
+
+            const visibleUpcoming = showUpcoming ? upcomingAppointments : [];
+            const visiblePast = showOverdue ? pastAppointments : [];
+
+            const upcomingDates = visibleUpcoming.map(ap => {
               const caseData = allCases.find(c => c.id === ap.caseId);
               return { date: new Date(ap.nextControl + 'T12:00:00'), status: caseData?.status || 'activo' };
             });
-            const pastDates = pastAppointments.map(ap => new Date(ap.nextControl + 'T12:00:00'));
+            const pastDates = visiblePast.map(ap => new Date(ap.nextControl + 'T12:00:00'));
 
             const modifiers = {
               critical: upcomingDates.filter(d => d.status === 'critico').map(d => d.date),
@@ -408,10 +415,22 @@ export default function Dashboard() {
             return (
               <Card className="rounded-xl border border-border/60 bg-card shadow-sm">
                 <CardHeader className="pb-3">
-                  <CardTitle className="heading-display text-lg flex items-center gap-2 text-foreground">
-                    <CalendarClock className="h-5 w-5 text-primary" />
-                    Turnos / Controles
-                  </CardTitle>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <CardTitle className="heading-display text-lg flex items-center gap-2 text-foreground">
+                      <CalendarClock className="h-5 w-5 text-primary" />
+                      Turnos / Controles
+                    </CardTitle>
+                    <Select value={appointmentFilter} onValueChange={(v) => setAppointmentFilter(v as typeof appointmentFilter)}>
+                      <SelectTrigger className="w-full sm:w-[180px] font-body text-sm">
+                        <SelectValue placeholder="Filtrar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos ({upcomingAppointments.length + pastAppointments.length})</SelectItem>
+                        <SelectItem value="upcoming">Próximos ({upcomingAppointments.length})</SelectItem>
+                        <SelectItem value="overdue">Vencidos ({pastAppointments.length})</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col lg:flex-row gap-6">
@@ -443,33 +462,41 @@ export default function Dashboard() {
                     </div>
 
                     <div className="flex-1 space-y-5">
-                      {pastAppointments.length > 0 && (
+                      {showOverdue && visiblePast.length > 0 && (
                         <div>
                           <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-destructive mb-2">
-                            Controles vencidos ({pastAppointments.length})
+                            Controles vencidos ({visiblePast.length})
                           </h3>
                           <div className="grid sm:grid-cols-2 gap-3 content-start">
-                            {pastAppointments.map(ap => renderApt(ap, { past: true }))}
+                            {visiblePast.map(ap => renderApt(ap, { past: true }))}
                           </div>
                         </div>
                       )}
 
-                      <div>
-                        <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                          Próximos turnos ({upcomingAppointments.length})
-                        </h3>
-                        {upcomingAppointments.length > 0 ? (
-                          <div className="grid sm:grid-cols-2 gap-3 content-start">
-                            {upcomingAppointments.map(ap => renderApt(ap))}
-                          </div>
-                        ) : (
-                          <div className="min-h-[140px] flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-6">
-                            <CalendarClock className="h-10 w-10 text-muted-foreground/60 mb-3" />
-                            <p className="font-body text-sm font-semibold text-foreground">No hay próximos turnos</p>
-                            <p className="font-body text-xs text-muted-foreground mt-1">Cuando programes controles, aparecerán aquí.</p>
-                          </div>
-                        )}
-                      </div>
+                      {showUpcoming && (
+                        <div>
+                          <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                            Próximos turnos ({visibleUpcoming.length})
+                          </h3>
+                          {visibleUpcoming.length > 0 ? (
+                            <div className="grid sm:grid-cols-2 gap-3 content-start">
+                              {visibleUpcoming.map(ap => renderApt(ap))}
+                            </div>
+                          ) : (
+                            <div className="min-h-[140px] flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-6">
+                              <CalendarClock className="h-10 w-10 text-muted-foreground/60 mb-3" />
+                              <p className="font-body text-sm font-semibold text-foreground">No hay próximos turnos</p>
+                              <p className="font-body text-xs text-muted-foreground mt-1">Cuando programes controles, aparecerán aquí.</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {!showUpcoming && !showOverdue && (
+                        <div className="min-h-[140px] flex items-center justify-center text-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-6">
+                          <p className="font-body text-sm text-muted-foreground">Sin resultados para el filtro seleccionado.</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
