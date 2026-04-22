@@ -82,64 +82,108 @@ export default function Patients() {
         </div>
 
         <div className="grid gap-3">
-          {filtered.map(p => (
-            <Card
-              key={p.id}
-              className="border-border/50 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => navigate(`/patients/${p.id}`)}
-            >
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h3 className="font-body text-sm font-semibold">{p.lastName}, {p.firstName}</h3>
-                    <Badge variant="outline" className="font-body text-xs">{p.age} años</Badge>
-                    <Badge variant="secondary" className="font-body text-xs">{p.gender}</Badge>
+          {filtered.map(p => {
+            const indicator = getPatientIndicator(p);
+            const meta = indicatorMeta[indicator];
+            const activeCount = getActiveWoundCount(p);
+            const lastEvo = getLastEvolutionDate(p);
+            const firstActiveCase = p.cases.find(c => c.status !== 'resuelto');
+            const handleNewEvo = (e: React.MouseEvent) => {
+              e.stopPropagation();
+              if (firstActiveCase) {
+                navigate(`/patients/${p.id}/cases/${firstActiveCase.id}?newEvo=1`);
+              } else {
+                navigate(`/patients/${p.id}`);
+              }
+            };
+            return (
+              <Card
+                key={p.id}
+                className="border-border/50 hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden"
+                onClick={() => navigate(`/patients/${p.id}`)}
+              >
+                <span className={`absolute left-0 top-0 bottom-0 w-1 ${meta.dotClass}`} aria-hidden />
+                <CardContent className="p-4 flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`h-2.5 w-2.5 rounded-full ${meta.dotClass} ring-2 ${meta.ringClass}`} aria-label={meta.label} />
+                      <h3 className="font-body text-sm font-semibold truncate">{p.lastName}, {p.firstName}</h3>
+                      <Badge variant="outline" className="font-body text-xs">{p.age} años</Badge>
+                      <Badge variant="secondary" className="font-body text-xs">{p.gender}</Badge>
+                      <Badge className={`font-body text-xs border bg-transparent ${meta.textClass} border-current/30`}>
+                        {meta.label}
+                      </Badge>
+                    </div>
+                    <p className="font-body text-xs text-muted-foreground mt-1 truncate">{p.diagnosis}</p>
+                    <div className="flex items-center gap-3 mt-2 flex-wrap">
+                      <span className="font-body text-xs text-muted-foreground">DNI: {p.dni}</span>
+                      <span className="font-body text-xs text-muted-foreground">· {p.assignedProfessional}</span>
+                      <Badge variant="outline" className="font-body text-xs flex items-center gap-1">
+                        <Activity className="h-3 w-3" />
+                        {activeCount} herida{activeCount !== 1 ? 's' : ''} activa{activeCount !== 1 ? 's' : ''}
+                      </Badge>
+                      {lastEvo ? (
+                        <span className="font-body text-xs text-muted-foreground flex items-center gap-1">
+                          <CalendarClock className="h-3 w-3" /> Última evolución: {lastEvo}
+                        </span>
+                      ) : (
+                        <span className="font-body text-xs text-muted-foreground italic">Sin evoluciones</span>
+                      )}
+                    </div>
                   </div>
-                  <p className="font-body text-xs text-muted-foreground mt-1 truncate">{p.diagnosis}</p>
-                  <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <span className="font-body text-xs text-muted-foreground">DNI: {p.dni}</span>
-                    <span className="font-body text-xs text-muted-foreground">· {p.assignedProfessional}</span>
-                    <Badge variant="outline" className="font-body text-xs">
-                      {p.cases.length} caso{p.cases.length !== 1 ? 's' : ''}
-                    </Badge>
-                    {p.cases.some(c => c.status === 'critico') && (
-                      <Badge variant="destructive" className="font-body text-xs">Crítico</Badge>
-                    )}
-                    {p.cases.length > 0 && p.cases.every(c => c.status === 'resuelto') && (
-                      <Badge className="font-body text-xs bg-success/15 text-success border-success/40 border">CERRADA ✅</Badge>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 ml-4 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => openEdit(p, e)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={e => e.stopPropagation()}>
-                        <Trash2 className="h-4 w-4" />
+                  <div className="flex items-center gap-1 ml-2 shrink-0">
+                    {firstActiveCase && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="font-body h-8 hidden sm:inline-flex border-primary/40 text-primary hover:bg-primary/5"
+                        onClick={handleNewEvo}
+                        title="Nueva evolución"
+                      >
+                        <Plus className="mr-1 h-3.5 w-3.5" /> Nueva evolución
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent onClick={e => e.stopPropagation()}>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="heading-display">¿Eliminar paciente?</AlertDialogTitle>
-                        <AlertDialogDescription className="font-body">
-                          Se eliminará a {p.firstName} {p.lastName} y todos sus casos. Esta acción no se puede deshacer.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deletePatient(p.id)} className="font-body bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                          Eliminar
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    )}
+                    {firstActiveCase && (
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 sm:hidden border-primary/40 text-primary"
+                        onClick={handleNewEvo}
+                        title="Nueva evolución"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => openEdit(p, e)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={e => e.stopPropagation()}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent onClick={e => e.stopPropagation()}>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="heading-display">¿Eliminar paciente?</AlertDialogTitle>
+                          <AlertDialogDescription className="font-body">
+                            Se eliminará a {p.firstName} {p.lastName} y todos sus casos. Esta acción no se puede deshacer.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deletePatient(p.id)} className="font-body bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Eliminar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
           {filtered.length === 0 && (
             <div className="text-center py-12">
               <p className="font-body text-muted-foreground">No se encontraron pacientes</p>
