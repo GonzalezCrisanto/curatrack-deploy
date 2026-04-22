@@ -33,6 +33,12 @@ export default function Patients() {
     `${p.firstName} ${p.lastName} ${p.dni} ${p.diagnosis}`.toLowerCase().includes(search.toLowerCase())
   );
 
+  const isHealedPatient = (p: Patient) =>
+    p.cases.length > 0 && p.cases.every(c => c.status === 'resuelto');
+
+  const activePatients = filtered.filter(p => !isHealedPatient(p));
+  const healedPatients = filtered.filter(isHealedPatient);
+
   const openNew = () => {
     setEditing(null);
     setForm({ ...emptyPatient, admissionDate: new Date().toISOString().split('T')[0] });
@@ -81,8 +87,8 @@ export default function Patients() {
           />
         </div>
 
-        <div className="grid gap-3">
-          {filtered.map(p => {
+        {(() => {
+          const renderCard = (p: Patient, dimmed = false) => {
             const indicator = getPatientIndicator(p);
             const meta = indicatorMeta[indicator];
             const activeCount = getActiveWoundCount(p);
@@ -99,7 +105,7 @@ export default function Patients() {
             return (
               <Card
                 key={p.id}
-                className="border-border/50 hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden"
+                className={`border-border/50 hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden ${dimmed ? 'opacity-75' : ''}`}
                 onClick={() => navigate(`/patients/${p.id}`)}
               >
                 <span className={`absolute left-0 top-0 bottom-0 w-1 ${meta.dotClass}`} aria-hidden />
@@ -183,13 +189,46 @@ export default function Patients() {
                 </CardContent>
               </Card>
             );
-          })}
-          {filtered.length === 0 && (
-            <div className="text-center py-12">
-              <p className="font-body text-muted-foreground">No se encontraron pacientes</p>
+          };
+
+          if (filtered.length === 0) {
+            return (
+              <div className="text-center py-12">
+                <p className="font-body text-muted-foreground">No se encontraron pacientes</p>
+              </div>
+            );
+          }
+
+          return (
+            <div className="space-y-8">
+              <section className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="heading-display text-base">Pacientes con casos activos</h2>
+                  <Badge variant="secondary" className="font-body text-xs">{activePatients.length}</Badge>
+                </div>
+                {activePatients.length > 0 ? (
+                  <div className="grid gap-3">
+                    {activePatients.map(p => renderCard(p, false))}
+                  </div>
+                ) : (
+                  <p className="font-body text-sm text-muted-foreground italic">No hay pacientes con casos activos.</p>
+                )}
+              </section>
+
+              {healedPatients.length > 0 && (
+                <section className="space-y-3">
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                    <h2 className="heading-display text-base mt-4 text-muted-foreground">Pacientes curados</h2>
+                    <Badge variant="outline" className="font-body text-xs mt-4">{healedPatients.length}</Badge>
+                  </div>
+                  <div className="grid gap-3">
+                    {healedPatients.map(p => renderCard(p, true))}
+                  </div>
+                </section>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })()}
 
         {/* Patient Form Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
