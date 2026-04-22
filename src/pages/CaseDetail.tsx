@@ -145,6 +145,8 @@ export default function CaseDetail() {
       infPurulenta: rest.infPurulenta ?? false,
       infDolorAumentado: rest.infDolorAumentado ?? false,
       bodyTemperature: rest.bodyTemperature ?? '',
+      requiresMedicalOrder: rest.requiresMedicalOrder ?? false,
+      medicalOrder: rest.medicalOrder ?? '',
     });
     setEvoPhotos([...photos]);
     setEvoDialogOpen(true);
