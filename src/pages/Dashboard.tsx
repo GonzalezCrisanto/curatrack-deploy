@@ -297,16 +297,24 @@ export default function Dashboard() {
                 : s.trend?.dir === 'down'
                   ? 'text-destructive'
                   : 'text-muted-foreground';
+              const isActive = activeFilter === s.key;
               return (
                 <Card
                   key={s.key}
-                  className={`rounded-xl border border-border/60 border-l-4 ${s.accent} bg-card shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleStatClick(s.key)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleStatClick(s.key); } }}
+                  className={`rounded-xl border border-border/60 border-l-4 ${s.accent} bg-card shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring ${isActive ? 'ring-2 ring-primary/60 shadow-md -translate-y-0.5 bg-primary/[0.03]' : ''}`}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                       <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${s.iconBg}`}>
                         <s.icon className={`h-4.5 w-4.5 ${s.iconColor}`} />
                       </div>
+                      {isActive && (
+                        <span className="font-body text-[10px] uppercase tracking-wide text-primary font-semibold">Filtro</span>
+                      )}
                     </div>
                     <div className="mt-3">
                       <div className="heading-display text-3xl text-foreground leading-none">{s.value}</div>
