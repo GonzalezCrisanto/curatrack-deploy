@@ -470,93 +470,242 @@ export default function Dashboard() {
               );
             };
 
+            // Unified chronological list (oldest overdue → furthest upcoming) for list view
+            const q = appointmentSearch.trim().toLowerCase();
+            const matchesSearch = (ap: typeof upcomingAppointments[number]) => {
+              if (!q) return true;
+              const patient = patients.find(p => p.id === ap.patientId);
+              const hay = `${patient?.firstName ?? ''} ${patient?.lastName ?? ''} ${ap.woundType ?? ''} ${ap.professional ?? ''} ${ap.nextControl ?? ''}`.toLowerCase();
+              return hay.includes(q);
+            };
+            const timelineItems = [
+              ...visiblePast.map(ap => ({ ap, past: true })),
+              ...visibleUpcoming.map(ap => ({ ap, past: false })),
+            ]
+              .filter(({ ap }) => matchesSearch(ap))
+              .sort((a, b) => {
+                const ka = `${a.ap.nextControl} ${a.ap.time ?? '00:00'}`;
+                const kb = `${b.ap.nextControl} ${b.ap.time ?? '00:00'}`;
+                return ka.localeCompare(kb);
+              });
+
             return (
               <Card className="rounded-xl border border-border/60 bg-card shadow-sm">
                 <CardHeader className="pb-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                     <CardTitle className="heading-display text-lg flex items-center gap-2 text-foreground">
                       <CalendarClock className="h-5 w-5 text-primary" />
                       Turnos / Controles
                     </CardTitle>
-                    <Select value={appointmentFilter} onValueChange={(v) => setAppointmentFilter(v as typeof appointmentFilter)}>
-                      <SelectTrigger className="w-full sm:w-[180px] font-body text-sm">
-                        <SelectValue placeholder="Filtrar" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos ({upcomingAppointments.length + pastAppointments.length})</SelectItem>
-                        <SelectItem value="upcoming">Próximos ({upcomingAppointments.length})</SelectItem>
-                        <SelectItem value="overdue">Vencidos ({pastAppointments.length})</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <div className="inline-flex rounded-md border border-border/60 bg-background p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setAppointmentView('calendar')}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded font-body text-xs transition-colors ${
+                            appointmentView === 'calendar'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                          aria-pressed={appointmentView === 'calendar'}
+                        >
+                          <CalendarDays className="h-3.5 w-3.5" />
+                          Calendario
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAppointmentView('list')}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded font-body text-xs transition-colors ${
+                            appointmentView === 'list'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                          aria-pressed={appointmentView === 'list'}
+                        >
+                          <ListOrdered className="h-3.5 w-3.5" />
+                          Lista
+                        </button>
+                      </div>
+                      <Select value={appointmentFilter} onValueChange={(v) => setAppointmentFilter(v as typeof appointmentFilter)}>
+                        <SelectTrigger className="w-full sm:w-[180px] font-body text-sm">
+                          <SelectValue placeholder="Filtrar" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos ({upcomingAppointments.length + pastAppointments.length})</SelectItem>
+                          <SelectItem value="upcoming">Próximos ({upcomingAppointments.length})</SelectItem>
+                          <SelectItem value="overdue">Vencidos ({pastAppointments.length})</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-col lg:flex-row gap-6">
-                    <div className="shrink-0">
-                      <Calendar
-                        mode="multiple"
-                        selected={[...upcomingDates.map(d => d.date), ...pastDates]}
-                        className="p-3 pointer-events-auto rounded-xl border border-border/60 bg-background"
-                        modifiers={modifiers}
-                        modifiersStyles={modifiersStyles}
-                      />
-                      <div className="flex flex-wrap gap-3 mt-3 px-1">
-                        {[
-                          { c: 'bg-destructive', l: 'Crítico' },
-                          { c: 'bg-warning', l: 'Activo' },
-                          { c: 'bg-success', l: 'En mejoría' },
-                          { c: 'bg-muted-foreground', l: 'Resuelto' },
-                        ].map(x => (
-                          <div key={x.l} className="flex items-center gap-1.5">
-                            <span className={`h-2.5 w-2.5 rounded-full ${x.c}`} />
-                            <span className="font-body text-xs text-muted-foreground">{x.l}</span>
+                  {appointmentView === 'calendar' ? (
+                    <div className="flex flex-col lg:flex-row gap-6">
+                      <div className="shrink-0">
+                        <Calendar
+                          mode="multiple"
+                          selected={[...upcomingDates.map(d => d.date), ...pastDates]}
+                          className="p-3 pointer-events-auto rounded-xl border border-border/60 bg-background"
+                          modifiers={modifiers}
+                          modifiersStyles={modifiersStyles}
+                        />
+                        <div className="flex flex-wrap gap-3 mt-3 px-1">
+                          {[
+                            { c: 'bg-destructive', l: 'Crítico' },
+                            { c: 'bg-warning', l: 'Activo' },
+                            { c: 'bg-success', l: 'En mejoría' },
+                            { c: 'bg-muted-foreground', l: 'Resuelto' },
+                          ].map(x => (
+                            <div key={x.l} className="flex items-center gap-1.5">
+                              <span className={`h-2.5 w-2.5 rounded-full ${x.c}`} />
+                              <span className="font-body text-xs text-muted-foreground">{x.l}</span>
+                            </div>
+                          ))}
+                          <div className="flex items-center gap-1.5">
+                            <span className="h-2.5 w-2.5 rounded-full border border-dashed border-destructive" />
+                            <span className="font-body text-xs text-muted-foreground">Vencido</span>
                           </div>
-                        ))}
-                        <div className="flex items-center gap-1.5">
-                          <span className="h-2.5 w-2.5 rounded-full border border-dashed border-destructive" />
-                          <span className="font-body text-xs text-muted-foreground">Vencido</span>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex-1 space-y-5">
-                      {showOverdue && visiblePast.length > 0 && (
-                        <div>
-                          <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-destructive mb-2">
-                            Controles vencidos ({visiblePast.length})
-                          </h3>
-                          <div className="grid sm:grid-cols-2 gap-3 content-start">
-                            {visiblePast.map(ap => renderApt(ap, { past: true }))}
-                          </div>
-                        </div>
-                      )}
-
-                      {showUpcoming && (
-                        <div>
-                          <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                            Próximos turnos ({visibleUpcoming.length})
-                          </h3>
-                          {visibleUpcoming.length > 0 ? (
+                      <div className="flex-1 space-y-5">
+                        {showOverdue && visiblePast.length > 0 && (
+                          <div>
+                            <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-destructive mb-2">
+                              Controles vencidos ({visiblePast.length})
+                            </h3>
                             <div className="grid sm:grid-cols-2 gap-3 content-start">
-                              {visibleUpcoming.map(ap => renderApt(ap))}
+                              {visiblePast.map(ap => renderApt(ap, { past: true }))}
                             </div>
-                          ) : (
-                            <div className="min-h-[140px] flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-6">
-                              <CalendarClock className="h-10 w-10 text-muted-foreground/60 mb-3" />
-                              <p className="font-body text-sm font-semibold text-foreground">No hay próximos turnos</p>
-                              <p className="font-body text-xs text-muted-foreground mt-1">Cuando programes controles, aparecerán aquí.</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                          </div>
+                        )}
 
-                      {!showUpcoming && !showOverdue && (
-                        <div className="min-h-[140px] flex items-center justify-center text-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-6">
-                          <p className="font-body text-sm text-muted-foreground">Sin resultados para el filtro seleccionado.</p>
+                        {showUpcoming && (
+                          <div>
+                            <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                              Próximos turnos ({visibleUpcoming.length})
+                            </h3>
+                            {visibleUpcoming.length > 0 ? (
+                              <div className="grid sm:grid-cols-2 gap-3 content-start">
+                                {visibleUpcoming.map(ap => renderApt(ap))}
+                              </div>
+                            ) : (
+                              <div className="min-h-[140px] flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-6">
+                                <CalendarClock className="h-10 w-10 text-muted-foreground/60 mb-3" />
+                                <p className="font-body text-sm font-semibold text-foreground">No hay próximos turnos</p>
+                                <p className="font-body text-xs text-muted-foreground mt-1">Cuando programes controles, aparecerán aquí.</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {!showUpcoming && !showOverdue && (
+                          <div className="min-h-[140px] flex items-center justify-center text-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-6">
+                            <p className="font-body text-sm text-muted-foreground">Sin resultados para el filtro seleccionado.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          value={appointmentSearch}
+                          onChange={(e) => setAppointmentSearch(e.target.value)}
+                          placeholder="Buscar por paciente, tipo de herida, profesional o fecha…"
+                          className="pl-9 pr-9 font-body text-sm"
+                        />
+                        {appointmentSearch && (
+                          <button
+                            type="button"
+                            onClick={() => setAppointmentSearch('')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                            aria-label="Limpiar búsqueda"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {timelineItems.length === 0 ? (
+                        <div className="min-h-[160px] flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-6">
+                          <CalendarClock className="h-10 w-10 text-muted-foreground/60 mb-3" />
+                          <p className="font-body text-sm font-semibold text-foreground">Sin resultados</p>
+                          <p className="font-body text-xs text-muted-foreground mt-1">
+                            Ajustá el filtro o la búsqueda para ver más turnos.
+                          </p>
                         </div>
+                      ) : (
+                        <ol className="relative border-l border-border/60 ml-3 space-y-3">
+                          {timelineItems.map(({ ap, past }, idx) => {
+                            const patient = patients.find(p => p.id === ap.patientId);
+                            const caseData = allCases.find(c => c.id === ap.caseId);
+                            const dotClass = statusDot[caseData?.status || 'activo'];
+                            const prev = timelineItems[idx - 1];
+                            const showDateHeader = !prev || prev.ap.nextControl !== ap.nextControl;
+                            return (
+                              <li key={ap.id + (past ? '-past-li' : '-up-li')} className="ml-6">
+                                <span
+                                  className={`absolute -left-[7px] flex h-3.5 w-3.5 items-center justify-center rounded-full ring-4 ring-card ${
+                                    past ? 'bg-destructive' : dotClass
+                                  }`}
+                                />
+                                {showDateHeader && (
+                                  <p className={`font-body text-xs font-semibold uppercase tracking-wide mb-1.5 ${
+                                    past ? 'text-destructive' : 'text-muted-foreground'
+                                  }`}>
+                                    {ap.nextControl}{past ? ' · Vencido' : ''}
+                                  </p>
+                                )}
+                                <div
+                                  className={`p-3 rounded-xl border transition-all cursor-pointer hover:-translate-y-0.5 hover:shadow-md ${
+                                    past
+                                      ? 'border-destructive/30 bg-destructive/[0.03]'
+                                      : 'border-border/60 bg-card'
+                                  }`}
+                                  onClick={() => navigate(`/patients/${ap.patientId}/cases/${ap.caseId}`)}
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <p className="font-body text-sm font-semibold text-foreground truncate">
+                                          {patient?.lastName}, {patient?.firstName}
+                                        </p>
+                                        {ap.time && (
+                                          <span className="font-body text-[11px] text-muted-foreground">
+                                            {ap.time} hs
+                                          </span>
+                                        )}
+                                        {past && (
+                                          <span className="font-body text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-semibold">
+                                            Vencido
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="font-body text-xs text-muted-foreground mt-0.5 truncate">
+                                        {ap.woundType} · Prof: {ap.professional}
+                                      </p>
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="font-body text-xs h-8 border-success/40 text-success hover:bg-success hover:text-white shrink-0"
+                                      onClick={(e) => markControlDone(ap.patientId, ap.caseId, ap.id, e)}
+                                    >
+                                      <Check className="mr-1 h-3.5 w-3.5" />
+                                      Realizado
+                                    </Button>
+                                  </div>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ol>
                       )}
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             );
