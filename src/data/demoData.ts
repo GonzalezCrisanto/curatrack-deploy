@@ -51,6 +51,8 @@ export interface Evolution {
   infPurulenta?: boolean;
   infDolorAumentado?: boolean;
   bodyTemperature?: number;
+  requiresMedicalOrder?: boolean;
+  medicalOrder?: string;
 }
 
 export const healingFrequencies = [

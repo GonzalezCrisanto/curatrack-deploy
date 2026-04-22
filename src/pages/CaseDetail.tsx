@@ -40,6 +40,8 @@ const emptyEvolution = {
   hasInfectionSigns: false,
   infMalOlor: false, infEritema: false, infCalor: false, infBiofilm: false, infPurulenta: false, infDolorAumentado: false,
   bodyTemperature: '' as number | '',
+  requiresMedicalOrder: false,
+  medicalOrder: '',
 };
 
 export default function CaseDetail() {
@@ -143,6 +145,8 @@ export default function CaseDetail() {
       infPurulenta: rest.infPurulenta ?? false,
       infDolorAumentado: rest.infDolorAumentado ?? false,
       bodyTemperature: rest.bodyTemperature ?? '',
+      requiresMedicalOrder: rest.requiresMedicalOrder ?? false,
+      medicalOrder: rest.medicalOrder ?? '',
     });
     setEvoPhotos([...photos]);
     setEvoDialogOpen(true);
@@ -202,6 +206,112 @@ export default function CaseDetail() {
     if (!isFinite(l) || !isFinite(w) || l <= 0 || w <= 0) return null;
     return (l * w).toFixed(2);
   })();
+
+  const emitMedicalOrder = () => {
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const timeStr = today.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    const orderId = `ORD-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}-${String(today.getHours()).padStart(2, '0')}${String(today.getMinutes()).padStart(2, '0')}`;
+
+    const escape = (s: string) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+    const orderText = evoForm.medicalOrder?.trim() || '(Sin detalle especificado)';
+
+    const html = `<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"/>
+<title>Orden Profesional ${orderId}</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:'Open Sans','Segoe UI',sans-serif;color:#1a1a1a;margin:0 auto;padding:32px;max-width:780px;line-height:1.5}
+  h1,h2{font-family:'Montserrat','Segoe UI',sans-serif;margin:0}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #00965E;padding-bottom:16px;margin-bottom:24px}
+  .brand{color:#00965E;font-size:22px;font-weight:700;letter-spacing:.5px}
+  .brand small{display:block;font-size:11px;color:#666;font-weight:500;letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+  .meta{text-align:right;font-size:12px;color:#555}
+  .meta strong{color:#00965E;font-size:14px;display:block;margin-bottom:2px}
+  h1{font-size:20px;text-align:center;margin:8px 0 24px;text-transform:uppercase;letter-spacing:1px;color:#00965E}
+  .section{margin-bottom:20px;page-break-inside:avoid}
+  .section h2{font-size:13px;color:#00965E;text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid #e5e5e5;padding-bottom:6px;margin-bottom:10px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:13px}
+  .grid div{padding:2px 0}
+  .grid b{color:#444;font-weight:600;display:inline-block;min-width:90px}
+  .order-box{background:#f5faf7;border-left:4px solid #00965E;padding:14px 18px;border-radius:4px;font-size:14px;white-space:pre-wrap;line-height:1.6}
+  .materials{background:#fafafa;border:1px solid #eaeaea;padding:12px;border-radius:4px;font-size:13px;white-space:pre-wrap}
+  .signature{margin-top:48px;display:grid;grid-template-columns:1fr 1fr;gap:48px}
+  .sig-line{border-top:1px solid #333;padding-top:6px;font-size:12px;color:#555;text-align:center}
+  .footer{margin-top:32px;padding-top:12px;border-top:1px solid #e5e5e5;font-size:10px;color:#888;text-align:center}
+  @media print{body{padding:24px} .no-print{display:none}}
+  .actions{position:fixed;top:16px;right:16px;display:flex;gap:8px}
+  .actions button{background:#00965E;color:#fff;border:0;padding:10px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px}
+  .actions button.alt{background:#fff;color:#00965E;border:1px solid #00965E}
+</style></head><body>
+<div class="actions no-print">
+  <button onclick="window.print()">Imprimir / Guardar PDF</button>
+  <button class="alt" onclick="window.close()">Cerrar</button>
+</div>
+<div class="header">
+  <div><div class="brand">CuraTrack<small>Sistema de Gestión de Heridas</small></div></div>
+  <div class="meta"><strong>Orden N° ${escape(orderId)}</strong>Emitida: ${escape(dateStr)} · ${escape(timeStr)}</div>
+</div>
+
+<h1>Orden Profesional</h1>
+
+<div class="section">
+  <h2>Datos del Paciente</h2>
+  <div class="grid">
+    <div><b>Nombre:</b> ${escape(patient.firstName + ' ' + patient.lastName)}</div>
+    <div><b>DNI:</b> ${escape(patient.dni || '—')}</div>
+    <div><b>Edad:</b> ${escape(String(patient.age || '—'))}</div>
+    <div><b>Sexo:</b> ${escape(patient.gender || '—')}</div>
+    <div><b>Teléfono:</b> ${escape(patient.phone || '—')}</div>
+    <div><b>Domicilio:</b> ${escape(patient.address || '—')}</div>
+    <div style="grid-column:1/-1"><b>Diagnóstico:</b> ${escape(patient.diagnosis || '—')}</div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Detalle de la Herida</h2>
+  <div class="grid">
+    <div><b>Tipo:</b> ${escape(woundCase.woundType)}</div>
+    <div><b>Ubicación:</b> ${escape(woundCase.anatomicalLocation)}</div>
+    <div><b>Inicio:</b> ${escape(woundCase.startDate)}</div>
+    <div><b>Estado:</b> ${escape(getStatusLabel(woundCase.status))}</div>
+    <div><b>Tamaño:</b> ${escape(woundCase.size)}</div>
+    <div><b>Profundidad:</b> ${escape(woundCase.depth)}</div>
+    <div><b>Exudado:</b> ${escape(woundCase.exudate)}</div>
+    <div><b>Infección:</b> ${escape(woundCase.infection)}</div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Procedimiento Realizado</h2>
+  <div class="materials">${escape(evoForm.procedure || '—')}</div>
+</div>
+
+<div class="section">
+  <h2>Material de Curación Utilizado</h2>
+  <div class="materials">${escape(evoForm.materials || '—')}</div>
+</div>
+
+<div class="section">
+  <h2>Indicación / Orden Médica</h2>
+  <div class="order-box">${escape(orderText)}</div>
+</div>
+
+<div class="signature">
+  <div class="sig-line">${escape(evoForm.professional || patient.assignedProfessional || '—')}<br/><span style="font-size:10px">Profesional tratante</span></div>
+  <div class="sig-line">Firma y sello</div>
+</div>
+
+<div class="footer">Documento generado electrónicamente por CuraTrack · ${escape(dateStr)} ${escape(timeStr)} · Orden ${escape(orderId)}</div>
+</body></html>`;
+
+    const w = window.open('', '_blank', 'width=900,height=1000');
+    if (!w) { toast.error('Habilitá las ventanas emergentes para emitir la orden.'); return; }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    toast.success(`Orden ${orderId} generada`);
+  };
 
   const caseDetails = [
     { icon: Stethoscope, label: 'Tipo de herida', value: woundCase.woundType },
@@ -791,16 +901,64 @@ export default function CaseDetail() {
                 <Textarea value={evoForm.description} onChange={e => setEField('description', e.target.value)} className="font-body" rows={3} />
               </div>
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Procedimiento</Label>
-                <Textarea value={evoForm.procedure} onChange={e => setEField('procedure', e.target.value)} className="font-body" rows={2} />
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Procedimiento realizado</Label>
+                <Textarea
+                  value={evoForm.procedure}
+                  onChange={e => setEField('procedure', e.target.value)}
+                  className="font-body" rows={3}
+                  placeholder="Ej: Desbridamiento cortante, Lavado con SF, Aplicación de colagenasa..."
+                />
               </div>
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Material de curación</Label>
-                <Textarea value={evoForm.materials} onChange={e => setEField('materials', e.target.value)} className="font-body" rows={2} placeholder="Ej: Solución fisiológica, hidrogel..." />
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Package className="h-3.5 w-3.5" /> Material de curación utilizado
+                </Label>
+                <Textarea
+                  value={evoForm.materials}
+                  onChange={e => setEField('materials', e.target.value)}
+                  className="font-body" rows={3}
+                  placeholder="Ej: Apósito de espuma 10x10, Hidrogel, Gasas, Solución fisiológica 500ml..."
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Observaciones</Label>
                 <Textarea value={evoForm.observations} onChange={e => setEField('observations', e.target.value)} className="font-body" rows={2} />
+              </div>
+
+              {/* Orden médica */}
+              <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="req-order" className="font-body text-sm font-semibold flex items-center gap-1.5">
+                    <FileText className={cn("h-4 w-4", evoForm.requiresMedicalOrder ? "text-primary" : "text-muted-foreground")} />
+                    ¿Requiere orden médica?
+                  </Label>
+                  <Switch
+                    id="req-order"
+                    checked={evoForm.requiresMedicalOrder}
+                    onCheckedChange={(v) => setEField('requiresMedicalOrder', v)}
+                  />
+                </div>
+
+                {evoForm.requiresMedicalOrder && (
+                  <div className="space-y-2 pt-1 animate-fade-in">
+                    <Label className="font-body text-[11px] text-muted-foreground">Detalle de la orden médica</Label>
+                    <Textarea
+                      value={evoForm.medicalOrder}
+                      onChange={e => setEField('medicalOrder', e.target.value)}
+                      className="font-body" rows={4}
+                      placeholder="Ej: Solicitud de cultivo, interconsulta con cirugía vascular, ATB sistémico..."
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="font-body w-full h-11 border-primary/40 text-primary hover:bg-primary/5"
+                      onClick={emitMedicalOrder}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Emitir orden profesional
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Fotos */}
