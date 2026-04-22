@@ -396,81 +396,153 @@ export default function CaseDetail() {
           )}
         </div>
 
-        {/* Evolution Form Dialog */}
+        {/* Evolution Form Dialog — mobile-first */}
         <Dialog open={evoDialogOpen} onOpenChange={setEvoDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="heading-display text-xl">
+          <DialogContent className="max-w-2xl w-full sm:max-w-2xl h-[100dvh] sm:h-auto sm:max-h-[90vh] p-0 gap-0 flex flex-col rounded-none sm:rounded-lg">
+            <DialogHeader className="px-4 sm:px-6 pt-4 pb-3 border-b border-border/50 shrink-0">
+              <DialogTitle className="heading-display text-lg sm:text-xl">
                 {editingEvo ? 'Editar Evolución' : 'Nueva Evolución'}
               </DialogTitle>
             </DialogHeader>
-            <div className="grid sm:grid-cols-2 gap-4 mt-4">
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Fecha</Label>
-                <Input type="date" value={evoForm.date} onChange={e => setEField('date', e.target.value)} className="font-body" />
+
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-5">
+              {/* Fecha de curación + hora */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fecha de curación</Label>
+                  <Input type="date" value={evoForm.healingDate} onChange={e => { setEField('healingDate', e.target.value); setEField('date', e.target.value); }} className="font-body h-11" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Hora</Label>
+                  <Input type="time" value={evoForm.time} onChange={e => setEField('time', e.target.value)} className="font-body h-11" />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Hora</Label>
-                <Input type="time" value={evoForm.time} onChange={e => setEField('time', e.target.value)} className="font-body" />
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label className="font-body text-sm">Profesional</Label>
+
+              {/* Profesional */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Profesional</Label>
                 <Select value={evoForm.professional} onValueChange={v => setEField('professional', v)}>
-                  <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="font-body h-11"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {professionals.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label className="font-body text-sm">Descripción clínica</Label>
-                <Textarea value={evoForm.description} onChange={e => setEField('description', e.target.value)} className="font-body" rows={3} />
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label className="font-body text-sm">Procedimiento realizado</Label>
-                <Textarea value={evoForm.procedure} onChange={e => setEField('procedure', e.target.value)} className="font-body" rows={2} />
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label className="font-body text-sm">Material de curación utilizado</Label>
-                <Textarea value={evoForm.materials} onChange={e => setEField('materials', e.target.value)} className="font-body" rows={2} placeholder="Ej: Solución fisiológica, hidrogel, apósito de espuma..." />
-              </div>
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Frecuencia de curación</Label>
-                <Input value={evoForm.healingFrequency} onChange={e => setEField('healingFrequency', e.target.value)} className="font-body" placeholder="Ej: Cada 48 horas" />
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label className="font-body text-sm">Observaciones</Label>
-                <Textarea value={evoForm.observations} onChange={e => setEField('observations', e.target.value)} className="font-body" rows={2} />
-              </div>
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Próximo control</Label>
-                <Input type="date" value={evoForm.nextControl} onChange={e => setEField('nextControl', e.target.value)} className="font-body" />
+
+              {/* Frecuencia de curación */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Frecuencia de curación</Label>
+                <Select value={evoForm.healingFrequency} onValueChange={v => setEField('healingFrequency', v)}>
+                  <SelectTrigger className="font-body h-11"><SelectValue placeholder="Seleccionar frecuencia" /></SelectTrigger>
+                  <SelectContent>
+                    {healingFrequencies.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Photo upload in evolution */}
-              <div className="space-y-2 sm:col-span-2">
-                <Label className="font-body text-sm">Fotos de la evolución</Label>
+              {/* Dolor — slider 0–10 */}
+              <div className="space-y-2">
+                <div className="flex items-baseline justify-between">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dolor (EVA)</Label>
+                  <span className={cn(
+                    "font-body text-sm font-bold tabular-nums px-2 py-0.5 rounded-md",
+                    evoForm.painLevel <= 3 && "bg-success/15 text-success",
+                    evoForm.painLevel > 3 && evoForm.painLevel <= 6 && "bg-warning/15 text-warning",
+                    evoForm.painLevel > 6 && "bg-destructive/15 text-destructive",
+                  )}>{evoForm.painLevel} / 10</span>
+                </div>
+                <Slider
+                  min={0} max={10} step={1}
+                  value={[evoForm.painLevel]}
+                  onValueChange={([v]) => setEField('painLevel', v)}
+                  className="py-2"
+                />
+                <div className="flex justify-between font-body text-[10px] text-muted-foreground px-0.5">
+                  <span>Sin dolor</span><span>Moderado</span><span>Insoportable</span>
+                </div>
+              </div>
+
+              {/* Olor — chips */}
+              <div className="space-y-2">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Olor</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {odorOptions.map(o => {
+                    const active = evoForm.odor === o.value;
+                    return (
+                      <button
+                        key={o.value}
+                        type="button"
+                        onClick={() => setEField('odor', o.value)}
+                        className={cn(
+                          "h-11 rounded-lg border font-body text-sm font-medium transition-all active:scale-95",
+                          active
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-background text-foreground border-border hover:border-primary/50"
+                        )}
+                      >
+                        {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Estado de evolución */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Estado de evolución</Label>
+                <Select value={evoForm.evolutionStatus} onValueChange={v => setEField('evolutionStatus', v)}>
+                  <SelectTrigger className={cn(
+                    "font-body h-11",
+                    evoForm.evolutionStatus === 'cicatrizada' && "border-success text-success font-semibold",
+                    evoForm.evolutionStatus === 'deterioro' && "border-destructive text-destructive",
+                    evoForm.evolutionStatus === 'requiere_evaluacion' && "border-warning text-warning",
+                  )}><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {evolutionStatuses.map(s => (
+                      <SelectItem key={s.value} value={s.value} className={s.closes ? "text-success font-semibold" : ""}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Próximo control */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Próximo control</Label>
+                <Input type="date" value={evoForm.nextControl} onChange={e => setEField('nextControl', e.target.value)} className="font-body h-11" />
+              </div>
+
+              {/* Descripción/procedimiento/materiales/observaciones */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Descripción clínica</Label>
+                <Textarea value={evoForm.description} onChange={e => setEField('description', e.target.value)} className="font-body" rows={3} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Procedimiento</Label>
+                <Textarea value={evoForm.procedure} onChange={e => setEField('procedure', e.target.value)} className="font-body" rows={2} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Material de curación</Label>
+                <Textarea value={evoForm.materials} onChange={e => setEField('materials', e.target.value)} className="font-body" rows={2} placeholder="Ej: Solución fisiológica, hidrogel..." />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Observaciones</Label>
+                <Textarea value={evoForm.observations} onChange={e => setEField('observations', e.target.value)} className="font-body" rows={2} />
+              </div>
+
+              {/* Fotos */}
+              <div className="space-y-2">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fotos</Label>
                 <div className="flex gap-2">
-                  <input
-                    ref={evoCameraInput}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    onChange={e => { handleFileUpload(e.target.files, 'evolution'); e.target.value = ''; }}
-                  />
-                  <input
-                    ref={evoPhotoInput}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={e => { handleFileUpload(e.target.files, 'evolution'); e.target.value = ''; }}
-                  />
-                  <Button type="button" variant="outline" size="sm" className="font-body" onClick={() => evoCameraInput.current?.click()}>
+                  <input ref={evoCameraInput} type="file" accept="image/*" capture="environment" className="hidden"
+                    onChange={e => { handleFileUpload(e.target.files, 'evolution'); e.target.value = ''; }} />
+                  <input ref={evoPhotoInput} type="file" accept="image/*" multiple className="hidden"
+                    onChange={e => { handleFileUpload(e.target.files, 'evolution'); e.target.value = ''; }} />
+                  <Button type="button" variant="outline" size="sm" className="font-body flex-1 h-11" onClick={() => evoCameraInput.current?.click()}>
                     <Camera className="mr-1.5 h-4 w-4" /> Cámara
                   </Button>
-                  <Button type="button" variant="outline" size="sm" className="font-body" onClick={() => evoPhotoInput.current?.click()}>
+                  <Button type="button" variant="outline" size="sm" className="font-body flex-1 h-11" onClick={() => evoPhotoInput.current?.click()}>
                     <Upload className="mr-1.5 h-4 w-4" /> Subir
                   </Button>
                 </div>
@@ -479,11 +551,9 @@ export default function CaseDetail() {
                     {evoPhotos.map(ph => (
                       <div key={ph.id} className="relative w-20 h-16 rounded-md overflow-hidden border border-border/50 group">
                         <img src={ph.url} alt={ph.caption} className="w-full h-full object-cover" />
-                        <button
-                          type="button"
+                        <button type="button"
                           onClick={() => setEvoPhotos(prev => prev.filter(p => p.id !== ph.id))}
-                          className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
+                          className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center">
                           <X className="h-3 w-3" />
                         </button>
                       </div>
@@ -492,12 +562,47 @@ export default function CaseDetail() {
                 )}
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <Button variant="outline" onClick={() => setEvoDialogOpen(false)} className="font-body">Cancelar</Button>
-              <Button onClick={handleSaveEvo} className="font-body">{editingEvo ? 'Guardar cambios' : 'Registrar evolución'}</Button>
+
+            {/* Sticky footer */}
+            <div className="sticky bottom-0 shrink-0 border-t border-border/50 bg-background/95 backdrop-blur px-4 sm:px-6 py-3 flex gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <Button variant="outline" onClick={() => setEvoDialogOpen(false)} className="font-body h-12 flex-1 sm:flex-none">Cancelar</Button>
+              <Button
+                onClick={handleSaveEvo}
+                className={cn(
+                  "font-body h-12 flex-[2] sm:flex-1 font-semibold",
+                  evoForm.evolutionStatus === 'cicatrizada' && "bg-success text-success-foreground hover:bg-success/90"
+                )}
+              >
+                {evoForm.evolutionStatus === 'cicatrizada'
+                  ? <><CheckCircle2 className="mr-2 h-5 w-5" /> Cerrar evolución</>
+                  : <><Save className="mr-2 h-5 w-5" /> Guardar evolución</>}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Confirm close evolution */}
+        <AlertDialog open={closeConfirmOpen} onOpenChange={setCloseConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="heading-display flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-success" /> ¿Cerrar evolución?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="font-body">
+                Marcarás la herida como <strong>cicatrizada</strong> y el caso quedará <strong>CERRADO</strong>. Podrás verlo en el historial pero no se sugerirán nuevos controles. Esta acción se puede revertir editando el caso.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => persistEvo(true)}
+                className="font-body bg-success text-success-foreground hover:bg-success/90"
+              >
+                Sí, cerrar evolución
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Photo viewer */}
         <Dialog open={!!photoViewer} onOpenChange={() => setPhotoViewer(null)}>
