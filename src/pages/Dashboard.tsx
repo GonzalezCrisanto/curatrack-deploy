@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,9 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import {
   Users, Activity, AlertTriangle, CheckCircle2, TrendingUp, Clock,
-  ChevronRight, CalendarClock, ArrowUp, ArrowDown, ArrowRight,
+  ChevronRight, CalendarClock, ArrowUp, ArrowDown, ArrowRight, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import AppLayout from '@/components/AppLayout';
