@@ -45,6 +45,7 @@ export default function CaseDetail() {
   const [evoForm, setEvoForm] = useState(emptyEvolution);
   const [evoPhotos, setEvoPhotos] = useState<Photo[]>([]);
   const [photoViewer, setPhotoViewer] = useState<string | null>(null);
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
 
   const casePhotoInput = useRef<HTMLInputElement>(null);
   const caseCameraInput = useRef<HTMLInputElement>(null);
@@ -95,9 +96,11 @@ export default function CaseDetail() {
   const openNewEvo = () => {
     setEditingEvo(null);
     const now = new Date();
+    const today = now.toISOString().split('T')[0];
     setEvoForm({
       ...emptyEvolution,
-      date: now.toISOString().split('T')[0],
+      date: today,
+      healingDate: today,
       time: now.toTimeString().slice(0, 5),
       professional: 'Lic. María González',
     });
@@ -108,23 +111,48 @@ export default function CaseDetail() {
   const openEditEvo = (ev: Evolution) => {
     setEditingEvo(ev);
     const { id, photos, ...rest } = ev;
-    setEvoForm(rest);
+    setEvoForm({
+      ...emptyEvolution,
+      ...rest,
+      healingDate: rest.healingDate ?? rest.date,
+      painLevel: rest.painLevel ?? 0,
+      odor: rest.odor ?? 'sin_olor',
+      evolutionStatus: rest.evolutionStatus ?? 'tratamiento_activo',
+    });
     setEvoPhotos([...photos]);
     setEvoDialogOpen(true);
   };
 
-  const handleSaveEvo = () => {
+  const persistEvo = (closeCase: boolean) => {
+    const payload: Evolution = editingEvo
+      ? { ...editingEvo, ...evoForm, photos: evoPhotos }
+      : { ...evoForm, id: `e${Date.now()}`, photos: evoPhotos } as Evolution;
+
     if (editingEvo) {
-      updateEvolution(patient.id, woundCase.id, { ...editingEvo, ...evoForm, photos: evoPhotos });
+      updateEvolution(patient.id, woundCase.id, payload);
     } else {
-      addEvolution(patient.id, woundCase.id, {
-        ...evoForm, id: `e${Date.now()}`, photos: evoPhotos,
-      } as Evolution);
+      addEvolution(patient.id, woundCase.id, payload);
+    }
+
+    if (closeCase) {
+      updateCase(patient.id, { ...woundCase, status: 'resuelto' });
+      toast.success('Evolución cerrada. Caso marcado como cicatrizado.');
+    } else {
+      toast.success(editingEvo ? 'Evolución actualizada' : 'Evolución registrada');
     }
     setEvoDialogOpen(false);
+    setCloseConfirmOpen(false);
   };
 
-  const setEField = (key: string, value: string) => setEvoForm(prev => ({ ...prev, [key]: value }));
+  const handleSaveEvo = () => {
+    if (evoForm.evolutionStatus === 'cicatrizada') {
+      setCloseConfirmOpen(true);
+      return;
+    }
+    persistEvo(false);
+  };
+
+  const setEField = (key: string, value: string | number) => setEvoForm(prev => ({ ...prev, [key]: value }));
 
   const caseDetails = [
     { icon: Stethoscope, label: 'Tipo de herida', value: woundCase.woundType },
