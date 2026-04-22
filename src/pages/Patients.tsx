@@ -110,7 +110,7 @@ export default function Patients() {
                       <h3 className="font-body text-sm font-semibold truncate">{p.lastName}, {p.firstName}</h3>
                       <Badge variant="outline" className="font-body text-xs">{p.age} años</Badge>
                       <Badge variant="secondary" className="font-body text-xs">{p.gender}</Badge>
-                      <Badge className={`font-body text-xs border bg-transparent ${meta.textClass} border-current/30`}>
+                      <Badge variant="outline" className={`font-body text-xs ${meta.textClass}`}>
                         {meta.label}
                       </Badge>
                     </div>
