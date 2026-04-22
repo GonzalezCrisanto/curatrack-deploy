@@ -76,6 +76,7 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [woundTypeFilter, setWoundTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('lastEvo');
+  const [appointmentFilter, setAppointmentFilter] = useState<'all' | 'upcoming' | 'overdue'>('all');
 
   const allCases = patients.flatMap(p => p.cases);
   const activeCases = allCases.filter(c => c.status === 'activo');
