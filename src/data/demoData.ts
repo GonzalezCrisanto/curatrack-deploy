@@ -8,6 +8,9 @@ export interface Photo {
 export type OdorLevel = 'sin_olor' | 'leve' | 'moderado' | 'intenso';
 export type TissueType = 'epitelizacion' | 'granulacion' | 'fibrina' | 'esfacelo' | 'necrosis' | 'hueso_tendon';
 export type EdgeType = 'regular' | 'irregular' | 'macerado' | 'eritematoso' | 'socavado' | 'enrollado' | 'necrosado';
+export type ExudateAmount = 'sin_exudado' | 'escaso' | 'moderado' | 'abundante';
+export type ExudateType = 'seroso' | 'serosanguinolento' | 'sanguinolento' | 'purulento' | 'fibrinoso';
+export type ExudateColor = 'transparente' | 'amarillo' | 'verde' | 'rojo' | 'marron';
 export type EvolutionStatus =
   | 'tratamiento_activo'
   | 'mejoria_progresiva'
