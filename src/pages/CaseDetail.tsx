@@ -627,6 +627,138 @@ export default function CaseDetail() {
                 </div>
               </div>
 
+              {/* Exudado */}
+              <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Droplets className="h-3.5 w-3.5" /> Exudado
+                </Label>
+
+                <div className="space-y-1.5">
+                  <p className="font-body text-[11px] text-muted-foreground">Cantidad</p>
+                  <div className="flex flex-wrap gap-2">
+                    {exudateAmountOptions.map(o => {
+                      const active = evoForm.exudateAmount === o.value;
+                      return (
+                        <button key={o.value} type="button"
+                          onClick={() => setEField('exudateAmount', active ? undefined : o.value)}
+                          className={cn(
+                            "min-h-11 px-4 rounded-full border font-body text-sm font-medium transition-all active:scale-95",
+                            active
+                              ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                              : "bg-background text-foreground border-border hover:border-primary/50"
+                          )}
+                        >{o.label}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <p className="font-body text-[11px] text-muted-foreground">Tipo</p>
+                  <div className="flex flex-wrap gap-2">
+                    {exudateTypeOptions.map(o => {
+                      const active = evoForm.exudateType === o.value;
+                      return (
+                        <button key={o.value} type="button"
+                          onClick={() => setEField('exudateType', active ? undefined : o.value)}
+                          className={cn(
+                            "min-h-11 px-4 rounded-full border font-body text-sm font-medium transition-all active:scale-95",
+                            active
+                              ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                              : "bg-background text-foreground border-border hover:border-primary/50"
+                          )}
+                        >{o.label}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <p className="font-body text-[11px] text-muted-foreground">Color</p>
+                  <div className="flex flex-wrap gap-2">
+                    {exudateColorOptions.map(o => {
+                      const active = evoForm.exudateColor === o.value;
+                      return (
+                        <button key={o.value} type="button"
+                          onClick={() => setEField('exudateColor', active ? undefined : o.value)}
+                          className={cn(
+                            "min-h-11 px-3 rounded-full border font-body text-sm font-medium transition-all active:scale-95 inline-flex items-center gap-2",
+                            active
+                              ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                              : "bg-background text-foreground border-border hover:border-primary/50"
+                          )}
+                        >
+                          <span className={cn("inline-block h-4 w-4 rounded-full shrink-0", o.swatch)} />
+                          {o.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Infección — progressive disclosure */}
+              <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="has-infection" className="font-body text-sm font-semibold flex items-center gap-1.5">
+                    <ShieldAlert className={cn("h-4 w-4", evoForm.hasInfectionSigns ? "text-destructive" : "text-muted-foreground")} />
+                    ¿Presenta signos de infección?
+                  </Label>
+                  <Switch
+                    id="has-infection"
+                    checked={evoForm.hasInfectionSigns}
+                    onCheckedChange={(v) => setEField('hasInfectionSigns', v)}
+                  />
+                </div>
+
+                {evoForm.hasInfectionSigns && (
+                  <div className="space-y-3 pt-1 animate-fade-in">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {infectionSignFields.map(f => {
+                        const checked = !!evoForm[f.key];
+                        return (
+                          <button
+                            key={f.key}
+                            type="button"
+                            onClick={() => setEField(f.key, !checked)}
+                            className={cn(
+                              "min-h-11 px-3 rounded-lg border font-body text-sm text-left flex items-center justify-between gap-2 transition-all active:scale-[0.98]",
+                              checked
+                                ? "bg-destructive/10 text-destructive border-destructive/40"
+                                : "bg-background text-foreground border-border hover:border-destructive/30"
+                            )}
+                          >
+                            <span>{f.label}</span>
+                            <span className={cn(
+                              "h-5 w-5 rounded-md border flex items-center justify-center shrink-0",
+                              checked ? "bg-destructive border-destructive" : "border-border"
+                            )}>
+                              {checked && <CheckCircle2 className="h-4 w-4 text-destructive-foreground" />}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="font-body text-[11px] text-muted-foreground flex items-center gap-1">
+                        <Thermometer className="h-3 w-3" /> Temperatura corporal (°C)
+                      </Label>
+                      <Input
+                        type="number" inputMode="decimal" step="0.1" min="30" max="45"
+                        value={evoForm.bodyTemperature}
+                        onChange={e => setEField('bodyTemperature', e.target.value === '' ? '' : Number(e.target.value))}
+                        className={cn(
+                          "font-body h-11 tabular-nums",
+                          typeof evoForm.bodyTemperature === 'number' && evoForm.bodyTemperature >= 38 && "border-destructive text-destructive font-semibold"
+                        )}
+                        placeholder="36.5"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Estado de evolución */}
               <div className="space-y-1.5">
                 <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Estado de evolución</Label>
