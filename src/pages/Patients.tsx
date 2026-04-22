@@ -28,6 +28,7 @@ export default function Patients() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
   const [form, setForm] = useState(emptyPatient);
+  const [woundPickerPatient, setWoundPickerPatient] = useState<Patient | null>(null);
 
   const filtered = patients.filter(p =>
     `${p.firstName} ${p.lastName} ${p.dni} ${p.diagnosis}`.toLowerCase().includes(search.toLowerCase())
