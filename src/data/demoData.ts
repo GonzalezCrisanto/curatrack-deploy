@@ -96,7 +96,38 @@ export const edgeTypeOptions: { value: EdgeType; label: string }[] = [
   { value: 'necrosado', label: 'Necrosado' },
 ];
 
-export interface WoundCase {
+export const exudateAmountOptions: { value: ExudateAmount; label: string }[] = [
+  { value: 'sin_exudado', label: 'Sin exudado' },
+  { value: 'escaso', label: 'Escaso' },
+  { value: 'moderado', label: 'Moderado' },
+  { value: 'abundante', label: 'Abundante' },
+];
+
+export const exudateTypeOptions: { value: ExudateType; label: string }[] = [
+  { value: 'seroso', label: 'Seroso' },
+  { value: 'serosanguinolento', label: 'Serosanguinolento' },
+  { value: 'sanguinolento', label: 'Sanguinolento' },
+  { value: 'purulento', label: 'Purulento' },
+  { value: 'fibrinoso', label: 'Fibrinoso' },
+];
+
+export const exudateColorOptions: { value: ExudateColor; label: string; swatch: string }[] = [
+  { value: 'transparente', label: 'Transparente', swatch: 'bg-background border-2 border-border' },
+  { value: 'amarillo', label: 'Amarillo', swatch: 'bg-yellow-400' },
+  { value: 'verde', label: 'Verde', swatch: 'bg-green-500' },
+  { value: 'rojo', label: 'Rojo', swatch: 'bg-red-500' },
+  { value: 'marron', label: 'Marrón', swatch: 'bg-amber-800' },
+];
+
+export const infectionSignFields: { key: 'infMalOlor' | 'infEritema' | 'infCalor' | 'infBiofilm' | 'infPurulenta' | 'infDolorAumentado'; label: string }[] = [
+  { key: 'infMalOlor', label: 'Mal olor' },
+  { key: 'infEritema', label: 'Eritema perilesional' },
+  { key: 'infCalor', label: 'Calor local' },
+  { key: 'infBiofilm', label: 'Sospecha de biofilm' },
+  { key: 'infPurulenta', label: 'Secreción purulenta' },
+  { key: 'infDolorAumentado', label: 'Dolor aumentado' },
+];
+
   id: string;
   patientId: string;
   woundType: string;
