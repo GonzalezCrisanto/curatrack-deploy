@@ -40,6 +40,8 @@ const emptyEvolution = {
   hasInfectionSigns: false,
   infMalOlor: false, infEritema: false, infCalor: false, infBiofilm: false, infPurulenta: false, infDolorAumentado: false,
   bodyTemperature: '' as number | '',
+  requiresMedicalOrder: false,
+  medicalOrder: '',
 };
 
 export default function CaseDetail() {
