@@ -1410,8 +1410,9 @@ export default function CaseDetail() {
               <Button
                 className="font-body h-11 flex-1 sm:flex-none"
                 onClick={() => {
-                  openSummaryPrintWindow(summaryViewerEvo);
-                  toast.info('Elegí "Guardar como PDF" en el diálogo de impresión.');
+                  if (openSummaryPrintWindow(summaryViewerEvo)) {
+                    toast.info('Elegí "Guardar como PDF" en el diálogo de impresión.');
+                  }
                 }}
               >
                 <Download className="mr-1.5 h-4 w-4" /> Descargar PDF
