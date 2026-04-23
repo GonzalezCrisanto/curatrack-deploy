@@ -37,7 +37,7 @@ const statusBadgeClass: Record<string, string> = {
 };
 
 const emptyEvolution = {
-  date: '', time: '', professional: '', description: '', procedure: '', materials: '', healingFrequency: '', observations: '', nextControl: '',
+  date: '', time: '', professional: '', description: '', procedure: '', materials: '', healingFrequency: '', healingFrequencyDays: '' as number | '', observations: '', nextControl: '',
   healingDate: '', painLevel: 0 as number, odor: 'sin_olor' as OdorLevel, evolutionStatus: 'tratamiento_activo' as EvolutionStatus,
   woundLength: '' as number | '', woundWidth: '' as number | '', woundDepth: '' as number | '',
   tissueTypes: [] as TissueType[], edgeTypes: [] as EdgeType[],
@@ -289,6 +289,7 @@ export default function CaseDetail() {
       woundWidth: numOrUndef(evoForm.woundWidth),
       woundDepth: numOrUndef(evoForm.woundDepth),
       bodyTemperature: numOrUndef(evoForm.bodyTemperature),
+      healingFrequencyDays: numOrUndef(evoForm.healingFrequencyDays),
     };
     const payload: Evolution = editingEvo
       ? { ...editingEvo, ...base, photos: evoPhotos } as Evolution
@@ -325,6 +326,14 @@ export default function CaseDetail() {
   };
 
   const handleSaveEvo = () => {
+    // Si no hay frecuencia preestablecida (vacía o "A demanda"), exigir días manuales
+    const presetSet = ['Diaria', 'Cada 48hs', 'Cada 72hs', 'Semanal'];
+    const hasPreset = presetSet.includes((evoForm.healingFrequency || '').trim());
+    const manualDays = evoForm.healingFrequencyDays === '' ? null : Number(evoForm.healingFrequencyDays);
+    if (!hasPreset && (!manualDays || manualDays <= 0)) {
+      toast.error('Indicá la frecuencia de curación o, en su defecto, los días estimados entre curaciones.');
+      return;
+    }
     if (evoForm.evolutionStatus === 'cicatrizada') {
       setCloseConfirmOpen(true);
       return;
