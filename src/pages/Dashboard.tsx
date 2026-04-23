@@ -69,9 +69,7 @@ function avatarColor(seed: string) {
 export default function Dashboard() {
   const { patients, currentUser } = useApp();
   const navigate = useNavigate();
-  const [showAllActivity, setShowAllActivity] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
-  const [attendedAlerts, setAttendedAlerts] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [woundTypeFilter, setWoundTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('lastEvo');
