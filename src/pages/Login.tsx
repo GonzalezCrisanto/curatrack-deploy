@@ -5,20 +5,33 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, Users } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import logo from '@/assets/curatrack-logo.png';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { setIsLoggedIn } = useApp();
-  const [email, setEmail] = useState('maria.gonzalez@curatrack.com');
+  const { login, allUsers } = useApp();
+  const [email, setEmail] = useState('maria@curatrack.demo');
   const [password, setPassword] = useState('demo1234');
   const [showPass, setShowPass] = useState(false);
 
+  // Only show seeded demo accounts (those whose email ends with @curatrack.demo)
+  const demoAccounts = allUsers.filter(u => u.email.endsWith('@curatrack.demo'));
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoggedIn(true);
+    const result = login(email, password);
+    if (!result.ok) {
+      toast({ title: 'No se pudo iniciar sesión', description: result.message, variant: 'destructive' });
+      return;
+    }
     navigate('/dashboard');
+  };
+
+  const pickDemo = (demoEmail: string) => {
+    setEmail(demoEmail);
+    setPassword('demo1234');
   };
 
   return (
@@ -37,8 +50,7 @@ export default function Login() {
       </div>
 
       {/* Right panel */}
-      <div className="flex-1 flex items-center justify-center p-6 bg-background relative">
-        {/* Back to landing */}
+      <div className="flex-1 flex items-center justify-center p-6 bg-background relative overflow-y-auto">
         <Button
           variant="ghost"
           size="sm"
@@ -48,7 +60,7 @@ export default function Login() {
           <ArrowLeft className="mr-1 h-4 w-4" /> Volver al inicio
         </Button>
 
-        <Card className="w-full max-w-md border-border/50 shadow-lg">
+        <Card className="w-full max-w-md border-border/50 shadow-lg my-8">
           <CardHeader className="text-center pb-2">
             <img src={logo} alt="CuraTrack" className="h-14 mx-auto mb-4 lg:hidden" />
             <h1 className="heading-display text-2xl">Iniciar sesión</h1>
@@ -91,6 +103,42 @@ export default function Login() {
                 <LogIn className="mr-2 h-4 w-4" /> Ingresar
               </Button>
 
+              {/* Demo accounts picker */}
+              {demoAccounts.length > 0 && (
+                <div className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-2">
+                  <div className="flex items-center gap-1.5 font-body text-xs font-semibold text-foreground">
+                    <Users className="h-3.5 w-3.5 text-primary" /> Cuentas demo
+                  </div>
+                  <p className="font-body text-[11px] text-muted-foreground">
+                    Probá cómo cada profesional ve sólo sus pacientes (y los compartidos):
+                  </p>
+                  <div className="grid gap-1.5">
+                    {demoAccounts.map(u => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => pickDemo(u.email)}
+                        className={`text-left rounded-md border px-2.5 py-1.5 transition-colors ${
+                          email === u.email
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border/60 bg-background hover:border-primary/40'
+                        }`}
+                      >
+                        <div className="font-body text-xs font-semibold text-foreground">
+                          {u.role === 'medico' ? 'Dr.' : 'Lic.'} {u.firstName} {u.lastName}
+                        </div>
+                        <div className="font-body text-[11px] text-muted-foreground">
+                          {u.email} · {u.institution || 'Independiente'}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="font-body text-[11px] text-muted-foreground">
+                    Contraseña: <span className="font-mono">demo1234</span>
+                  </p>
+                </div>
+              )}
+
               <div className="relative py-1">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t border-border" />
@@ -109,10 +157,6 @@ export default function Login() {
               >
                 <UserPlus className="mr-2 h-4 w-4" /> Crear cuenta
               </Button>
-
-              <p className="text-center text-xs text-muted-foreground font-body">
-                Demo: las credenciales ya están precargadas
-              </p>
             </form>
           </CardContent>
         </Card>
