@@ -588,11 +588,11 @@ export default function PatientDetail() {
 
 function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-start gap-2">
+    <div className="flex items-start gap-1.5 min-w-0">
       <div className="text-muted-foreground mt-0.5 shrink-0">{icon}</div>
-      <div>
-        <p className="font-body text-xs text-muted-foreground">{label}</p>
-        <p className="font-body text-sm">{value}</p>
+      <div className="min-w-0">
+        <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground leading-tight">{label}</p>
+        <p className="font-body text-sm leading-snug truncate" title={value}>{value}</p>
       </div>
     </div>
   );
