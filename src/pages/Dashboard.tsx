@@ -338,8 +338,11 @@ export default function Dashboard() {
             const showUpcoming = appointmentFilter === 'all' || appointmentFilter === 'upcoming';
             const showOverdue = appointmentFilter === 'all' || appointmentFilter === 'overdue';
 
-            const visibleUpcoming = showUpcoming ? upcomingAppointments : [];
-            const visiblePast = showOverdue ? pastAppointments : [];
+            const selectedISO = selectedDay ? toISODate(selectedDay) : null;
+            const visibleUpcoming = (showUpcoming ? upcomingAppointments : [])
+              .filter(ap => !selectedISO || ap.nextControl === selectedISO);
+            const visiblePast = (showOverdue ? pastAppointments : [])
+              .filter(ap => !selectedISO || ap.nextControl === selectedISO);
 
             const upcomingDates = visibleUpcoming.map(ap => {
               const caseData = allCases.find(c => c.id === ap.caseId);
