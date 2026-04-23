@@ -6,12 +6,32 @@ import {
 } from '@/data/demoUsers';
 
 // ---------- Storage keys ----------
+// Bump DATA_VERSION whenever the seed demo data changes shape so existing
+// localStorage caches get refreshed instead of overriding the new defaults.
+const DATA_VERSION = 'v2-2026-04-clinical-fields';
 const LS_USERS = 'curatrack:users';
 const LS_TEAMS = 'curatrack:teams';
 const LS_PATIENTS = 'curatrack:patients';        // Patient[] + ownerId map embedded
 const LS_OWNERS = 'curatrack:patientOwners';     // Record<patientId, userId>
 const LS_SHARES = 'curatrack:patientShares';     // PatientShare[]
 const LS_SESSION = 'curatrack:sessionUserId';
+const LS_VERSION = 'curatrack:dataVersion';
+
+// One-time migration: if the cached data version differs, wipe the demo caches
+// so the new seeds in demoData/demoUsers take effect. Session is preserved.
+if (typeof window !== 'undefined') {
+  try {
+    const stored = localStorage.getItem(LS_VERSION);
+    if (stored !== DATA_VERSION) {
+      localStorage.removeItem(LS_PATIENTS);
+      localStorage.removeItem(LS_OWNERS);
+      localStorage.removeItem(LS_SHARES);
+      localStorage.removeItem(LS_USERS);
+      localStorage.removeItem(LS_TEAMS);
+      localStorage.setItem(LS_VERSION, DATA_VERSION);
+    }
+  } catch { /* ignore */ }
+}
 
 function loadLS<T>(key: string, fallback: T): T {
   try {
