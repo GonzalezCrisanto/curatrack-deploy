@@ -627,7 +627,6 @@ export default function PatientDetail() {
             },
           };
           activeCases.forEach(c => {
-          activeCases.forEach(c => {
             // Suggested per-case (dashed circle with case color)
             const sugDates = suggestionsByCase.filter(s => s.caseId === c.id).map(s => s.date);
             if (sugDates.length > 0) {
