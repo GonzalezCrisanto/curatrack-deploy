@@ -6,14 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import {
   Users, Activity, AlertTriangle, CheckCircle2, TrendingUp, Clock,
-  ChevronRight, CalendarClock, ArrowUp, ArrowDown, ArrowRight, ChevronDown, ChevronUp,
-  Search, X, Check,
+  ChevronRight, CalendarClock, ArrowUp, ArrowDown, ArrowRight,
+  Search, X,
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import AppLayout from '@/components/AppLayout';
