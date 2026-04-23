@@ -367,8 +367,20 @@ export default function Patients() {
                     <Label className="font-body text-sm">Edad <span className="text-destructive">*</span></Label>
                     <Input
                       type="number"
+                      min={0}
+                      max={120}
+                      step={1}
+                      inputMode="numeric"
                       value={form.age || ''}
-                      onChange={e => setField('age', parseInt(e.target.value) || 0)}
+                      onChange={e => {
+                        const raw = e.target.value;
+                        if (raw === '') return setField('age', 0);
+                        const n = parseInt(raw, 10);
+                        if (Number.isNaN(n)) return;
+                        // Clamp 0–120
+                        setField('age', Math.max(0, Math.min(120, n)));
+                      }}
+                      placeholder="0 – 120"
                       className={`font-body ${errors.age ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                       aria-invalid={!!errors.age}
                     />
