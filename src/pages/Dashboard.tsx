@@ -257,7 +257,7 @@ export default function Dashboard() {
   }, [patients, activeFilter, searchQuery, woundTypeFilter, sortBy]);
 
   const handleStatClick = (key: string) => {
-    setActiveFilter(prev => (prev === key ? 'all' : key));
+    navigate(`/patients?filter=${key}`);
   };
 
   return (
