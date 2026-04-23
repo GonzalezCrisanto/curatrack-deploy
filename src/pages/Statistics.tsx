@@ -105,8 +105,16 @@ const infectionLabel = Object.fromEntries(infectionSignFields.map(o => [o.key, o
 export default function Statistics() {
   const { patients } = useApp();
   const [patientFilter, setPatientFilter] = useState<string>('all');
-  const [fromDate, setFromDate] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
+  // Default range: last 30 days through today (inclusive).
+  const defaultRange = useMemo(() => {
+    const today = new Date();
+    const from = new Date();
+    from.setDate(today.getDate() - 30);
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+    return { from: iso(from), to: iso(today) };
+  }, []);
+  const [fromDate, setFromDate] = useState<string>(defaultRange.from);
+  const [toDate, setToDate] = useState<string>(defaultRange.to);
 
   const filteredPatients = useMemo(() => {
     return patientFilter === 'all'
