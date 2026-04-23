@@ -654,10 +654,29 @@ export default function PatientDetail() {
           });
 
           const openNewAppointment = (preselectDate?: string, preselectCaseId?: string) => {
-            setApptCaseId(preselectCaseId || activeCases[0]?.id || '');
-            // Default suggested date: 7 days ahead if nothing better
-            setApptDate(preselectDate || new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-            setApptTime('09:00');
+            const caseId = preselectCaseId || activeCases[0]?.id || '';
+            setApptCaseId(caseId);
+
+            // Default date: first suggested date for the chosen case (or earliest overall),
+            // falling back to 7 days ahead if no suggestion exists.
+            let defaultDate = preselectDate;
+            if (!defaultDate) {
+              const sortedSugs = [...suggestionsByCase].sort((a, b) => a.date.getTime() - b.date.getTime());
+              const forCase = caseId ? sortedSugs.find(s => s.caseId === caseId) : undefined;
+              const chosen = forCase || sortedSugs[0];
+              defaultDate = chosen
+                ? chosen.date.toISOString().split('T')[0]
+                : new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            }
+            setApptDate(defaultDate);
+
+            // Default time: first 15-min slot from 09:00 not colliding with any appointment that day.
+            const takenThatDay = new Set<string>();
+            patients.forEach(p => p.cases.forEach(c => c.evolutions.forEach(e => {
+              if (e.nextControl === defaultDate && e.time) takenThatDay.add(e.time);
+            })));
+            setApptTime(pickAvailableTime(takenThatDay));
+
             setApptDialogOpen(true);
           };
 
