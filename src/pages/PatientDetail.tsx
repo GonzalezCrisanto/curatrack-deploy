@@ -169,6 +169,21 @@ export default function PatientDetail() {
               }))
           );
 
+          // Appointments from OTHER patients (to avoid scheduling clashes)
+          const otherPatientsAppointments = patients
+            .filter(p => p.id !== patient.id)
+            .flatMap(p => p.cases.flatMap(c =>
+              c.evolutions
+                .filter(e => e.nextControl && e.nextControl.trim() !== '' && new Date(e.nextControl + 'T12:00:00') >= today)
+                .map(e => ({
+                  date: new Date(e.nextControl + 'T12:00:00'),
+                  time: e.time || '',
+                  patientName: `${p.lastName}, ${p.firstName}`,
+                  woundType: c.woundType,
+                }))
+            ));
+          const otherDates = otherPatientsAppointments.map(a => a.date);
+          const otherDateStrings = new Set(otherDates.map(d => d.toISOString().split('T')[0]));
           // Suggested future dates based on interval (per patient)
           const interval = patient.controlIntervalDays || 7;
           const suggestedDates: Date[] = [];
