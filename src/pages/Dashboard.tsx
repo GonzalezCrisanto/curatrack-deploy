@@ -501,7 +501,7 @@ export default function Dashboard() {
                           <X className="h-3 w-3" /> Quitar filtro de día ({toISODate(selectedDay)})
                         </button>
                       )}
-                      <div className="flex flex-wrap gap-3 mt-3 px-1">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 px-1 w-full max-w-[280px]">
                         {[
                           { c: 'bg-destructive', l: 'Crítico' },
                           { c: 'bg-warning', l: 'Activo' },
@@ -513,6 +513,13 @@ export default function Dashboard() {
                             <span className="font-body text-xs text-muted-foreground">{x.l}</span>
                           </div>
                         ))}
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ background: 'conic-gradient(hsl(var(--warning)) 0 50%, hsl(var(--destructive)) 50% 100%)' }}
+                          />
+                          <span className="font-body text-xs text-muted-foreground">Varios casos</span>
+                        </div>
                         <div className="flex items-center gap-1.5">
                           <span className="h-2.5 w-2.5 rounded-full border border-dashed border-destructive" />
                           <span className="font-body text-xs text-muted-foreground">Vencido</span>
