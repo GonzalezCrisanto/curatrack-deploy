@@ -196,13 +196,20 @@ export default function PatientDetail() {
           }
 
           // Build dynamic modifiers: one modifier key per case
-          const modifiers: Record<string, Date[]> = { suggested: suggestedDates };
+          const modifiers: Record<string, Date[]> = { suggested: suggestedDates, other: otherDates };
           const modifiersStyles: Record<string, React.CSSProperties> = {
             suggested: {
               backgroundColor: 'transparent',
               color: 'hsl(var(--muted-foreground))',
               borderRadius: '9999px',
               border: '1.5px dashed hsl(var(--muted-foreground) / 0.5)',
+            },
+            other: {
+              backgroundColor: 'hsl(var(--muted))',
+              color: 'hsl(var(--muted-foreground))',
+              borderRadius: '9999px',
+              border: '1.5px solid hsl(var(--muted-foreground) / 0.4)',
+              opacity: 0.7,
             },
           };
           activeCases.forEach(c => {
@@ -218,6 +225,13 @@ export default function PatientDetail() {
               };
             }
           });
+
+          const openNewAppointment = (preselectDate?: string) => {
+            setApptCaseId(activeCases[0]?.id || '');
+            setApptDate(preselectDate || new Date(today.getTime() + interval * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+            setApptTime('09:00');
+            setApptDialogOpen(true);
+          };
 
           return (
             <Card className="border-border/50">
