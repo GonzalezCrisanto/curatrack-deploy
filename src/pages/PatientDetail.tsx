@@ -70,6 +70,41 @@ export default function PatientDetail() {
 
   const setCField = (key: string, value: string) => setCaseForm(prev => ({ ...prev, [key]: value }));
 
+  const handleSaveAppointment = () => {
+    if (!apptCaseId || !apptDate) return;
+    const newEvo = {
+      id: `evo-${Date.now()}`,
+      date: apptDate,
+      time: apptTime,
+      professional: patient.assignedProfessional || '',
+      description: 'Turno programado',
+      procedure: '',
+      materials: '',
+      healingFrequency: '',
+      observations: '',
+      nextControl: apptDate,
+      photos: [],
+    };
+    addEvolution(patient.id, apptCaseId, newEvo);
+    setApptDialogOpen(false);
+  };
+
+  // Compute conflicts for currently selected appointment date
+  const apptConflicts = useMemo(() => {
+    if (!apptDate) return [] as { patientName: string; time: string; woundType: string }[];
+    return patients
+      .filter(p => p.id !== patient.id)
+      .flatMap(p => p.cases.flatMap(c =>
+        c.evolutions
+          .filter(e => e.nextControl === apptDate)
+          .map(e => ({
+            patientName: `${p.lastName}, ${p.firstName}`,
+            time: e.time || '',
+            woundType: c.woundType,
+          }))
+      ));
+  }, [patients, patient.id, apptDate]);
+
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
