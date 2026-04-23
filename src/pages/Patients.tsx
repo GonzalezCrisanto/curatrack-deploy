@@ -346,22 +346,15 @@ export default function Patients() {
                 <Label className="font-body text-sm">Diagnóstico</Label>
                 <Textarea value={form.diagnosis} onChange={e => setField('diagnosis', e.target.value)} className="font-body" />
               </div>
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Profesional asignado</Label>
-                <Select value={form.assignedProfessional} onValueChange={v => setField('assignedProfessional', v)}>
-                  <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {professionals.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Fecha de ingreso</Label>
-                <Input type="date" value={form.admissionDate} onChange={e => setField('admissionDate', e.target.value)} className="font-body" />
-              </div>
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Intervalo entre controles (días)</Label>
-                <Input type="number" min={1} max={90} value={form.controlIntervalDays} onChange={e => setField('controlIntervalDays', e.target.value)} className="font-body" placeholder="ej: 7" />
+              <div className="space-y-2 sm:col-span-2">
+                <Label className="font-body text-sm">Profesional asignado <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                <ProfessionalCombobox
+                  value={form.assignedProfessional}
+                  onChange={v => setField('assignedProfessional', v)}
+                />
+                <p className="font-body text-[11px] text-muted-foreground">
+                  Podés elegir uno del listado, escribir otro nombre o dejarlo en blanco para asignar después.
+                </p>
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label className="font-body text-sm">Observaciones</Label>
