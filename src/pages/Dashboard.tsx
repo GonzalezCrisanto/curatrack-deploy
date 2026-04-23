@@ -6,14 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import {
   Users, Activity, AlertTriangle, CheckCircle2, TrendingUp, Clock,
-  ChevronRight, CalendarClock, ArrowUp, ArrowDown, ArrowRight, ChevronDown, ChevronUp,
-  Search, X, Check, CalendarDays, ListOrdered,
+  ChevronRight, CalendarClock, ArrowUp, ArrowDown, ArrowRight,
+  Search, X,
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import AppLayout from '@/components/AppLayout';
@@ -68,21 +67,17 @@ function avatarColor(seed: string) {
 }
 
 export default function Dashboard() {
-  const { patients, currentUser, addEvolution } = useApp();
+  const { patients, currentUser } = useApp();
   const navigate = useNavigate();
-  const [showAllActivity, setShowAllActivity] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
-  const [attendedAlerts, setAttendedAlerts] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [woundTypeFilter, setWoundTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('lastEvo');
   const [appointmentFilter, setAppointmentFilter] = useState<'all' | 'upcoming' | 'overdue'>('all');
-  const [appointmentView, setAppointmentView] = useState<'calendar' | 'list'>('calendar');
-  const [appointmentSearch, setAppointmentSearch] = useState('');
 
   const allCases = patients.flatMap(p => p.cases);
   const activeCases = allCases.filter(c => c.status === 'activo');
-  const criticalCases = allCases.filter(c => c.status === 'critico').filter(c => !attendedAlerts.has(c.id));
+  const criticalCases = allCases.filter(c => c.status === 'critico');
   const improvingCases = allCases.filter(c => c.status === 'en_mejoria');
   const resolvedCases = allCases.filter(c => c.status === 'resuelto');
   const totalEvolutions = allCases.reduce((sum, c) => sum + c.evolutions.length, 0);
@@ -99,10 +94,7 @@ export default function Dashboard() {
   const evosPrev7 = allEvos.filter(e => inLastDays(e.date, 7, 14)).length;
   const evoTrend = evosLast7 - evosPrev7;
 
-  const recentEvolutions = allCases
-    .flatMap(c => c.evolutions.map(e => ({ ...e, caseId: c.id, patientId: c.patientId, woundType: c.woundType, status: c.status })))
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 6);
+
 
   const today = new Date().toISOString().split('T')[0];
   const allAppointments = allCases
@@ -268,59 +260,6 @@ export default function Dashboard() {
     setActiveFilter(prev => (prev === key ? 'all' : key));
   };
 
-  const markAlertAttended = (caseId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setAttendedAlerts(prev => {
-      const next = new Set(prev);
-      next.add(caseId);
-      return next;
-    });
-    toast({ title: 'Alerta marcada como atendida', description: 'Se ocultó de la lista de alertas críticas.' });
-  };
-
-  const markControlDone = (
-    patientId: string,
-    caseId: string,
-    sourceEvolutionId: string,
-    e: React.MouseEvent
-  ) => {
-    e.stopPropagation();
-    const patient = patients.find(p => p.id === patientId);
-    const caseData = patient?.cases.find(c => c.id === caseId);
-    const sourceEvo = caseData?.evolutions.find(ev => ev.id === sourceEvolutionId);
-    if (!patient || !caseData || !sourceEvo) return;
-
-    const intervalDays = patient.controlIntervalDays && patient.controlIntervalDays > 0
-      ? patient.controlIntervalDays
-      : 7;
-
-    const todayDate = new Date();
-    const todayStr = todayDate.toISOString().split('T')[0];
-    const nextDate = new Date(todayDate);
-    nextDate.setDate(nextDate.getDate() + intervalDays);
-    const nextStr = nextDate.toISOString().split('T')[0];
-
-    const newEvolution = {
-      ...sourceEvo,
-      id: `evo-${Date.now()}`,
-      date: todayStr,
-      time: `${String(todayDate.getHours()).padStart(2, '0')}:${String(todayDate.getMinutes()).padStart(2, '0')}`,
-      professional: currentUser,
-      description: `Control realizado (programado para ${sourceEvo.nextControl}).`,
-      observations: 'Control marcado como realizado desde el panel.',
-      nextControl: nextStr,
-      photos: [],
-      aiSummary: undefined,
-      closedAt: undefined,
-    };
-
-    addEvolution(patientId, caseId, newEvolution);
-    toast({
-      title: 'Control marcado como realizado',
-      description: `Próximo control programado para ${nextStr} (en ${intervalDays} días).`,
-    });
-  };
-
   return (
     <AppLayout>
       <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
@@ -453,438 +392,101 @@ export default function Dashboard() {
                   <p className="font-body text-sm font-semibold text-foreground">{patient?.lastName}, {patient?.firstName}</p>
                   <p className="font-body text-xs text-muted-foreground mt-0.5">{ap.woundType}</p>
                   <p className="font-body text-xs text-muted-foreground mt-1">Prof: {ap.professional}</p>
-                  <Button
-                    size="sm"
-                    variant={opts.past ? 'default' : 'outline'}
-                    className={`mt-3 w-full font-body text-xs h-8 ${
-                      opts.past
-                        ? 'bg-success text-white hover:bg-success/90'
-                        : 'border-success/40 text-success hover:bg-success hover:text-white'
-                    }`}
-                    onClick={(e) => markControlDone(ap.patientId, ap.caseId, ap.id, e)}
-                  >
-                    <Check className="mr-1 h-3.5 w-3.5" />
-                    Marcar realizado
-                  </Button>
                 </div>
               );
             };
 
-            // Unified chronological list (oldest overdue → furthest upcoming) for list view
-            const q = appointmentSearch.trim().toLowerCase();
-            const matchesSearch = (ap: typeof upcomingAppointments[number]) => {
-              if (!q) return true;
-              const patient = patients.find(p => p.id === ap.patientId);
-              const hay = `${patient?.firstName ?? ''} ${patient?.lastName ?? ''} ${ap.woundType ?? ''} ${ap.professional ?? ''} ${ap.nextControl ?? ''}`.toLowerCase();
-              return hay.includes(q);
-            };
-            const timelineItems = [
-              ...visiblePast.map(ap => ({ ap, past: true })),
-              ...visibleUpcoming.map(ap => ({ ap, past: false })),
-            ]
-              .filter(({ ap }) => matchesSearch(ap))
-              .sort((a, b) => {
-                const ka = `${a.ap.nextControl} ${a.ap.time ?? '00:00'}`;
-                const kb = `${b.ap.nextControl} ${b.ap.time ?? '00:00'}`;
-                return ka.localeCompare(kb);
-              });
-
             return (
               <Card className="rounded-xl border border-border/60 bg-card shadow-sm">
                 <CardHeader className="pb-3">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <CardTitle className="heading-display text-lg flex items-center gap-2 text-foreground">
                       <CalendarClock className="h-5 w-5 text-primary" />
                       Turnos / Controles
                     </CardTitle>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                      <div className="inline-flex rounded-md border border-border/60 bg-background p-0.5">
-                        <button
-                          type="button"
-                          onClick={() => setAppointmentView('calendar')}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded font-body text-xs transition-colors ${
-                            appointmentView === 'calendar'
-                              ? 'bg-primary text-primary-foreground'
-                              : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                          aria-pressed={appointmentView === 'calendar'}
-                        >
-                          <CalendarDays className="h-3.5 w-3.5" />
-                          Calendario
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setAppointmentView('list')}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded font-body text-xs transition-colors ${
-                            appointmentView === 'list'
-                              ? 'bg-primary text-primary-foreground'
-                              : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                          aria-pressed={appointmentView === 'list'}
-                        >
-                          <ListOrdered className="h-3.5 w-3.5" />
-                          Lista
-                        </button>
-                      </div>
-                      <Select value={appointmentFilter} onValueChange={(v) => setAppointmentFilter(v as typeof appointmentFilter)}>
-                        <SelectTrigger className="w-full sm:w-[180px] font-body text-sm">
-                          <SelectValue placeholder="Filtrar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos ({upcomingAppointments.length + pastAppointments.length})</SelectItem>
-                          <SelectItem value="upcoming">Próximos ({upcomingAppointments.length})</SelectItem>
-                          <SelectItem value="overdue">Vencidos ({pastAppointments.length})</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <Select value={appointmentFilter} onValueChange={(v) => setAppointmentFilter(v as typeof appointmentFilter)}>
+                      <SelectTrigger className="w-full sm:w-[180px] font-body text-sm">
+                        <SelectValue placeholder="Filtrar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos ({upcomingAppointments.length + pastAppointments.length})</SelectItem>
+                        <SelectItem value="upcoming">Próximos ({upcomingAppointments.length})</SelectItem>
+                        <SelectItem value="overdue">Vencidos ({pastAppointments.length})</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {appointmentView === 'calendar' ? (
-                    <div className="flex flex-col lg:flex-row gap-6">
-                      <div className="shrink-0">
-                        <Calendar
-                          mode="multiple"
-                          selected={[...upcomingDates.map(d => d.date), ...pastDates]}
-                          className="p-3 pointer-events-auto rounded-xl border border-border/60 bg-background"
-                          modifiers={modifiers}
-                          modifiersStyles={modifiersStyles}
-                        />
-                        <div className="flex flex-wrap gap-3 mt-3 px-1">
-                          {[
-                            { c: 'bg-destructive', l: 'Crítico' },
-                            { c: 'bg-warning', l: 'Activo' },
-                            { c: 'bg-success', l: 'En mejoría' },
-                            { c: 'bg-muted-foreground', l: 'Resuelto' },
-                          ].map(x => (
-                            <div key={x.l} className="flex items-center gap-1.5">
-                              <span className={`h-2.5 w-2.5 rounded-full ${x.c}`} />
-                              <span className="font-body text-xs text-muted-foreground">{x.l}</span>
-                            </div>
-                          ))}
-                          <div className="flex items-center gap-1.5">
-                            <span className="h-2.5 w-2.5 rounded-full border border-dashed border-destructive" />
-                            <span className="font-body text-xs text-muted-foreground">Vencido</span>
+                  <div className="flex flex-col lg:flex-row gap-6">
+                    <div className="shrink-0">
+                      <Calendar
+                        mode="multiple"
+                        selected={[...upcomingDates.map(d => d.date), ...pastDates]}
+                        className="p-3 pointer-events-auto rounded-xl border border-border/60 bg-background"
+                        modifiers={modifiers}
+                        modifiersStyles={modifiersStyles}
+                      />
+                      <div className="flex flex-wrap gap-3 mt-3 px-1">
+                        {[
+                          { c: 'bg-destructive', l: 'Crítico' },
+                          { c: 'bg-warning', l: 'Activo' },
+                          { c: 'bg-success', l: 'En mejoría' },
+                          { c: 'bg-muted-foreground', l: 'Resuelto' },
+                        ].map(x => (
+                          <div key={x.l} className="flex items-center gap-1.5">
+                            <span className={`h-2.5 w-2.5 rounded-full ${x.c}`} />
+                            <span className="font-body text-xs text-muted-foreground">{x.l}</span>
                           </div>
+                        ))}
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-2.5 w-2.5 rounded-full border border-dashed border-destructive" />
+                          <span className="font-body text-xs text-muted-foreground">Vencido</span>
                         </div>
-                      </div>
-
-                      <div className="flex-1 space-y-5">
-                        {showOverdue && visiblePast.length > 0 && (
-                          <div>
-                            <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-destructive mb-2">
-                              Controles vencidos ({visiblePast.length})
-                            </h3>
-                            <div className="grid sm:grid-cols-2 gap-3 content-start">
-                              {visiblePast.map(ap => renderApt(ap, { past: true }))}
-                            </div>
-                          </div>
-                        )}
-
-                        {showUpcoming && (
-                          <div>
-                            <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                              Próximos turnos ({visibleUpcoming.length})
-                            </h3>
-                            {visibleUpcoming.length > 0 ? (
-                              <div className="grid sm:grid-cols-2 gap-3 content-start">
-                                {visibleUpcoming.map(ap => renderApt(ap))}
-                              </div>
-                            ) : (
-                              <div className="min-h-[140px] flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-6">
-                                <CalendarClock className="h-10 w-10 text-muted-foreground/60 mb-3" />
-                                <p className="font-body text-sm font-semibold text-foreground">No hay próximos turnos</p>
-                                <p className="font-body text-xs text-muted-foreground mt-1">Cuando programes controles, aparecerán aquí.</p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {!showUpcoming && !showOverdue && (
-                          <div className="min-h-[140px] flex items-center justify-center text-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-6">
-                            <p className="font-body text-sm text-muted-foreground">Sin resultados para el filtro seleccionado.</p>
-                          </div>
-                        )}
                       </div>
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          value={appointmentSearch}
-                          onChange={(e) => setAppointmentSearch(e.target.value)}
-                          placeholder="Buscar por paciente, tipo de herida, profesional o fecha…"
-                          className="pl-9 pr-9 font-body text-sm"
-                        />
-                        {appointmentSearch && (
-                          <button
-                            type="button"
-                            onClick={() => setAppointmentSearch('')}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                            aria-label="Limpiar búsqueda"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
 
-                      {timelineItems.length === 0 ? (
-                        <div className="min-h-[160px] flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-6">
-                          <CalendarClock className="h-10 w-10 text-muted-foreground/60 mb-3" />
-                          <p className="font-body text-sm font-semibold text-foreground">Sin resultados</p>
-                          <p className="font-body text-xs text-muted-foreground mt-1">
-                            Ajustá el filtro o la búsqueda para ver más turnos.
-                          </p>
+                    <div className="flex-1 space-y-5">
+                      {showOverdue && visiblePast.length > 0 && (
+                        <div>
+                          <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-destructive mb-2">
+                            Controles vencidos ({visiblePast.length})
+                          </h3>
+                          <div className="grid sm:grid-cols-2 gap-3 content-start">
+                            {visiblePast.map(ap => renderApt(ap, { past: true }))}
+                          </div>
                         </div>
-                      ) : (
-                        <ol className="relative border-l border-border/60 ml-3 space-y-3">
-                          {timelineItems.map(({ ap, past }, idx) => {
-                            const patient = patients.find(p => p.id === ap.patientId);
-                            const caseData = allCases.find(c => c.id === ap.caseId);
-                            const dotClass = statusDot[caseData?.status || 'activo'];
-                            const prev = timelineItems[idx - 1];
-                            const showDateHeader = !prev || prev.ap.nextControl !== ap.nextControl;
-                            return (
-                              <li key={ap.id + (past ? '-past-li' : '-up-li')} className="ml-6">
-                                <span
-                                  className={`absolute -left-[7px] flex h-3.5 w-3.5 items-center justify-center rounded-full ring-4 ring-card ${
-                                    past ? 'bg-destructive' : dotClass
-                                  }`}
-                                />
-                                {showDateHeader && (
-                                  <p className={`font-body text-xs font-semibold uppercase tracking-wide mb-1.5 ${
-                                    past ? 'text-destructive' : 'text-muted-foreground'
-                                  }`}>
-                                    {ap.nextControl}{past ? ' · Vencido' : ''}
-                                  </p>
-                                )}
-                                <div
-                                  className={`p-3 rounded-xl border transition-all cursor-pointer hover:-translate-y-0.5 hover:shadow-md ${
-                                    past
-                                      ? 'border-destructive/30 bg-destructive/[0.03]'
-                                      : 'border-border/60 bg-card'
-                                  }`}
-                                  onClick={() => navigate(`/patients/${ap.patientId}/cases/${ap.caseId}`)}
-                                >
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div className="min-w-0 flex-1">
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <p className="font-body text-sm font-semibold text-foreground truncate">
-                                          {patient?.lastName}, {patient?.firstName}
-                                        </p>
-                                        {ap.time && (
-                                          <span className="font-body text-[11px] text-muted-foreground">
-                                            {ap.time} hs
-                                          </span>
-                                        )}
-                                        {past && (
-                                          <span className="font-body text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-semibold">
-                                            Vencido
-                                          </span>
-                                        )}
-                                      </div>
-                                      <p className="font-body text-xs text-muted-foreground mt-0.5 truncate">
-                                        {ap.woundType} · Prof: {ap.professional}
-                                      </p>
-                                    </div>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="font-body text-xs h-8 border-success/40 text-success hover:bg-success hover:text-white shrink-0"
-                                      onClick={(e) => markControlDone(ap.patientId, ap.caseId, ap.id, e)}
-                                    >
-                                      <Check className="mr-1 h-3.5 w-3.5" />
-                                      Realizado
-                                    </Button>
-                                  </div>
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ol>
+                      )}
+
+                      {showUpcoming && (
+                        <div>
+                          <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                            Próximos turnos ({visibleUpcoming.length})
+                          </h3>
+                          {visibleUpcoming.length > 0 ? (
+                            <div className="grid sm:grid-cols-2 gap-3 content-start">
+                              {visibleUpcoming.map(ap => renderApt(ap))}
+                            </div>
+                          ) : (
+                            <div className="min-h-[140px] flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-6">
+                              <CalendarClock className="h-10 w-10 text-muted-foreground/60 mb-3" />
+                              <p className="font-body text-sm font-semibold text-foreground">No hay próximos turnos</p>
+                              <p className="font-body text-xs text-muted-foreground mt-1">Cuando programes controles, aparecerán aquí.</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {!showUpcoming && !showOverdue && (
+                        <div className="min-h-[140px] flex items-center justify-center text-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-6">
+                          <p className="font-body text-sm text-muted-foreground">Sin resultados para el filtro seleccionado.</p>
+                        </div>
                       )}
                     </div>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
             );
           })()}
-
-          <div className="grid lg:grid-cols-2 gap-6 items-start">
-            {/* Critical alerts */}
-            <Card className={`rounded-xl border shadow-sm ${criticalCases.length > 0 ? 'border-destructive/40 bg-destructive/[0.03]' : 'border-border/60 bg-card'}`}>
-              <CardHeader className="pb-3">
-                <CardTitle className="heading-display text-lg flex items-center gap-2 text-foreground">
-                  {criticalCases.length > 0 ? (
-                    <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive" />
-                    </span>
-                  ) : (
-                    <CheckCircle2 className="h-5 w-5 text-success" />
-                  )}
-                  Alertas Críticas
-                  {criticalCases.length > 0 && (
-                    <Badge variant="destructive" className="ml-1 font-body">{criticalCases.length}</Badge>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {criticalCases.length === 0 ? (
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-success/10 border border-success/20">
-                    <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
-                    <p className="font-body text-sm text-foreground font-medium">Sin alertas críticas hoy</p>
-                  </div>
-                ) : (
-                  criticalCases.map(c => {
-                    const patient = patients.find(p => p.id === c.patientId);
-                    const lastEvo = [...c.evolutions].sort((a, b) => b.date.localeCompare(a.date))[0];
-                    const days = lastEvo ? daysSince(lastEvo.date) : null;
-                    return (
-                      <div
-                        key={c.id}
-                        className="group flex items-center justify-between gap-3 p-3 rounded-xl bg-card border border-border/60 border-l-4 border-l-destructive cursor-pointer hover:shadow-md transition-all"
-                        onClick={() => navigate(`/patients/${c.patientId}/cases/${c.id}`)}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="font-body text-sm font-semibold text-foreground truncate">{patient?.firstName} {patient?.lastName}</p>
-                          <p className="font-body text-xs text-muted-foreground truncate">
-                            {c.woundType} · {c.anatomicalLocation}
-                          </p>
-                          {days !== null && (
-                            <p className="font-body text-[11px] text-destructive mt-1 font-medium">
-                              Última evolución {days === 0 ? 'hoy' : days === 1 ? 'hace 1 día' : `hace ${days} días`}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-1.5 shrink-0">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="font-body text-xs border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/patients/${c.patientId}`);
-                            }}
-                          >
-                            Ver paciente
-                            <ChevronRight className="ml-1 h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="font-body text-[11px] h-7 text-muted-foreground hover:text-success hover:bg-success/10"
-                            onClick={(e) => markAlertAttended(c.id, e)}
-                          >
-                            <Check className="mr-1 h-3 w-3" />
-                            Marcar atendida
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Recent activity — Timeline */}
-            <Card className="rounded-xl border border-border/60 bg-card shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="heading-display text-lg text-foreground">Actividad Reciente</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="relative pl-6">
-                  <span className="absolute left-2 top-1 bottom-1 w-px bg-border" aria-hidden />
-                  <Collapsible open={showAllActivity} onOpenChange={setShowAllActivity}>
-                    <ul className="space-y-1">
-                      {recentEvolutions.slice(0, 3).map((ev, i) => {
-                        const patient = patients.find(p => p.id === ev.patientId);
-                        const dot = statusDot[ev.status as string] || 'bg-muted-foreground';
-                        return (
-                          <li
-                            key={ev.id}
-                            className={`relative cursor-pointer rounded-lg px-3 py-2.5 -ml-3 hover:bg-secondary/60 transition-colors ${i % 2 === 0 ? 'bg-secondary/30' : ''}`}
-                            onClick={() => navigate(`/patients/${ev.patientId}/cases/${ev.caseId}`)}
-                          >
-                            <span
-                              className={`absolute -left-[18px] top-3.5 h-2.5 w-2.5 rounded-full ring-2 ring-card ${dot}`}
-                              aria-hidden
-                            />
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="min-w-0">
-                                <p className="font-body text-sm font-semibold text-foreground truncate">
-                                  {patient?.firstName} {patient?.lastName} <span className="text-muted-foreground font-normal">— {ev.woundType}</span>
-                                </p>
-                                <p className="font-body text-[11px] text-muted-foreground mt-0.5">
-                                  {relativeDate(ev.date)} · {ev.professional}
-                                </p>
-                              </div>
-                              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                            </div>
-                          </li>
-                        );
-                      })}
-                      <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
-                        <ul className="space-y-1">
-                          {recentEvolutions.slice(3).map((ev, idx) => {
-                            const i = idx + 3;
-                            const patient = patients.find(p => p.id === ev.patientId);
-                            const dot = statusDot[ev.status as string] || 'bg-muted-foreground';
-                            return (
-                              <li
-                                key={ev.id}
-                                className={`relative cursor-pointer rounded-lg px-3 py-2.5 -ml-3 hover:bg-secondary/60 transition-colors ${i % 2 === 0 ? 'bg-secondary/30' : ''}`}
-                                onClick={() => navigate(`/patients/${ev.patientId}/cases/${ev.caseId}`)}
-                              >
-                                <span
-                                  className={`absolute -left-[18px] top-3.5 h-2.5 w-2.5 rounded-full ring-2 ring-card ${dot}`}
-                                  aria-hidden
-                                />
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="min-w-0">
-                                    <p className="font-body text-sm font-semibold text-foreground truncate">
-                                      {patient?.firstName} {patient?.lastName} <span className="text-muted-foreground font-normal">— {ev.woundType}</span>
-                                    </p>
-                                    <p className="font-body text-[11px] text-muted-foreground mt-0.5">
-                                      {relativeDate(ev.date)} · {ev.professional}
-                                    </p>
-                                  </div>
-                                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </CollapsibleContent>
-                    </ul>
-                  </Collapsible>
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    {recentEvolutions.length > 3 && (
-                      <button
-                        type="button"
-                        onClick={() => setShowAllActivity(v => !v)}
-                        className="inline-flex items-center gap-1 font-body text-sm text-primary hover:underline transition-colors"
-                      >
-                        {showAllActivity ? (
-                          <>Ver menos <ChevronUp className="h-3.5 w-3.5" /></>
-                        ) : (
-                          <>Ver toda la actividad <ChevronDown className="h-3.5 w-3.5" /></>
-                        )}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => navigate('/patients')}
-                      className="inline-flex items-center gap-1 font-body text-sm text-muted-foreground hover:text-primary transition-colors"
-                    >
-                      Ver historial completo <ChevronRight className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
 
           {/* Quick access patients */}
           <Card className="rounded-xl border border-border/60 bg-card shadow-sm">
