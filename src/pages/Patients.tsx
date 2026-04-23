@@ -387,16 +387,9 @@ export default function Patients() {
                     <Label className="font-body text-sm">Fecha de ingreso al servicio</Label>
                     <Input type="date" value={form.admissionDate} onChange={e => setField('admissionDate', e.target.value)} className="font-body" />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Profesional a cargo <span className="text-muted-foreground font-normal">(opcional)</span></Label>
-                    <ProfessionalCombobox
-                      value={form.assignedProfessional}
-                      onChange={v => setField('assignedProfessional', v)}
-                    />
-                  </div>
                   <div className="space-y-2 sm:col-span-2">
                     <p className="font-body text-[11px] text-muted-foreground -mt-1">
-                      El profesional se puede elegir del listado, escribir otro nombre o dejar en blanco para asignar después. El intervalo entre controles se define al crear cada herida.
+                      El intervalo entre controles se define al crear cada herida.
                     </p>
                   </div>
                 </div>
