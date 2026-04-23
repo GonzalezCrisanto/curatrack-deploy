@@ -605,8 +605,8 @@ export default function PatientDetail() {
             }
           });
 
-          const openNewAppointment = (preselectDate?: string) => {
-            setApptCaseId(activeCases[0]?.id || '');
+          const openNewAppointment = (preselectDate?: string, preselectCaseId?: string) => {
+            setApptCaseId(preselectCaseId || activeCases[0]?.id || '');
             setApptDate(preselectDate || new Date(today.getTime() + interval * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
             setApptTime('09:00');
             setApptDialogOpen(true);
