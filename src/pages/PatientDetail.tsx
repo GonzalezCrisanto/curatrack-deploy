@@ -262,7 +262,7 @@ export default function PatientDetail() {
         <div className="flex items-center justify-between">
           <h2 className="heading-display text-xl">Casos / Heridas</h2>
           <Button onClick={openNewCase} className="font-body" size="sm">
-            <Plus className="mr-2 h-4 w-4" /> Nuevo Caso
+            <Plus className="mr-2 h-4 w-4" /> Nueva Herida
           </Button>
         </div>
 
@@ -328,7 +328,7 @@ export default function PatientDetail() {
         <Dialog open={caseDialogOpen} onOpenChange={setCaseDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="heading-display text-xl">{editingCase ? 'Editar Caso' : 'Nuevo Caso'}</DialogTitle>
+              <DialogTitle className="heading-display text-xl">{editingCase ? 'Editar Herida' : 'Nueva Herida'}</DialogTitle>
             </DialogHeader>
             <div className="grid sm:grid-cols-2 gap-4 mt-4">
               <div className="space-y-2">
