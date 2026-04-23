@@ -9,13 +9,22 @@ import { useNavigate } from 'react-router-dom';
 import logo from '@/assets/curatrack-logo.png';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
-  const { currentUser, setIsLoggedIn } = useApp();
+  const { currentUser, currentUserName, logout } = useApp();
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
+    logout();
     navigate('/');
   };
+
+  const initials = currentUser
+    ? `${currentUser.firstName[0] ?? ''}${currentUser.lastName[0] ?? ''}`.toUpperCase()
+    : 'U';
+  const roleLabel = currentUser?.role === 'medico'
+    ? 'Médico/a'
+    : currentUser?.role === 'admin'
+      ? 'Administrativo/a'
+      : 'Enfermería';
 
   return (
     <SidebarProvider>
@@ -29,11 +38,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             </div>
             <div className="flex items-center gap-3">
               <div className="hidden sm:block text-right">
-                <p className="font-body text-sm font-medium">{currentUser}</p>
-                <p className="font-body text-xs text-muted-foreground">Enfermería</p>
+                <p className="font-body text-sm font-medium">{currentUserName || 'Sin sesión'}</p>
+                <p className="font-body text-xs text-muted-foreground">{roleLabel}{currentUser?.institution ? ` · ${currentUser.institution}` : ''}</p>
               </div>
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-primary-foreground text-xs font-body">MG</AvatarFallback>
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs font-body">{initials}</AvatarFallback>
               </Avatar>
               <Button variant="ghost" size="icon" onClick={handleLogout} className="h-8 w-8 text-muted-foreground hover:text-destructive">
                 <LogOut className="h-4 w-4" />
