@@ -880,7 +880,7 @@ export default function PatientDetail() {
               {/* Tamaño de la herida */}
               <div className="space-y-2 rounded-lg border border-border/60 bg-muted/30 p-3">
                 <div className="flex items-baseline justify-between">
-                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tamaño de la herida (cm)</Label>
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tamaño de la herida (cm)<OptionalTag /></Label>
                   {caseWoundArea && (
                     <span className="font-body text-xs font-semibold text-primary tabular-nums">
                       Área: {caseWoundArea} cm²
