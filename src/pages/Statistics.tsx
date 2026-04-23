@@ -1278,3 +1278,63 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
     </div>
   );
 }
+
+function CompletenessTile({ label, pct, detail, missing }: { label: string; pct: number; detail: string; missing: number }) {
+  const tone = pct >= 90 ? 'text-success' : pct >= 70 ? 'text-warning' : 'text-destructive';
+  return (
+    <div className="border border-border rounded-lg p-4 bg-card">
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+        <span className={`font-heading text-2xl font-bold ${tone}`}>{pct}%</span>
+      </div>
+      <Progress value={pct} className="mt-3 h-2" />
+      <p className="font-body text-[11px] text-muted-foreground mt-2">{detail}</p>
+      {missing > 0 && (
+        <p className="font-body text-[11px] text-warning mt-1">
+          {missing} con campos faltantes
+        </p>
+      )}
+    </div>
+  );
+}
+
+function MissingFieldsList({ title, total, bars }: {
+  title: string;
+  total: number;
+  bars: { name: string; missing: number; total: number; pct: number }[];
+}) {
+  return (
+    <div className="border border-border rounded-lg p-4 bg-card">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="font-heading text-sm font-semibold">{title}</h4>
+        <span className="font-body text-[11px] text-muted-foreground">{total} totales</span>
+      </div>
+      {bars.length === 0 ? (
+        <p className="font-body text-xs text-muted-foreground py-6 text-center">
+          Sin campos faltantes ✓
+        </p>
+      ) : (
+        <ul className="space-y-2 max-h-72 overflow-y-auto pr-1">
+          {bars.map(b => (
+            <li key={b.name} className="space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-body text-xs text-foreground truncate" title={b.name}>{b.name}</span>
+                <span className="font-body text-[11px] text-muted-foreground shrink-0">
+                  <span className="font-semibold text-warning">{b.missing}</span>
+                  <span className="opacity-60"> / {b.total}</span>
+                  <span className="ml-1 opacity-60">({b.pct}%)</span>
+                </span>
+              </div>
+              <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-warning"
+                  style={{ width: `${b.pct}%` }}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
