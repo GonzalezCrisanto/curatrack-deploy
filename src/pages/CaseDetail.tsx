@@ -25,7 +25,7 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import AISummaryCard from '@/components/AISummaryCard';
+
 import ReactMarkdown from 'react-markdown';
 import { marked } from 'marked';
 
@@ -698,7 +698,7 @@ export default function CaseDetail() {
             const exudateType = ev.exudateType
               ? exudateTypeOptions.find(o => o.value === ev.exudateType)?.label
               : null;
-            const hasAiSummary = !!ev.aiSummary && ev.aiSummary.trim().length > 0;
+            
 
             return (
               <div key={ev.id} className="relative pl-12 animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
