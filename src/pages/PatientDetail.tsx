@@ -235,12 +235,20 @@ export default function PatientDetail() {
 
           return (
             <Card className="border-border/50">
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between gap-3 flex-wrap">
                 <CardTitle className="heading-display text-lg flex items-center gap-2">
                   <CalendarClock className="h-5 w-5 text-primary" />
                   Calendario de Controles
                   <Badge variant="outline" className="font-body text-xs ml-2">Cada {interval} día{interval !== 1 ? 's' : ''}</Badge>
                 </CardTitle>
+                <Button
+                  size="sm"
+                  className="font-body"
+                  onClick={() => openNewAppointment()}
+                  disabled={activeCases.length === 0}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Nuevo turno
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col lg:flex-row gap-6">
