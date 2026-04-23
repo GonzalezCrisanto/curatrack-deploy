@@ -182,7 +182,6 @@ export default function PatientDetail() {
       initialMaterials: c.initialMaterials ?? '',
       initialObservations: c.initialObservations ?? '',
       treatment: c.treatment ?? '',
-      createInitialEvolution: false,
     });
     setCaseDialogOpen(true);
   };
