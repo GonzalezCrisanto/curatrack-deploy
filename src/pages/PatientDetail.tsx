@@ -313,11 +313,43 @@ export default function PatientDetail() {
                       <>
                         <h3 className="font-body text-sm font-semibold text-muted-foreground mt-4">Fechas sugeridas (cada {interval} días)</h3>
                         <div className="flex flex-wrap gap-2">
-                          {suggestedDates.slice(0, 6).map((d, i) => (
-                            <Badge key={`sug-${i}`} variant="outline" className="font-body text-xs border-dashed border-muted-foreground/50">
-                              {d.toISOString().split('T')[0]}
-                            </Badge>
-                          ))}
+                          {suggestedDates.slice(0, 6).map((d, i) => {
+                            const ds = d.toISOString().split('T')[0];
+                            const clash = otherDateStrings.has(ds);
+                            return (
+                              <Badge
+                                key={`sug-${i}`}
+                                variant="outline"
+                                className={`font-body text-xs cursor-pointer ${clash ? 'border-warning/60 text-warning' : 'border-dashed border-muted-foreground/50 hover:border-primary'}`}
+                                onClick={() => openNewAppointment(ds)}
+                                title={clash ? 'Ese día ya hay turno con otro paciente' : 'Programar turno en esta fecha'}
+                              >
+                                {ds}{clash ? ' ⚠' : ''}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+
+                    {otherPatientsAppointments.length > 0 && (
+                      <>
+                        <h3 className="font-body text-sm font-semibold text-muted-foreground mt-4">Turnos con otros pacientes</h3>
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                          {otherPatientsAppointments
+                            .sort((a, b) => a.date.getTime() - b.date.getTime())
+                            .slice(0, 8)
+                            .map((ap, i) => (
+                              <div key={`other-${i}`} className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/40 border border-border/40">
+                                <div className="min-w-0">
+                                  <p className="font-body text-xs font-medium truncate">{ap.patientName}</p>
+                                  <p className="font-body text-[11px] text-muted-foreground truncate">{ap.woundType}</p>
+                                </div>
+                                <span className="font-body text-[11px] text-muted-foreground shrink-0">
+                                  {ap.date.toISOString().split('T')[0]}{ap.time ? ` · ${ap.time}` : ''}
+                                </span>
+                              </div>
+                            ))}
                         </div>
                       </>
                     )}
