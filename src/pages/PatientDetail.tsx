@@ -511,16 +511,55 @@ export default function PatientDetail() {
             ));
           const otherDates = otherPatientsAppointments.map(a => a.date);
           const otherDateStrings = new Set(otherDates.map(d => d.toISOString().split('T')[0]));
-          // Suggested future dates based on interval (per patient)
+
+          // Map healing frequency label to days interval
+          const frequencyToDays = (freq?: string): number | null => {
+            switch ((freq || '').trim()) {
+              case 'Diaria': return 1;
+              case 'Cada 48hs': return 2;
+              case 'Cada 72hs': return 3;
+              case 'Semanal': return 7;
+              case 'A demanda': return null;
+              default: return null;
+            }
+          };
+
+          // Patient-level fallback interval
           const interval = patient.controlIntervalDays || 7;
-          const suggestedDates: Date[] = [];
+
+          // Suggested future dates PER CASE based on its healingFrequency.
+          // Anchor: latest evolution date with that frequency, else next existing nextControl, else today.
           const existingDateStrings = new Set(appointmentsByCase.map(a => a.date.toISOString().split('T')[0]));
-          for (let i = 1; i <= 8; i++) {
-            const d = new Date(today);
-            d.setDate(d.getDate() + interval * i);
-            const ds = d.toISOString().split('T')[0];
-            if (!existingDateStrings.has(ds)) suggestedDates.push(new Date(d));
-          }
+          const suggestionsByCase: Array<{ caseId: string; date: Date; days: number }> = [];
+
+          activeCases.forEach(c => {
+            // Find effective frequency: latest evolution's healingFrequency, else case-level
+            const sortedEvos = [...c.evolutions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            const evoFreq = sortedEvos.find(e => e.healingFrequency)?.healingFrequency;
+            const freq = evoFreq || c.healingFrequency;
+            const days = frequencyToDays(freq) ?? interval;
+            if (!days) return;
+
+            // Anchor date: last existing nextControl for this case, else last evolution date, else today
+            const futureControls = c.evolutions
+              .filter(e => e.nextControl && e.nextControl.trim() !== '')
+              .map(e => new Date(e.nextControl + 'T12:00:00'))
+              .sort((a, b) => b.getTime() - a.getTime());
+            let anchor = futureControls[0]
+              || (sortedEvos[0]?.date ? new Date(sortedEvos[0].date + 'T12:00:00') : new Date(today));
+            if (anchor < today) anchor = new Date(today);
+
+            for (let i = 1; i <= 6; i++) {
+              const d = new Date(anchor);
+              d.setDate(d.getDate() + days * i);
+              const ds = d.toISOString().split('T')[0];
+              if (!existingDateStrings.has(ds)) {
+                suggestionsByCase.push({ caseId: c.id, date: new Date(d), days });
+              }
+            }
+          });
+
+          const suggestedDates: Date[] = suggestionsByCase.map(s => s.date);
 
           // Build dynamic modifiers: one modifier key per case
           const modifiers: Record<string, Date[]> = { suggested: suggestedDates, other: otherDates };
