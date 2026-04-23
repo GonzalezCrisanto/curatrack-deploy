@@ -511,16 +511,55 @@ export default function PatientDetail() {
             ));
           const otherDates = otherPatientsAppointments.map(a => a.date);
           const otherDateStrings = new Set(otherDates.map(d => d.toISOString().split('T')[0]));
-          // Suggested future dates based on interval (per patient)
+
+          // Map healing frequency label to days interval
+          const frequencyToDays = (freq?: string): number | null => {
+            switch ((freq || '').trim()) {
+              case 'Diaria': return 1;
+              case 'Cada 48hs': return 2;
+              case 'Cada 72hs': return 3;
+              case 'Semanal': return 7;
+              case 'A demanda': return null;
+              default: return null;
+            }
+          };
+
+          // Patient-level fallback interval
           const interval = patient.controlIntervalDays || 7;
-          const suggestedDates: Date[] = [];
+
+          // Suggested future dates PER CASE based on its healingFrequency.
+          // Anchor: latest evolution date with that frequency, else next existing nextControl, else today.
           const existingDateStrings = new Set(appointmentsByCase.map(a => a.date.toISOString().split('T')[0]));
-          for (let i = 1; i <= 8; i++) {
-            const d = new Date(today);
-            d.setDate(d.getDate() + interval * i);
-            const ds = d.toISOString().split('T')[0];
-            if (!existingDateStrings.has(ds)) suggestedDates.push(new Date(d));
-          }
+          const suggestionsByCase: Array<{ caseId: string; date: Date; days: number }> = [];
+
+          activeCases.forEach(c => {
+            // Find effective frequency: latest evolution's healingFrequency, else case-level
+            const sortedEvos = [...c.evolutions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            const evoFreq = sortedEvos.find(e => e.healingFrequency)?.healingFrequency;
+            const freq = evoFreq || c.healingFrequency;
+            const days = frequencyToDays(freq) ?? interval;
+            if (!days) return;
+
+            // Anchor date: last existing nextControl for this case, else last evolution date, else today
+            const futureControls = c.evolutions
+              .filter(e => e.nextControl && e.nextControl.trim() !== '')
+              .map(e => new Date(e.nextControl + 'T12:00:00'))
+              .sort((a, b) => b.getTime() - a.getTime());
+            let anchor = futureControls[0]
+              || (sortedEvos[0]?.date ? new Date(sortedEvos[0].date + 'T12:00:00') : new Date(today));
+            if (anchor < today) anchor = new Date(today);
+
+            for (let i = 1; i <= 6; i++) {
+              const d = new Date(anchor);
+              d.setDate(d.getDate() + days * i);
+              const ds = d.toISOString().split('T')[0];
+              if (!existingDateStrings.has(ds)) {
+                suggestionsByCase.push({ caseId: c.id, date: new Date(d), days });
+              }
+            }
+          });
+
+          const suggestedDates: Date[] = suggestionsByCase.map(s => s.date);
 
           // Build dynamic modifiers: one modifier key per case
           const modifiers: Record<string, Date[]> = { suggested: suggestedDates, other: otherDates };
@@ -551,10 +590,23 @@ export default function PatientDetail() {
                 fontWeight: 600,
               };
             }
+            // Suggested per-case (dashed circle with case color)
+            const sugDates = suggestionsByCase.filter(s => s.caseId === c.id).map(s => s.date);
+            if (sugDates.length > 0) {
+              const sKey = `sug_${c.id}`;
+              modifiers[sKey] = sugDates;
+              modifiersStyles[sKey] = {
+                backgroundColor: 'transparent',
+                color: caseColor[c.id],
+                borderRadius: '9999px',
+                border: `1.5px dashed ${caseColor[c.id]}`,
+                fontWeight: 600,
+              };
+            }
           });
 
-          const openNewAppointment = (preselectDate?: string) => {
-            setApptCaseId(activeCases[0]?.id || '');
+          const openNewAppointment = (preselectDate?: string, preselectCaseId?: string) => {
+            setApptCaseId(preselectCaseId || activeCases[0]?.id || '');
             setApptDate(preselectDate || new Date(today.getTime() + interval * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
             setApptTime('09:00');
             setApptDialogOpen(true);
@@ -636,23 +688,48 @@ export default function PatientDetail() {
                       <p className="font-body text-sm text-muted-foreground">No hay turnos programados.</p>
                     )}
 
-                    {suggestedDates.length > 0 && (
+                    {suggestionsByCase.length > 0 && (
                       <>
-                        <h3 className="font-body text-sm font-semibold text-muted-foreground mt-4">Fechas sugeridas (cada {interval} días)</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {suggestedDates.slice(0, 6).map((d, i) => {
-                            const ds = d.toISOString().split('T')[0];
-                            const clash = otherDateStrings.has(ds);
+                        <h3 className="font-body text-sm font-semibold text-muted-foreground mt-4">Turnos sugeridos según frecuencia de curación</h3>
+                        <div className="space-y-2">
+                          {activeCases.map(c => {
+                            const sugs = suggestionsByCase.filter(s => s.caseId === c.id).slice(0, 4);
+                            if (sugs.length === 0) return null;
+                            const days = sugs[0].days;
+                            const freqLabel =
+                              days === 1 ? 'Diaria' :
+                              days === 2 ? 'Cada 48hs' :
+                              days === 3 ? 'Cada 72hs' :
+                              days === 7 ? 'Semanal' :
+                              `Cada ${days} días`;
                             return (
-                              <Badge
-                                key={`sug-${i}`}
-                                variant="outline"
-                                className={`font-body text-xs cursor-pointer ${clash ? 'border-warning/60 text-warning' : 'border-dashed border-muted-foreground/50 hover:border-primary'}`}
-                                onClick={() => openNewAppointment(ds)}
-                                title={clash ? 'Ese día ya hay turno con otro paciente' : 'Programar turno en esta fecha'}
-                              >
-                                {ds}{clash ? ' ⚠' : ''}
-                              </Badge>
+                              <div key={`sugcase-${c.id}`} className="p-2.5 rounded-lg border border-border/40 bg-muted/20">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: caseColor[c.id] }} />
+                                  <span className="font-body text-xs font-semibold truncate">
+                                    {c.woundType}{c.anatomicalLocation ? ` · ${c.anatomicalLocation}` : ''}
+                                  </span>
+                                  <Badge variant="outline" className="font-body text-[10px] ml-auto shrink-0">{freqLabel}</Badge>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {sugs.map((s, i) => {
+                                    const ds = s.date.toISOString().split('T')[0];
+                                    const clash = otherDateStrings.has(ds);
+                                    return (
+                                      <Badge
+                                        key={`sug-${c.id}-${i}`}
+                                        variant="outline"
+                                        className={`font-body text-xs cursor-pointer ${clash ? 'border-warning/60 text-warning' : 'hover:bg-accent'}`}
+                                        style={!clash ? { borderColor: caseColor[c.id], color: caseColor[c.id], borderStyle: 'dashed' } : undefined}
+                                        onClick={() => openNewAppointment(ds, c.id)}
+                                        title={clash ? 'Ese día ya hay turno con otro paciente' : `Programar turno para ${c.woundType}`}
+                                      >
+                                        {ds}{clash ? ' ⚠' : ''}
+                                      </Badge>
+                                    );
+                                  })}
+                                </div>
+                              </div>
                             );
                           })}
                         </div>
