@@ -172,6 +172,122 @@ export default function Assistant() {
     send(text);
   };
 
+  const generateAgenda = async () => {
+    setAgendaOpen(true);
+    setAgendaText('');
+    setAgendaLoading(true);
+    setCopied(false);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const prompt = `Generá un RESUMEN DE AGENDA DEL DÍA (${today}) para el personal de enfermería, listo para imprimir.
+
+Incluí, en este orden y con encabezados Markdown claros:
+
+# Agenda del día — ${today}
+
+## 1. Turnos y controles de hoy
+Lista de pacientes con control programado HOY (fecha exacta = ${today}). Incluí: hora, nombre, tipo de herida, ubicación anatómica, y acción sugerida. Si no hay turnos hoy, indicá "Sin turnos programados para hoy".
+
+## 2. Próximos controles (próximos 7 días)
+Lista cronológica de pacientes con próximo control entre mañana y los próximos 7 días. Incluí fecha, hora, paciente y herida.
+
+## 3. Priorización por gravedad
+Ordená los pacientes activos de mayor a menor prioridad según signos de infección, deterioro, dolor, y estado de evolución. Justificá brevemente cada prioridad (alta / media / baja).
+
+## 4. Insumos y preparación
+Lista breve de insumos clave a tener listos según las heridas a curar hoy y mañana.
+
+## 5. Alertas clínicas
+Cualquier paciente con signos de alarma (infección, deterioro, biofilm, requiere evaluación médica).
+
+Sé breve, claro y accionable. Usá listas con bullets o numeradas. No uses bloques de código.`;
+
+    try {
+      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nurse-assistant`;
+      const resp = await fetch(CHAT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: prompt }],
+          context,
+        }),
+      });
+
+      if (resp.status === 429) { toast.error('Límite de solicitudes alcanzado.'); setAgendaLoading(false); return; }
+      if (resp.status === 402) { toast.error('Créditos de IA agotados.'); setAgendaLoading(false); return; }
+      if (!resp.ok || !resp.body) { toast.error('No se pudo generar la agenda.'); setAgendaLoading(false); return; }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = '';
+      let streamDone = false;
+      let acc = '';
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, nl);
+          textBuffer = textBuffer.slice(nl + 1);
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') { streamDone = true; break; }
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) { acc += content; setAgendaText(acc); }
+          } catch {
+            textBuffer = line + '\n' + textBuffer;
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Error al generar la agenda.');
+    } finally {
+      setAgendaLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(agendaText);
+      setCopied(true);
+      toast.success('Agenda copiada al portapapeles');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('No se pudo copiar');
+    }
+  };
+
+  const handlePrint = () => {
+    const html = printRef.current?.innerHTML;
+    if (!html) return;
+    const w = window.open('', '_blank', 'width=900,height=700');
+    if (!w) { toast.error('Permití ventanas emergentes para imprimir'); return; }
+    w.document.write(`<!doctype html><html><head><title>Agenda del día</title>
+      <style>
+        body { font-family: 'Open Sans', system-ui, sans-serif; padding: 32px; color: #111; line-height: 1.5; max-width: 800px; margin: 0 auto; }
+        h1 { color: #00965E; border-bottom: 2px solid #00965E; padding-bottom: 8px; }
+        h2 { color: #00965E; margin-top: 24px; }
+        ul, ol { padding-left: 20px; }
+        li { margin: 4px 0; }
+        @media print { body { padding: 16px; } }
+      </style>
+    </head><body>${html}</body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 300);
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6 max-w-5xl mx-auto">
