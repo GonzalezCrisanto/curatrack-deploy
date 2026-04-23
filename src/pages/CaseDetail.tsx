@@ -14,7 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   ArrowLeft, Plus, Edit, Trash2, Clock, Camera, FileText,
   Stethoscope, Ruler, Droplets, ShieldAlert, Thermometer, Pill, X, Image, Upload, ImagePlus, Package, RefreshCw, CheckCircle2, Save,
-  TrendingDown, TrendingUp, Minus, Sparkles, Archive
+  TrendingDown, TrendingUp, Minus, Sparkles, Archive, Copy, Printer, Download
 } from 'lucide-react';
 import { Evolution, Photo, professionals, getStatusLabel, woundStatuses, healingFrequencies, odorOptions, evolutionStatuses, OdorLevel, EvolutionStatus, tissueTypeOptions, edgeTypeOptions, TissueType, EdgeType, exudateAmountOptions, exudateTypeOptions, exudateColorOptions, ExudateAmount, ExudateType, ExudateColor, infectionSignFields } from '@/data/demoData';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -66,6 +66,9 @@ export default function CaseDetail() {
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+
+  // Per-evolution AI summary viewer dialog
+  const [summaryViewerEvo, setSummaryViewerEvo] = useState<Evolution | null>(null);
 
   const casePhotoInput = useRef<HTMLInputElement>(null);
   const caseCameraInput = useRef<HTMLInputElement>(null);
@@ -629,17 +632,7 @@ export default function CaseDetail() {
             const exudateType = ev.exudateType
               ? exudateTypeOptions.find(o => o.value === ev.exudateType)?.label
               : null;
-            const aiSnippet = ev.aiSummary
-              ? ev.aiSummary
-                  .replace(/^#+\s+.*$/gm, '')
-                  .replace(/\*\*?/g, '')
-                  .replace(/^[-*]\s+/gm, '• ')
-                  .split('\n')
-                  .map(s => s.trim())
-                  .filter(Boolean)
-                  .join(' ')
-                  .slice(0, 220)
-              : null;
+            const hasAiSummary = !!ev.aiSummary && ev.aiSummary.trim().length > 0;
 
             return (
               <div key={ev.id} className="relative pl-12 animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
@@ -740,12 +733,17 @@ export default function CaseDetail() {
                           <p className="font-body text-sm">{ev.observations}</p>
                         </div>
                       )}
-                      {aiSnippet && (
-                        <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5">
-                          <p className="font-body text-[11px] uppercase tracking-wide text-primary/80 mb-1 flex items-center gap-1">
-                            <Sparkles className="h-3 w-3" /> Resumen IA
-                          </p>
-                          <p className="font-body text-xs leading-relaxed text-foreground/85 line-clamp-3">{aiSnippet}</p>
+                      {hasAiSummary && (
+                        <div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="font-body h-8 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+                            onClick={() => setSummaryViewerEvo(ev)}
+                          >
+                            <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Ver resumen IA
+                          </Button>
                         </div>
                       )}
                       {ev.nextControl && (
@@ -1310,6 +1308,113 @@ export default function CaseDetail() {
         <Dialog open={!!photoViewer} onOpenChange={() => setPhotoViewer(null)}>
           <DialogContent className="max-w-3xl p-2">
             <img src={photoViewer || ''} alt="Foto clínica" className="w-full rounded-lg" />
+          </DialogContent>
+        </Dialog>
+
+        {/* AI Summary viewer */}
+        <Dialog open={!!summaryViewerEvo} onOpenChange={(o) => !o && setSummaryViewerEvo(null)}>
+          <DialogContent className="max-w-2xl w-full sm:max-w-2xl h-[100dvh] sm:h-auto sm:max-h-[85vh] p-0 gap-0 flex flex-col rounded-none sm:rounded-lg">
+            <DialogHeader className="px-4 sm:px-6 pt-4 pb-3 border-b border-border/50 shrink-0">
+              <DialogTitle className="heading-display flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" /> Resumen con IA
+              </DialogTitle>
+              {summaryViewerEvo && (
+                <p className="font-body text-sm text-muted-foreground mt-1">
+                  Evolución del {summaryViewerEvo.date}
+                  {summaryViewerEvo.time ? ` · ${summaryViewerEvo.time} hs` : ''}
+                  {summaryViewerEvo.professional ? ` · ${summaryViewerEvo.professional}` : ''}
+                </p>
+              )}
+            </DialogHeader>
+
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
+              {summaryViewerEvo?.aiSummary ? (
+                <div className="font-body text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
+                  {summaryViewerEvo.aiSummary}
+                </div>
+              ) : (
+                <p className="font-body text-sm text-muted-foreground">No hay resumen disponible.</p>
+              )}
+            </div>
+
+            <div className="shrink-0 border-t border-border/50 bg-background px-4 sm:px-6 py-3 flex flex-wrap gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <Button
+                variant="outline"
+                className="font-body h-11 flex-1 sm:flex-none"
+                onClick={async () => {
+                  if (!summaryViewerEvo?.aiSummary) return;
+                  try {
+                    await navigator.clipboard.writeText(summaryViewerEvo.aiSummary);
+                    toast.success('Resumen copiado al portapapeles');
+                  } catch {
+                    toast.error('No se pudo copiar');
+                  }
+                }}
+              >
+                <Copy className="mr-1.5 h-4 w-4" /> Copiar
+              </Button>
+              <Button
+                variant="outline"
+                className="font-body h-11 flex-1 sm:flex-none"
+                onClick={() => {
+                  if (!summaryViewerEvo?.aiSummary) return;
+                  const ev = summaryViewerEvo;
+                  const win = window.open('', '_blank');
+                  if (!win) return;
+                  const safe = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
+                  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Resumen IA</title>
+                    <style>
+                      body { font-family: 'Open Sans', system-ui, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 24px; color: #111; }
+                      h1 { font-family: 'Montserrat', system-ui, sans-serif; color: #00965E; font-size: 22px; margin: 0 0 4px; }
+                      .meta { color: #555; font-size: 13px; margin-bottom: 24px; }
+                      .content { white-space: pre-wrap; line-height: 1.55; font-size: 14px; }
+                      @media print { body { margin: 0; padding: 16mm; } }
+                    </style></head><body>
+                    <h1>Resumen con IA</h1>
+                    <div class="meta">Evolución del ${safe(ev.date)}${ev.time ? ` · ${safe(ev.time)} hs` : ''}${ev.professional ? ` · ${safe(ev.professional)}` : ''}</div>
+                    <div class="content">${safe(ev.aiSummary || '')}</div>
+                    <script>window.onload = () => { window.print(); };</script>
+                  </body></html>`);
+                  win.document.close();
+                }}
+              >
+                <Printer className="mr-1.5 h-4 w-4" /> Imprimir
+              </Button>
+              <Button
+                className="font-body h-11 flex-1 sm:flex-none"
+                onClick={() => {
+                  if (!summaryViewerEvo?.aiSummary) return;
+                  const ev = summaryViewerEvo;
+                  const win = window.open('', '_blank');
+                  if (!win) return;
+                  const safe = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
+                  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Resumen-IA-${safe(ev.date)}</title>
+                    <style>
+                      body { font-family: 'Open Sans', system-ui, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 24px; color: #111; }
+                      h1 { font-family: 'Montserrat', system-ui, sans-serif; color: #00965E; font-size: 22px; margin: 0 0 4px; }
+                      .meta { color: #555; font-size: 13px; margin-bottom: 24px; }
+                      .content { white-space: pre-wrap; line-height: 1.55; font-size: 14px; }
+                      @media print { body { margin: 0; padding: 16mm; } }
+                    </style></head><body>
+                    <h1>Resumen con IA</h1>
+                    <div class="meta">Evolución del ${safe(ev.date)}${ev.time ? ` · ${safe(ev.time)} hs` : ''}${ev.professional ? ` · ${safe(ev.professional)}` : ''}</div>
+                    <div class="content">${safe(ev.aiSummary || '')}</div>
+                    <script>window.onload = () => { window.print(); };</script>
+                  </body></html>`);
+                  win.document.close();
+                  toast.info('Elegí "Guardar como PDF" en el diálogo de impresión.');
+                }}
+              >
+                <Download className="mr-1.5 h-4 w-4" /> Descargar PDF
+              </Button>
+              <Button
+                variant="ghost"
+                className="font-body h-11"
+                onClick={() => setSummaryViewerEvo(null)}
+              >
+                Cerrar
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
