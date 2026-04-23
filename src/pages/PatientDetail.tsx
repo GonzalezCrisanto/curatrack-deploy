@@ -996,7 +996,7 @@ export default function PatientDetail() {
               {/* Exudado */}
               <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
                 <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                  <Droplets className="h-3.5 w-3.5" /> Exudado
+                  <Droplets className="h-3.5 w-3.5" /> Exudado<OptionalTag />
                 </Label>
 
                 <div className="space-y-1.5">
