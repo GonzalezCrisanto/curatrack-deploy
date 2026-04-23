@@ -70,6 +70,7 @@ interface CaseFormState {
   infDolorAumentado: boolean;
   bodyTemperature: number | '';
   healingFrequency: string;
+  healingFrequencyDays: number | '';
   initialProcedure: string;
   initialMaterials: string;
   initialObservations: string;
@@ -87,6 +88,7 @@ const emptyCase: CaseFormState = {
   infMalOlor: false, infEritema: false, infCalor: false, infBiofilm: false, infPurulenta: false, infDolorAumentado: false,
   bodyTemperature: '',
   healingFrequency: '',
+  healingFrequencyDays: '',
   initialProcedure: '', initialMaterials: '', initialObservations: '',
   treatment: '',
 };
@@ -202,6 +204,7 @@ export default function PatientDetail() {
       infDolorAumentado: c.infDolorAumentado ?? false,
       bodyTemperature: c.bodyTemperature ?? '',
       healingFrequency: c.healingFrequency ?? '',
+      healingFrequencyDays: c.healingFrequencyDays ?? '',
       initialProcedure: c.initialProcedure ?? '',
       initialMaterials: c.initialMaterials ?? '',
       initialObservations: c.initialObservations ?? '',
