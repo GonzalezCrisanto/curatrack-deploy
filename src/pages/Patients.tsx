@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Trash2, Edit, ChevronRight, CalendarClock, Activity } from 'lucide-react';
+import { Plus, Search, Trash2, Edit, ChevronRight, CalendarClock, Activity, ArrowLeft } from 'lucide-react';
 import { Patient, professionals } from '@/data/demoData';
 import { getPatientIndicator, indicatorMeta, getActiveWoundCount, getLastEvolutionDate } from '@/lib/patientStatus';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -104,6 +104,11 @@ export default function Patients() {
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
+        <div>
+          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="font-body text-sm -ml-2">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Dashboard
+          </Button>
+        </div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="heading-display text-2xl md:text-3xl">Pacientes</h1>
