@@ -910,13 +910,30 @@ export default function CaseDetail() {
 
               {/* Frecuencia de curación */}
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Frecuencia de curación</Label>
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Frecuencia de curación <span className="text-destructive">*</span></Label>
                 <Select value={evoForm.healingFrequency} onValueChange={v => setEField('healingFrequency', v)}>
                   <SelectTrigger className="font-body h-11"><SelectValue placeholder="Seleccionar frecuencia" /></SelectTrigger>
                   <SelectContent>
                     {healingFrequencies.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                {(evoForm.healingFrequency === '' || evoForm.healingFrequency === 'A demanda') && (
+                  <div className="space-y-1 pt-1">
+                    <Label className="font-body text-[11px] text-muted-foreground">
+                      Días estimados entre curaciones <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      type="number" inputMode="numeric" min="1" step="1"
+                      value={evoForm.healingFrequencyDays}
+                      onChange={e => setEField('healingFrequencyDays', e.target.value === '' ? '' : Number(e.target.value))}
+                      className="font-body h-10 w-32 tabular-nums"
+                      placeholder="Ej: 5"
+                    />
+                    <p className="font-body text-[11px] text-muted-foreground">
+                      Se usa para sugerir los próximos turnos en el calendario.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Tamaño de la herida */}
