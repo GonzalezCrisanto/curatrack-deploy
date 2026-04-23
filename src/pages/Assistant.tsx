@@ -1,12 +1,13 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Send, Sparkles, Loader2, MessageSquare } from 'lucide-react';
+import { Send, Sparkles, Loader2, MessageSquare, CalendarCheck, Printer, Copy, Check } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useApp } from '@/context/AppContext';
 import { toast } from 'sonner';
 import { getPatientIndicator, indicatorMeta } from '@/lib/patientStatus';
@@ -29,7 +30,12 @@ export default function Assistant() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [agendaOpen, setAgendaOpen] = useState(false);
+  const [agendaText, setAgendaText] = useState('');
+  const [agendaLoading, setAgendaLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const printRef = useRef<HTMLDivElement>(null);
 
   // Build a compact context summary for the AI
   const context = useMemo(() => {
