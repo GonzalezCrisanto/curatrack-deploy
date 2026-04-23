@@ -1154,11 +1154,7 @@ export default function CaseDetail() {
                 </Select>
               </div>
 
-              {/* Próximo control */}
-              <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Próximo control</Label>
-                <Input type="date" value={evoForm.nextControl} onChange={e => setEField('nextControl', e.target.value)} className="font-body h-11" />
-              </div>
+              {/* Próximo control: se gestiona desde el calendario del paciente */}
 
               {/* Descripción/procedimiento/materiales/observaciones */}
               <div className="space-y-1.5">
