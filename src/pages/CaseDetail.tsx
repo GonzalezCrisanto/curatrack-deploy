@@ -26,6 +26,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import AISummaryCard from '@/components/AISummaryCard';
+import ReactMarkdown from 'react-markdown';
+import { marked } from 'marked';
 
 const statusBadgeClass: Record<string, string> = {
   activo: 'bg-info/10 text-info border-info/30',
@@ -329,6 +331,38 @@ export default function CaseDetail() {
     }
     persistEvo(false);
   };
+
+  const openSummaryPrintWindow = (ev: Evolution | null) => {
+    if (!ev?.aiSummary) return;
+    const win = window.open('', '_blank');
+    if (!win) return;
+    const safe = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
+    const bodyHtml = marked.parse(ev.aiSummary, { async: false }) as string;
+    win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Resumen-IA-${safe(ev.date)}</title>
+      <style>
+        body { font-family: 'Open Sans', system-ui, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 24px; color: #111; }
+        h1.title { font-family: 'Montserrat', system-ui, sans-serif; color: #00965E; font-size: 22px; margin: 0 0 4px; }
+        .meta { color: #555; font-size: 13px; margin-bottom: 24px; }
+        .content { line-height: 1.55; font-size: 14px; }
+        .content h1, .content h2, .content h3, .content h4 { font-family: 'Montserrat', system-ui, sans-serif; color: #111; margin-top: 18px; margin-bottom: 6px; }
+        .content h1 { font-size: 18px; }
+        .content h2 { font-size: 16px; }
+        .content h3 { font-size: 14px; }
+        .content p { margin: 8px 0; }
+        .content ul, .content ol { margin: 8px 0; padding-left: 20px; }
+        .content li { margin: 3px 0; }
+        .content strong { color: #00965E; }
+        .content code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 13px; }
+        @media print { body { margin: 0; padding: 16mm; } }
+      </style></head><body>
+      <h1 class="title">Resumen con IA</h1>
+      <div class="meta">Evolución del ${safe(ev.date)}${ev.time ? ` · ${safe(ev.time)} hs` : ''}${ev.professional ? ` · ${safe(ev.professional)}` : ''}</div>
+      <div class="content">${bodyHtml}</div>
+      <script>window.onload = () => { window.print(); };</script>
+    </body></html>`);
+    win.document.close();
+  };
+
 
   const setEField = (key: string, value: unknown) => setEvoForm(prev => ({ ...prev, [key]: value as never }));
 
@@ -1329,8 +1363,8 @@ export default function CaseDetail() {
 
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
               {summaryViewerEvo?.aiSummary ? (
-                <div className="font-body text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
-                  {summaryViewerEvo.aiSummary}
+                <div className="font-body text-sm leading-relaxed text-foreground/90 prose prose-sm max-w-none prose-headings:font-display prose-headings:text-foreground prose-strong:text-foreground prose-li:my-0.5 prose-p:my-2 prose-ul:my-2 prose-ol:my-2">
+                  <ReactMarkdown>{summaryViewerEvo.aiSummary}</ReactMarkdown>
                 </div>
               ) : (
                 <p className="font-body text-sm text-muted-foreground">No hay resumen disponible.</p>
@@ -1356,52 +1390,14 @@ export default function CaseDetail() {
               <Button
                 variant="outline"
                 className="font-body h-11 flex-1 sm:flex-none"
-                onClick={() => {
-                  if (!summaryViewerEvo?.aiSummary) return;
-                  const ev = summaryViewerEvo;
-                  const win = window.open('', '_blank');
-                  if (!win) return;
-                  const safe = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
-                  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Resumen IA</title>
-                    <style>
-                      body { font-family: 'Open Sans', system-ui, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 24px; color: #111; }
-                      h1 { font-family: 'Montserrat', system-ui, sans-serif; color: #00965E; font-size: 22px; margin: 0 0 4px; }
-                      .meta { color: #555; font-size: 13px; margin-bottom: 24px; }
-                      .content { white-space: pre-wrap; line-height: 1.55; font-size: 14px; }
-                      @media print { body { margin: 0; padding: 16mm; } }
-                    </style></head><body>
-                    <h1>Resumen con IA</h1>
-                    <div class="meta">Evolución del ${safe(ev.date)}${ev.time ? ` · ${safe(ev.time)} hs` : ''}${ev.professional ? ` · ${safe(ev.professional)}` : ''}</div>
-                    <div class="content">${safe(ev.aiSummary || '')}</div>
-                    <script>window.onload = () => { window.print(); };</script>
-                  </body></html>`);
-                  win.document.close();
-                }}
+                onClick={() => openSummaryPrintWindow(summaryViewerEvo)}
               >
                 <Printer className="mr-1.5 h-4 w-4" /> Imprimir
               </Button>
               <Button
                 className="font-body h-11 flex-1 sm:flex-none"
                 onClick={() => {
-                  if (!summaryViewerEvo?.aiSummary) return;
-                  const ev = summaryViewerEvo;
-                  const win = window.open('', '_blank');
-                  if (!win) return;
-                  const safe = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
-                  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Resumen-IA-${safe(ev.date)}</title>
-                    <style>
-                      body { font-family: 'Open Sans', system-ui, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 24px; color: #111; }
-                      h1 { font-family: 'Montserrat', system-ui, sans-serif; color: #00965E; font-size: 22px; margin: 0 0 4px; }
-                      .meta { color: #555; font-size: 13px; margin-bottom: 24px; }
-                      .content { white-space: pre-wrap; line-height: 1.55; font-size: 14px; }
-                      @media print { body { margin: 0; padding: 16mm; } }
-                    </style></head><body>
-                    <h1>Resumen con IA</h1>
-                    <div class="meta">Evolución del ${safe(ev.date)}${ev.time ? ` · ${safe(ev.time)} hs` : ''}${ev.professional ? ` · ${safe(ev.professional)}` : ''}</div>
-                    <div class="content">${safe(ev.aiSummary || '')}</div>
-                    <script>window.onload = () => { window.print(); };</script>
-                  </body></html>`);
-                  win.document.close();
+                  openSummaryPrintWindow(summaryViewerEvo);
                   toast.info('Elegí "Guardar como PDF" en el diálogo de impresión.');
                 }}
               >
