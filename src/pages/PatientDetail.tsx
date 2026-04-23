@@ -105,22 +105,6 @@ export default function PatientDetail() {
     setApptDialogOpen(false);
   };
 
-  // Compute conflicts for currently selected appointment date
-  const apptConflicts = useMemo(() => {
-    if (!apptDate) return [] as { patientName: string; time: string; woundType: string }[];
-    return patients
-      .filter(p => p.id !== patient.id)
-      .flatMap(p => p.cases.flatMap(c =>
-        c.evolutions
-          .filter(e => e.nextControl === apptDate)
-          .map(e => ({
-            patientName: `${p.lastName}, ${p.firstName}`,
-            time: e.time || '',
-            woundType: c.woundType,
-          }))
-      ));
-  }, [patients, patient.id, apptDate]);
-
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
