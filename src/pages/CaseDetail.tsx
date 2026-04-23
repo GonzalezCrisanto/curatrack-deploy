@@ -177,64 +177,73 @@ export default function CaseDetail() {
     setEvoDialogOpen(true);
   };
 
-  const buildEvolutionPromptData = () => {
+  // Build a comprehensive prompt that covers the WHOLE case + ALL its evolutions.
+  const buildCasePromptData = () => {
     const labelOf = <T extends string>(arr: { value: T; label: string }[], v?: T) =>
       v ? arr.find(o => o.value === v)?.label ?? v : undefined;
+
+    const evos = [...woundCase.evolutions]
+      .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+      .map(ev => {
+        const l = typeof ev.woundLength === 'number' ? ev.woundLength : null;
+        const w = typeof ev.woundWidth === 'number' ? ev.woundWidth : null;
+        const area = l && w ? Number((l * w).toFixed(2)) : null;
+        return {
+          fecha: ev.date,
+          hora: ev.time || null,
+          profesional: ev.professional || null,
+          estado_evolucion: labelOf(evolutionStatuses, ev.evolutionStatus),
+          tamaño_cm: { largo: l, ancho: w, profundidad: ev.woundDepth ?? null, area_cm2: area },
+          tipos_tejido: (ev.tissueTypes || []).map(t => labelOf(tissueTypeOptions, t)),
+          tipos_borde: (ev.edgeTypes || []).map(t => labelOf(edgeTypeOptions, t)),
+          dolor_eva: ev.painLevel ?? null,
+          olor: labelOf(odorOptions, ev.odor),
+          exudado: {
+            cantidad: labelOf(exudateAmountOptions, ev.exudateAmount),
+            tipo: labelOf(exudateTypeOptions, ev.exudateType),
+            color: labelOf(exudateColorOptions, ev.exudateColor),
+          },
+          infeccion: ev.hasInfectionSigns
+            ? {
+                presenta_signos: true,
+                signos: infectionSignFields.filter(f => (ev as unknown as Record<string, unknown>)[f.key]).map(f => f.label),
+                temperatura_c: ev.bodyTemperature ?? null,
+              }
+            : { presenta_signos: false },
+          frecuencia_curacion: ev.healingFrequency || null,
+          frecuencia_dias: ev.healingFrequencyDays ?? null,
+          procedimiento: ev.procedure || null,
+          materiales_usados: ev.materials || null,
+          descripcion: ev.description || null,
+          observaciones: ev.observations || null,
+          proximo_control: ev.nextControl || null,
+        };
+      });
 
     return {
       paciente: `${patient.firstName} ${patient.lastName}`,
       edad: patient.age,
       diagnostico_base: patient.diagnosis,
-      herida: {
+      caso: {
         tipo: woundCase.woundType,
         ubicacion: woundCase.anatomicalLocation,
         inicio: woundCase.startDate,
-        tratamiento_actual: woundCase.treatment,
+        estado_actual: labelOf(woundStatuses, woundCase.status as never) ?? woundCase.status,
+        tratamiento_actual: woundCase.treatment || null,
+        frecuencia_curacion_caso: woundCase.healingFrequency || null,
+        frecuencia_dias_caso: woundCase.healingFrequencyDays ?? null,
+        cantidad_evoluciones: evos.length,
       },
-      evolucion: {
-        fecha_curacion: evoForm.healingDate,
-        profesional: evoForm.professional,
-        frecuencia_curacion: evoForm.healingFrequency,
-        tamaño_cm: {
-          largo: evoForm.woundLength || null,
-          ancho: evoForm.woundWidth || null,
-          profundidad: evoForm.woundDepth || null,
-          area_cm2: woundArea,
-        },
-        tipos_tejido: evoForm.tissueTypes.map(t => labelOf(tissueTypeOptions, t)),
-        tipos_borde: evoForm.edgeTypes.map(t => labelOf(edgeTypeOptions, t)),
-        dolor_eva: evoForm.painLevel,
-        olor: labelOf(odorOptions, evoForm.odor),
-        exudado: {
-          cantidad: labelOf(exudateAmountOptions, evoForm.exudateAmount),
-          tipo: labelOf(exudateTypeOptions, evoForm.exudateType),
-          color: labelOf(exudateColorOptions, evoForm.exudateColor),
-        },
-        infeccion: evoForm.hasInfectionSigns
-          ? {
-              presenta_signos: true,
-              signos: infectionSignFields.filter(f => evoForm[f.key]).map(f => f.label),
-              temperatura_c: evoForm.bodyTemperature || null,
-            }
-          : { presenta_signos: false },
-        estado_evolucion: labelOf(evolutionStatuses, evoForm.evolutionStatus),
-        descripcion: evoForm.description,
-        procedimiento: evoForm.procedure,
-        materiales_usados: evoForm.materials,
-        observaciones: evoForm.observations,
-        proximo_control: evoForm.nextControl,
-        orden_medica: evoForm.requiresMedicalOrder ? evoForm.medicalOrder : null,
-      },
+      evoluciones: evos,
     };
   };
 
-  const generateAISummary = async (targetEvo?: Evolution) => {
+  const generateAISummary = async () => {
     setAiLoading(true);
     setAiError(null);
-    setAiSummary(null);
     try {
       const { data, error } = await supabase.functions.invoke('generate-evolution-summary', {
-        body: { evolutionData: buildEvolutionPromptData() },
+        body: { evolutionData: buildCasePromptData() },
       });
       if (error) {
         const msg = (error as { message?: string })?.message || 'Error al generar el resumen';
@@ -252,17 +261,12 @@ export default function CaseDetail() {
         setAiError('La IA no devolvió contenido.');
         return;
       }
-      setAiSummary(summary);
-      // Persist the summary onto the just-saved evolution.
-      // IMPORTANT: use the freshly-saved payload (not a re-lookup from `woundCase`,
-      // which is captured from the render BEFORE the edit was persisted and would
-      // revert the user's changes).
-      const base = targetEvo ?? editingEvo;
-      if (base) {
-        const merged: Evolution = { ...base, aiSummary: summary };
-        updateEvolution(patient.id, woundCase.id, merged);
-        setEditingEvo(merged);
-      }
+      // Persist the summary onto the CASE itself.
+      updateCase(patient.id, {
+        ...woundCase,
+        aiSummary: summary,
+        aiSummaryUpdatedAt: new Date().toISOString(),
+      });
       toast.success('Resumen clínico generado');
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Error desconocido';
