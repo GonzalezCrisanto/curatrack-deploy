@@ -29,6 +29,14 @@ import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { SharePatientDialog } from '@/components/SharePatientDialog';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
+
+const RequiredMark = () => (
+  <span className="text-destructive ml-0.5" aria-label="campo obligatorio">*</span>
+);
+const OptionalTag = () => (
+  <span className="font-body text-[10px] font-normal normal-case tracking-normal text-muted-foreground/70 ml-1">(opcional)</span>
+);
 
 const statusBadgeClass: Record<string, string> = {
   activo: 'bg-info/10 text-info border-info/30',
