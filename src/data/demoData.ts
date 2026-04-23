@@ -168,6 +168,8 @@ export interface WoundCase {
   initialMaterials?: string;
   initialObservations?: string;
   treatment?: string;
+  aiSummary?: string;
+  aiSummaryUpdatedAt?: string;
 
   // Legacy text fields (kept optional for backward compat with old PDFs/imports)
   size?: string;
