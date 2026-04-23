@@ -74,6 +74,14 @@ export default function Dashboard() {
   const [woundTypeFilter, setWoundTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('lastEvo');
   const [appointmentFilter, setAppointmentFilter] = useState<'all' | 'upcoming' | 'overdue'>('all');
+  const [selectedDay, setSelectedDay] = useState<Date | undefined>(undefined);
+
+  const toISODate = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
 
   const allCases = patients.flatMap(p => p.cases);
   const activeCases = allCases.filter(c => c.status === 'activo');
