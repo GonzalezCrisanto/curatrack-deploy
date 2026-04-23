@@ -31,11 +31,33 @@ const emptyCase: { woundType: string; anatomicalLocation: string; startDate: str
 export default function PatientDetail() {
   const { patientId } = useParams();
   const navigate = useNavigate();
-  const { patients, addCase, updateCase, deleteCase } = useApp();
+  const { patients, addCase, updateCase, deleteCase, addEvolution } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const [caseDialogOpen, setCaseDialogOpen] = useState(false);
   const [editingCase, setEditingCase] = useState<WoundCase | null>(null);
   const [caseForm, setCaseForm] = useState(emptyCase);
+
+  // New appointment dialog state
+  const [apptDialogOpen, setApptDialogOpen] = useState(false);
+  const [apptCaseId, setApptCaseId] = useState<string>('');
+  const [apptDate, setApptDate] = useState<string>('');
+  const [apptTime, setApptTime] = useState<string>('09:00');
+
+  // Compute conflicts for currently selected appointment date (must run before early return)
+  const apptConflicts = useMemo(() => {
+    if (!apptDate) return [] as { patientName: string; time: string; woundType: string }[];
+    return patients
+      .filter(p => p.id !== patientId)
+      .flatMap(p => p.cases.flatMap(c =>
+        c.evolutions
+          .filter(e => e.nextControl === apptDate)
+          .map(e => ({
+            patientName: `${p.lastName}, ${p.firstName}`,
+            time: e.time || '',
+            woundType: c.woundType,
+          }))
+      ));
+  }, [patients, patientId, apptDate]);
 
   if (!patient) return <AppLayout><div className="p-8 text-center font-body text-muted-foreground">Paciente no encontrado</div></AppLayout>;
 
@@ -63,6 +85,25 @@ export default function PatientDetail() {
   };
 
   const setCField = (key: string, value: string) => setCaseForm(prev => ({ ...prev, [key]: value }));
+
+  const handleSaveAppointment = () => {
+    if (!apptCaseId || !apptDate) return;
+    const newEvo = {
+      id: `evo-${Date.now()}`,
+      date: apptDate,
+      time: apptTime,
+      professional: patient.assignedProfessional || '',
+      description: 'Turno programado',
+      procedure: '',
+      materials: '',
+      healingFrequency: '',
+      observations: '',
+      nextControl: apptDate,
+      photos: [],
+    };
+    addEvolution(patient.id, apptCaseId, newEvo);
+    setApptDialogOpen(false);
+  };
 
   return (
     <AppLayout>
@@ -163,6 +204,21 @@ export default function PatientDetail() {
               }))
           );
 
+          // Appointments from OTHER patients (to avoid scheduling clashes)
+          const otherPatientsAppointments = patients
+            .filter(p => p.id !== patient.id)
+            .flatMap(p => p.cases.flatMap(c =>
+              c.evolutions
+                .filter(e => e.nextControl && e.nextControl.trim() !== '' && new Date(e.nextControl + 'T12:00:00') >= today)
+                .map(e => ({
+                  date: new Date(e.nextControl + 'T12:00:00'),
+                  time: e.time || '',
+                  patientName: `${p.lastName}, ${p.firstName}`,
+                  woundType: c.woundType,
+                }))
+            ));
+          const otherDates = otherPatientsAppointments.map(a => a.date);
+          const otherDateStrings = new Set(otherDates.map(d => d.toISOString().split('T')[0]));
           // Suggested future dates based on interval (per patient)
           const interval = patient.controlIntervalDays || 7;
           const suggestedDates: Date[] = [];
@@ -175,13 +231,20 @@ export default function PatientDetail() {
           }
 
           // Build dynamic modifiers: one modifier key per case
-          const modifiers: Record<string, Date[]> = { suggested: suggestedDates };
+          const modifiers: Record<string, Date[]> = { suggested: suggestedDates, other: otherDates };
           const modifiersStyles: Record<string, React.CSSProperties> = {
             suggested: {
               backgroundColor: 'transparent',
               color: 'hsl(var(--muted-foreground))',
               borderRadius: '9999px',
               border: '1.5px dashed hsl(var(--muted-foreground) / 0.5)',
+            },
+            other: {
+              backgroundColor: 'hsl(var(--muted))',
+              color: 'hsl(var(--muted-foreground))',
+              borderRadius: '9999px',
+              border: '1.5px solid hsl(var(--muted-foreground) / 0.4)',
+              opacity: 0.7,
             },
           };
           activeCases.forEach(c => {
@@ -198,14 +261,29 @@ export default function PatientDetail() {
             }
           });
 
+          const openNewAppointment = (preselectDate?: string) => {
+            setApptCaseId(activeCases[0]?.id || '');
+            setApptDate(preselectDate || new Date(today.getTime() + interval * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+            setApptTime('09:00');
+            setApptDialogOpen(true);
+          };
+
           return (
             <Card className="border-border/50">
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between gap-3 flex-wrap">
                 <CardTitle className="heading-display text-lg flex items-center gap-2">
                   <CalendarClock className="h-5 w-5 text-primary" />
                   Calendario de Controles
                   <Badge variant="outline" className="font-body text-xs ml-2">Cada {interval} día{interval !== 1 ? 's' : ''}</Badge>
                 </CardTitle>
+                <Button
+                  size="sm"
+                  className="font-body"
+                  onClick={() => openNewAppointment()}
+                  disabled={activeCases.length === 0}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Nuevo turno
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col lg:flex-row gap-6">
@@ -233,6 +311,12 @@ export default function PatientDetail() {
                         <span className="h-3 w-3 rounded-full border-2 border-dashed border-muted-foreground/50" />
                         <span className="font-body text-xs text-muted-foreground">Sugerido</span>
                       </div>
+                      {otherDates.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-3 w-3 rounded-full bg-muted border border-muted-foreground/40" />
+                          <span className="font-body text-xs text-muted-foreground">Otro paciente</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -264,11 +348,43 @@ export default function PatientDetail() {
                       <>
                         <h3 className="font-body text-sm font-semibold text-muted-foreground mt-4">Fechas sugeridas (cada {interval} días)</h3>
                         <div className="flex flex-wrap gap-2">
-                          {suggestedDates.slice(0, 6).map((d, i) => (
-                            <Badge key={`sug-${i}`} variant="outline" className="font-body text-xs border-dashed border-muted-foreground/50">
-                              {d.toISOString().split('T')[0]}
-                            </Badge>
-                          ))}
+                          {suggestedDates.slice(0, 6).map((d, i) => {
+                            const ds = d.toISOString().split('T')[0];
+                            const clash = otherDateStrings.has(ds);
+                            return (
+                              <Badge
+                                key={`sug-${i}`}
+                                variant="outline"
+                                className={`font-body text-xs cursor-pointer ${clash ? 'border-warning/60 text-warning' : 'border-dashed border-muted-foreground/50 hover:border-primary'}`}
+                                onClick={() => openNewAppointment(ds)}
+                                title={clash ? 'Ese día ya hay turno con otro paciente' : 'Programar turno en esta fecha'}
+                              >
+                                {ds}{clash ? ' ⚠' : ''}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+
+                    {otherPatientsAppointments.length > 0 && (
+                      <>
+                        <h3 className="font-body text-sm font-semibold text-muted-foreground mt-4">Turnos con otros pacientes</h3>
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                          {otherPatientsAppointments
+                            .sort((a, b) => a.date.getTime() - b.date.getTime())
+                            .slice(0, 8)
+                            .map((ap, i) => (
+                              <div key={`other-${i}`} className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/40 border border-border/40">
+                                <div className="min-w-0">
+                                  <p className="font-body text-xs font-medium truncate">{ap.patientName}</p>
+                                  <p className="font-body text-[11px] text-muted-foreground truncate">{ap.woundType}</p>
+                                </div>
+                                <span className="font-body text-[11px] text-muted-foreground shrink-0">
+                                  {ap.date.toISOString().split('T')[0]}{ap.time ? ` · ${ap.time}` : ''}
+                                </span>
+                              </div>
+                            ))}
                         </div>
                       </>
                     )}
@@ -346,6 +462,61 @@ export default function PatientDetail() {
         </div>
 
         {/* Case Form Dialog */}
+        {/* New Appointment Dialog */}
+        <Dialog open={apptDialogOpen} onOpenChange={setApptDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="heading-display text-lg">Nuevo turno</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <div className="space-y-1.5">
+                <Label className="font-body text-sm">Herida</Label>
+                <Select value={apptCaseId} onValueChange={setApptCaseId}>
+                  <SelectTrigger className="font-body"><SelectValue placeholder="Seleccionar herida" /></SelectTrigger>
+                  <SelectContent>
+                    {patient.cases.filter(c => c.status !== 'resuelto').map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.woundType}{c.anatomicalLocation ? ` · ${c.anatomicalLocation}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="font-body text-sm">Fecha</Label>
+                  <Input type="date" value={apptDate} onChange={e => setApptDate(e.target.value)} className="font-body" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-body text-sm">Hora</Label>
+                  <Input type="time" value={apptTime} onChange={e => setApptTime(e.target.value)} className="font-body" />
+                </div>
+              </div>
+
+              {apptConflicts.length > 0 && (
+                <div className="rounded-md border border-warning/40 bg-warning/10 p-3 space-y-1.5">
+                  <p className="font-body text-xs font-semibold text-warning">
+                    ⚠ Ya hay {apptConflicts.length} turno{apptConflicts.length !== 1 ? 's' : ''} con otros pacientes ese día:
+                  </p>
+                  <ul className="space-y-0.5">
+                    {apptConflicts.slice(0, 5).map((c, i) => (
+                      <li key={i} className="font-body text-[11px] text-foreground/80">
+                        • {c.patientName}{c.time ? ` — ${c.time}` : ''} ({c.woundType})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="outline" onClick={() => setApptDialogOpen(false)} className="font-body">Cancelar</Button>
+              <Button onClick={handleSaveAppointment} disabled={!apptCaseId || !apptDate} className="font-body">
+                Guardar turno
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={caseDialogOpen} onOpenChange={setCaseDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
