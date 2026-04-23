@@ -590,6 +590,19 @@ export default function PatientDetail() {
                 fontWeight: 600,
               };
             }
+            // Suggested per-case (dashed circle with case color)
+            const sugDates = suggestionsByCase.filter(s => s.caseId === c.id).map(s => s.date);
+            if (sugDates.length > 0) {
+              const sKey = `sug_${c.id}`;
+              modifiers[sKey] = sugDates;
+              modifiersStyles[sKey] = {
+                backgroundColor: 'transparent',
+                color: caseColor[c.id],
+                borderRadius: '9999px',
+                border: `1.5px dashed ${caseColor[c.id]}`,
+                fontWeight: 600,
+              };
+            }
           });
 
           const openNewAppointment = (preselectDate?: string) => {
