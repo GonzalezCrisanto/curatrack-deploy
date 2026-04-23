@@ -1124,7 +1124,7 @@ export default function PatientDetail() {
               {/* Materiales utilizados */}
               <div className="space-y-1.5">
                 <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                  <Package className="h-3.5 w-3.5" /> Material de curación utilizado
+                  <Package className="h-3.5 w-3.5" /> Material de curación utilizado<OptionalTag />
                 </Label>
                 <Textarea value={caseForm.initialMaterials} onChange={e => setCField('initialMaterials', e.target.value)}
                   className="font-body" rows={3}
