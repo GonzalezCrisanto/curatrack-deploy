@@ -462,9 +462,16 @@ export default function Patients() {
               <section className="space-y-3 pt-4 border-t border-border/60">
                 <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-muted-foreground">Seguimiento</h3>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Fecha de ingreso al servicio</Label>
-                    <Input type="date" value={form.admissionDate} onChange={e => setField('admissionDate', e.target.value)} className="font-body" />
+                  <div className="space-y-1.5" data-error={!!errors.admissionDate}>
+                    <Label className="font-body text-sm">Fecha de ingreso al servicio <span className="text-destructive">*</span></Label>
+                    <Input
+                      type="date"
+                      value={form.admissionDate}
+                      onChange={e => setField('admissionDate', e.target.value)}
+                      className={`font-body ${errors.admissionDate ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                      aria-invalid={!!errors.admissionDate}
+                    />
+                    {errors.admissionDate && <p className="font-body text-[11px] text-destructive">{errors.admissionDate}</p>}
                   </div>
                   <div className="space-y-2 sm:col-span-2">
                     <p className="font-body text-[11px] text-muted-foreground -mt-1">
