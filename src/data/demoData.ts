@@ -138,15 +138,41 @@ export interface WoundCase {
   woundType: string;
   anatomicalLocation: string;
   startDate: string;
-  size: string;
-  depth: string;
-  exudate: string;
-  infection: string;
-  pain: string;
-  treatment: string;
   status: 'activo' | 'en_mejoria' | 'critico' | 'resuelto';
   evolutions: Evolution[];
   photos: Photo[];
+
+  // Structured baseline (same fields as Evolution)
+  woundLength?: number;
+  woundWidth?: number;
+  woundDepth?: number;
+  tissueTypes?: TissueType[];
+  edgeTypes?: EdgeType[];
+  exudateAmount?: ExudateAmount;
+  exudateType?: ExudateType;
+  exudateColor?: ExudateColor;
+  painLevel?: number;
+  odor?: OdorLevel;
+  hasInfectionSigns?: boolean;
+  infMalOlor?: boolean;
+  infEritema?: boolean;
+  infCalor?: boolean;
+  infBiofilm?: boolean;
+  infPurulenta?: boolean;
+  infDolorAumentado?: boolean;
+  bodyTemperature?: number;
+  healingFrequency?: string;
+  initialProcedure?: string;
+  initialMaterials?: string;
+  initialObservations?: string;
+  treatment?: string;
+
+  // Legacy text fields (kept optional for backward compat with old PDFs/imports)
+  size?: string;
+  depth?: string;
+  exudate?: string;
+  infection?: string;
+  pain?: string;
 }
 
 export interface Patient {
@@ -229,45 +255,44 @@ export const demoPatients: Patient[] = [
         woundType: 'Úlcera por presión',
         anatomicalLocation: 'Sacro',
         startDate: '2025-11-20',
-        size: '8 x 6 cm',
-        depth: 'Estadio III - Pérdida total del espesor de la piel',
-        exudate: 'Moderado, seroso',
-        infection: 'Sin signos de infección actual',
-        pain: 'EVA 5/10 - Moderado',
-        treatment: 'Desbridamiento autolítico con hidrogel + apósito de espuma multicapa. Cambio cada 48-72hs.',
         status: 'activo',
+        woundLength: 8, woundWidth: 6, woundDepth: 1.2,
+        tissueTypes: ['granulacion', 'fibrina', 'esfacelo'],
+        edgeTypes: ['regular', 'macerado'],
+        exudateAmount: 'moderado', exudateType: 'seroso', exudateColor: 'amarillo',
+        painLevel: 5, odor: 'leve',
+        hasInfectionSigns: false,
+        healingFrequency: 'Cada 48hs',
+        initialProcedure: 'Limpieza con solución fisiológica. Desbridamiento autolítico con hidrogel. Apósito de espuma multicapa.',
+        initialMaterials: 'Solución fisiológica, hidrogel amorfo, apósito de espuma Mepilex Border, gasas estériles',
+        initialObservations: 'Estadio III. Cambio de posición cada 2hs. Colchón antiescaras instalado.',
+        treatment: 'Desbridamiento autolítico + apósito de espuma. Cambio cada 48-72hs.',
+        size: '8 x 6 cm', depth: 'Estadio III', exudate: 'Moderado, seroso',
+        infection: 'Sin signos de infección actual', pain: 'EVA 5/10 - Moderado',
         evolutions: [
           {
-            id: 'e1-t3',
-            date: '2026-05-03',
-            time: '09:30',
+            id: 'e1-t3', date: '2026-05-03', time: '09:30',
             professional: 'Lic. María González',
             description: 'Turno programado',
             procedure: '', materials: '', healingFrequency: '', observations: '',
             nextControl: '2026-05-03', photos: [],
           },
           {
-            id: 'e1-t2',
-            date: '2026-04-30',
-            time: '09:30',
+            id: 'e1-t2', date: '2026-04-30', time: '09:30',
             professional: 'Lic. María González',
             description: 'Turno programado',
             procedure: '', materials: '', healingFrequency: '', observations: '',
             nextControl: '2026-04-30', photos: [],
           },
           {
-            id: 'e1-t1',
-            date: '2026-04-27',
-            time: '09:30',
+            id: 'e1-t1', date: '2026-04-27', time: '09:30',
             professional: 'Lic. María González',
             description: 'Turno programado',
             procedure: '', materials: '', healingFrequency: '', observations: '',
             nextControl: '2026-04-27', photos: [],
           },
           {
-            id: 'e1',
-            date: '2026-03-18',
-            time: '09:30',
+            id: 'e1', date: '2026-03-18', time: '09:30',
             professional: 'Lic. María González',
             description: 'Lecho de herida con 60% tejido de granulación, 30% fibrina amarilla, 10% esfacelo. Bordes definidos con leve maceración perilesional.',
             procedure: 'Limpieza con solución fisiológica. Desbridamiento autolítico con hidrogel. Aplicación de apósito de espuma multicapa.',
@@ -278,9 +303,7 @@ export const demoPatients: Patient[] = [
             photos: [{ id: 'ph1', url: woundPhotos[0], caption: 'Vista general de la úlcera sacra', date: '2026-03-18' }],
           },
           {
-            id: 'e2',
-            date: '2026-03-14',
-            time: '10:00',
+            id: 'e2', date: '2026-03-14', time: '10:00',
             professional: 'Lic. María González',
             description: 'Leve reducción del área de fibrina. Granulación progresando desde los bordes. Sin signos de infección.',
             procedure: 'Irrigación con solución fisiológica tibia. Aplicación de colagenasa en zona de fibrina. Apósito secundario.',
@@ -291,9 +314,7 @@ export const demoPatients: Patient[] = [
             photos: [{ id: 'ph2', url: woundPhotos[1], caption: 'Evolución favorable', date: '2026-03-14' }],
           },
           {
-            id: 'e3',
-            date: '2026-03-10',
-            time: '08:45',
+            id: 'e3', date: '2026-03-10', time: '08:45',
             professional: 'Dr. Carlos Rodríguez',
             description: 'Primera evaluación. Úlcera sacra estadio III con abundante fibrina. Bordes irregulares.',
             procedure: 'Desbridamiento cortante de tejido necrótico. Toma de cultivo. Inicio de protocolo de curación.',
@@ -316,13 +337,20 @@ export const demoPatients: Patient[] = [
         woundType: 'Pie diabético',
         anatomicalLocation: 'Pie derecho - Zona plantar metatarsiana',
         startDate: '2026-01-10',
-        size: '3 x 2.5 cm',
-        depth: 'Wagner grado 2',
-        exudate: 'Escaso, seroso',
-        infection: 'Colonización bacteriana controlada',
-        pain: 'EVA 3/10 - Neuropatía periférica',
-        treatment: 'Descarga con bota Walker. Curación con cadexómero iodado. Control glucémico estricto.',
         status: 'en_mejoria',
+        woundLength: 3, woundWidth: 2.5, woundDepth: 0.8,
+        tissueTypes: ['granulacion', 'fibrina'],
+        edgeTypes: ['regular'],
+        exudateAmount: 'escaso', exudateType: 'seroso', exudateColor: 'amarillo',
+        painLevel: 3, odor: 'sin_olor',
+        hasInfectionSigns: false,
+        healingFrequency: 'Cada 72hs',
+        initialProcedure: 'Curación con cadexómero iodado. Apósito no adherente. Descarga con bota Walker.',
+        initialMaterials: 'Cadexómero iodado (Iodosorb), apósito no adherente Mepitel, venda de fijación, bota Walker',
+        initialObservations: 'Wagner grado 2. Control glucémico estricto. HbA1c 7.8%.',
+        treatment: 'Descarga con bota Walker. Curación con cadexómero iodado. Control glucémico estricto.',
+        size: '3 x 2.5 cm', depth: 'Wagner grado 2', exudate: 'Escaso, seroso',
+        infection: 'Colonización bacteriana controlada', pain: 'EVA 3/10 - Neuropatía periférica',
         evolutions: [
           {
             id: 'e4-t2',
@@ -388,13 +416,22 @@ export const demoPatients: Patient[] = [
         woundType: 'Úlcera venosa',
         anatomicalLocation: 'Pierna izquierda - Zona maleolar interna',
         startDate: '2025-12-05',
-        size: '12 x 8 cm',
-        depth: 'Superficial con bordes irregulares',
-        exudate: 'Abundante, serohemático',
-        infection: 'Biofilm bacteriano detectado',
-        pain: 'EVA 7/10 - Dolor intenso al reposo',
-        treatment: 'Terapia compresiva multicapa. Apósito de alginato + plata. Elevación de MMII.',
         status: 'critico',
+        woundLength: 12, woundWidth: 8, woundDepth: 0.5,
+        tissueTypes: ['fibrina', 'esfacelo'],
+        edgeTypes: ['irregular', 'macerado', 'eritematoso'],
+        exudateAmount: 'abundante', exudateType: 'serosanguinolento', exudateColor: 'rojo',
+        painLevel: 7, odor: 'moderado',
+        hasInfectionSigns: true, infMalOlor: true, infBiofilm: true, infPurulenta: false,
+        bodyTemperature: 37.4,
+        healingFrequency: 'Cada 48hs',
+        initialProcedure: 'Desbridamiento con hidrofibra. Apósito de alginato con plata iónica. Vendaje compresivo multicapa.',
+        initialMaterials: 'Hidrofibra Aquacel Ag+, alginato con plata, vendaje compresivo Profore, protector cutáneo',
+        initialObservations: 'Dermatitis ocre y lipodermatoesclerosis perilesional. Eco Doppler venoso solicitado.',
+        treatment: 'Terapia compresiva multicapa. Apósito de alginato + plata. Elevación de MMII.',
+        size: '12 x 8 cm', depth: 'Superficial con bordes irregulares',
+        exudate: 'Abundante, serohemático', infection: 'Biofilm bacteriano detectado',
+        pain: 'EVA 7/10 - Dolor intenso al reposo',
         evolutions: [
           {
             id: 'e5-t3',
@@ -469,13 +506,23 @@ export const demoPatients: Patient[] = [
         woundType: 'Herida quirúrgica',
         anatomicalLocation: 'Abdomen - Línea media infraumbilical',
         startDate: '2026-02-25',
-        size: '15 x 4 cm (dehiscencia de 6 cm)',
-        depth: 'Hasta fascia muscular visible',
+        status: 'activo',
+        woundLength: 15, woundWidth: 4, woundDepth: 2.5,
+        tissueTypes: ['granulacion', 'fibrina'],
+        edgeTypes: ['irregular', 'eritematoso'],
+        exudateAmount: 'moderado', exudateType: 'purulento', exudateColor: 'amarillo',
+        painLevel: 6, odor: 'leve',
+        hasInfectionSigns: true, infEritema: true, infCalor: true, infPurulenta: true,
+        bodyTemperature: 37.8,
+        healingFrequency: 'Diaria',
+        initialProcedure: 'Irrigación con PHMB. Packing con gasa húmeda. Apósito secundario absorbente.',
+        initialMaterials: 'PHMB (Prontosan), gasas húmedas estériles, apósito absorbente, cinta hipoalergénica',
+        initialObservations: 'Dehiscencia 6cm. ATB sistémico (Cefalotina). Cultivo: S. aureus MSSA. VAC therapy en evaluación.',
+        treatment: 'ATB sistémico (Cefalotina). Curación con PHMB. VAC therapy en evaluación.',
+        size: '15 x 4 cm (dehiscencia de 6 cm)', depth: 'Hasta fascia muscular visible',
         exudate: 'Moderado, seropurulento',
         infection: 'Infección de sitio quirúrgico superficial - Cultivo: S. aureus MSSA',
         pain: 'EVA 6/10',
-        treatment: 'ATB sistémico (Cefalotina). Curación con PHMB. VAC therapy en evaluación.',
-        status: 'activo',
         evolutions: [
           {
             id: 'e6-t3',
@@ -550,13 +597,21 @@ export const demoPatients: Patient[] = [
         woundType: 'Quemadura',
         anatomicalLocation: 'Antebrazo derecho - Cara anterior',
         startDate: '2026-03-01',
-        size: '10 x 7 cm',
-        depth: 'Segundo grado superficial (ABA)',
-        exudate: 'Seroso, moderado',
-        infection: 'Sin signos de infección',
-        pain: 'EVA 8/10 - Muy doloroso',
-        treatment: 'Sulfadiazina de plata. Apósito de silicona no adherente. Analgesia pautada.',
         status: 'en_mejoria',
+        woundLength: 10, woundWidth: 7, woundDepth: 0.3,
+        tissueTypes: ['epitelizacion', 'granulacion'],
+        edgeTypes: ['regular'],
+        exudateAmount: 'moderado', exudateType: 'seroso', exudateColor: 'transparente',
+        painLevel: 8, odor: 'sin_olor',
+        hasInfectionSigns: false,
+        healingFrequency: 'Cada 72hs',
+        initialProcedure: 'Limpieza con SF tibia. Sulfadiazina de plata + apósito de silicona no adherente.',
+        initialMaterials: 'Solución fisiológica tibia, sulfadiazina de plata, apósito de silicona Mepitel One, gasas',
+        initialObservations: 'Quemadura por agua hirviente. Analgesia pautada (paracetamol + tramadol). Sin ampollas residuales.',
+        treatment: 'Sulfadiazina de plata. Apósito de silicona no adherente. Analgesia pautada.',
+        size: '10 x 7 cm', depth: 'Segundo grado superficial (ABA)',
+        exudate: 'Seroso, moderado', infection: 'Sin signos de infección',
+        pain: 'EVA 8/10 - Muy doloroso',
         evolutions: [
           {
             id: 'e7-t3',
@@ -631,13 +686,22 @@ export const demoPatients: Patient[] = [
         woundType: 'Lesión traumática',
         anatomicalLocation: 'Muslo izquierdo - Cara lateral',
         startDate: '2026-02-15',
-        size: '18 x 12 cm',
-        depth: 'Pérdida parcial de espesor con exposición de tejido subcutáneo',
+        status: 'en_mejoria',
+        woundLength: 18, woundWidth: 12, woundDepth: 1.5,
+        tissueTypes: ['granulacion'],
+        edgeTypes: ['regular'],
+        exudateAmount: 'moderado', exudateType: 'seroso', exudateColor: 'transparente',
+        painLevel: 4, odor: 'sin_olor',
+        hasInfectionSigns: false,
+        healingFrequency: 'Cada 48hs',
+        initialProcedure: 'Terapia de presión negativa (VAC). Cambio de esponja según protocolo.',
+        initialMaterials: 'Sistema VAC, esponja de polivinilo, film adhesivo, canister de drenaje',
+        initialObservations: 'Politraumatismo en moto. Injerto de piel parcial planificado para 25/03. Excelente evolución.',
+        treatment: 'Terapia de presión negativa (VAC) + injerto de piel parcial planificado.',
+        size: '18 x 12 cm', depth: 'Pérdida parcial de espesor con exposición de tejido subcutáneo',
         exudate: 'Abundante los primeros días, actualmente moderado seroso',
         infection: 'Infección controlada tras tratamiento con ATB',
         pain: 'EVA 4/10 - En descenso',
-        treatment: 'Terapia de presión negativa (VAC) + injerto de piel parcial planificado.',
-        status: 'en_mejoria',
         evolutions: [
           {
             id: 'e8-t3',
@@ -712,13 +776,20 @@ export const demoPatients: Patient[] = [
         woundType: 'Úlcera por presión',
         anatomicalLocation: 'Talón derecho',
         startDate: '2025-10-15',
-        size: '4 x 3 cm',
-        depth: 'Estadio II',
-        exudate: 'Escaso',
-        infection: 'Sin infección',
-        pain: 'EVA 2/10',
-        treatment: 'Apósito hidrocoloide. Protección de talones con taloneras.',
         status: 'resuelto',
+        woundLength: 4, woundWidth: 3, woundDepth: 0.2,
+        tissueTypes: ['epitelizacion'],
+        edgeTypes: ['regular'],
+        exudateAmount: 'sin_exudado',
+        painLevel: 2, odor: 'sin_olor',
+        hasInfectionSigns: false,
+        healingFrequency: 'Semanal',
+        initialProcedure: 'Apósito hidrocoloide. Protección de talones con taloneras.',
+        initialMaterials: 'Hidrocoloide fino, talonera preventiva, crema hidratante',
+        initialObservations: 'Estadio II. Caso resuelto el 28/02/2026. Continúa con medidas preventivas.',
+        treatment: 'Apósito hidrocoloide. Protección de talones con taloneras.',
+        size: '4 x 3 cm', depth: 'Estadio II', exudate: 'Escaso',
+        infection: 'Sin infección', pain: 'EVA 2/10',
         evolutions: [
           {
             id: 'e9',

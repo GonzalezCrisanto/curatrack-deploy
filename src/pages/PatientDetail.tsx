@@ -10,13 +10,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Edit, Trash2, ChevronRight, User, Phone, Mail, MapPin, CalendarClock, CalendarDays, FileDown, ShieldAlert, BadgeCheck, UserCog, FileDown as FileDownIcon, Share2, Crown, Users as UsersIcon } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import {
+  ArrowLeft, Plus, Edit, Trash2, ChevronRight, User, Phone, Mail, MapPin, CalendarClock, CalendarDays,
+  FileDown, ShieldAlert, BadgeCheck, UserCog, FileDown as FileDownIcon, Share2, Crown, Users as UsersIcon,
+  Droplets, Thermometer, Package, CheckCircle2,
+} from 'lucide-react';
 import { exportPatientPdf } from '@/lib/exportPdf';
-import { WoundCase, woundTypes, woundStatuses, getStatusLabel, professionals } from '@/data/demoData';
+import {
+  WoundCase, woundTypes, woundStatuses, getStatusLabel, professionals,
+  healingFrequencies, odorOptions, tissueTypeOptions, edgeTypeOptions,
+  exudateAmountOptions, exudateTypeOptions, exudateColorOptions, infectionSignFields,
+  TissueType, EdgeType, OdorLevel, ExudateAmount, ExudateType, ExudateColor,
+} from '@/data/demoData';
 import { ROLE_LABEL_SHORT } from '@/data/demoUsers';
 import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { SharePatientDialog } from '@/components/SharePatientDialog';
+import { cn } from '@/lib/utils';
 
 const statusBadgeClass: Record<string, string> = {
   activo: 'bg-info/10 text-info border-info/30',
@@ -25,9 +37,52 @@ const statusBadgeClass: Record<string, string> = {
   resuelto: 'bg-success/15 text-success border-success/40',
 };
 
-const emptyCase: { woundType: string; anatomicalLocation: string; startDate: string; size: string; depth: string; exudate: string; infection: string; pain: string; treatment: string; status: 'activo' | 'en_mejoria' | 'critico' | 'resuelto' } = {
-  woundType: '', anatomicalLocation: '', startDate: '', size: '', depth: '',
-  exudate: '', infection: '', pain: '', treatment: '', status: 'activo',
+interface CaseFormState {
+  woundType: string;
+  anatomicalLocation: string;
+  startDate: string;
+  status: 'activo' | 'en_mejoria' | 'critico' | 'resuelto';
+  professional: string;
+  woundLength: number | '';
+  woundWidth: number | '';
+  woundDepth: number | '';
+  tissueTypes: TissueType[];
+  edgeTypes: EdgeType[];
+  exudateAmount?: ExudateAmount;
+  exudateType?: ExudateType;
+  exudateColor?: ExudateColor;
+  painLevel: number;
+  odor: OdorLevel;
+  hasInfectionSigns: boolean;
+  infMalOlor: boolean;
+  infEritema: boolean;
+  infCalor: boolean;
+  infBiofilm: boolean;
+  infPurulenta: boolean;
+  infDolorAumentado: boolean;
+  bodyTemperature: number | '';
+  healingFrequency: string;
+  initialProcedure: string;
+  initialMaterials: string;
+  initialObservations: string;
+  treatment: string;
+  createInitialEvolution: boolean;
+}
+
+const emptyCase: CaseFormState = {
+  woundType: '', anatomicalLocation: '', startDate: '', status: 'activo',
+  professional: '',
+  woundLength: '', woundWidth: '', woundDepth: '',
+  tissueTypes: [], edgeTypes: [],
+  exudateAmount: undefined, exudateType: undefined, exudateColor: undefined,
+  painLevel: 0, odor: 'sin_olor',
+  hasInfectionSigns: false,
+  infMalOlor: false, infEritema: false, infCalor: false, infBiofilm: false, infPurulenta: false, infDolorAumentado: false,
+  bodyTemperature: '',
+  healingFrequency: '',
+  initialProcedure: '', initialMaterials: '', initialObservations: '',
+  treatment: '',
+  createInitialEvolution: true,
 };
 
 export default function PatientDetail() {
@@ -81,28 +136,155 @@ export default function PatientDetail() {
 
   const openNewCase = () => {
     setEditingCase(null);
-    setCaseForm({ ...emptyCase, startDate: new Date().toISOString().split('T')[0] });
+    setCaseForm({
+      ...emptyCase,
+      startDate: new Date().toISOString().split('T')[0],
+      professional: patient.assignedProfessional || '',
+    });
     setCaseDialogOpen(true);
   };
 
   const openEditCase = (c: WoundCase, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingCase(c);
-    const { id, patientId, evolutions, photos, ...rest } = c;
-    setCaseForm(rest);
+    setCaseForm({
+      woundType: c.woundType,
+      anatomicalLocation: c.anatomicalLocation,
+      startDate: c.startDate,
+      status: c.status,
+      professional: patient.assignedProfessional || '',
+      woundLength: c.woundLength ?? '',
+      woundWidth: c.woundWidth ?? '',
+      woundDepth: c.woundDepth ?? '',
+      tissueTypes: c.tissueTypes ?? [],
+      edgeTypes: c.edgeTypes ?? [],
+      exudateAmount: c.exudateAmount,
+      exudateType: c.exudateType,
+      exudateColor: c.exudateColor,
+      painLevel: c.painLevel ?? 0,
+      odor: c.odor ?? 'sin_olor',
+      hasInfectionSigns: c.hasInfectionSigns ?? false,
+      infMalOlor: c.infMalOlor ?? false,
+      infEritema: c.infEritema ?? false,
+      infCalor: c.infCalor ?? false,
+      infBiofilm: c.infBiofilm ?? false,
+      infPurulenta: c.infPurulenta ?? false,
+      infDolorAumentado: c.infDolorAumentado ?? false,
+      bodyTemperature: c.bodyTemperature ?? '',
+      healingFrequency: c.healingFrequency ?? '',
+      initialProcedure: c.initialProcedure ?? '',
+      initialMaterials: c.initialMaterials ?? '',
+      initialObservations: c.initialObservations ?? '',
+      treatment: c.treatment ?? '',
+      createInitialEvolution: false,
+    });
     setCaseDialogOpen(true);
   };
 
   const handleSaveCase = () => {
+    const numOrUndef = (v: number | '') => (v === '' ? undefined : Number(v));
+    const baseCase = {
+      woundType: caseForm.woundType,
+      anatomicalLocation: caseForm.anatomicalLocation,
+      startDate: caseForm.startDate,
+      status: caseForm.status,
+      woundLength: numOrUndef(caseForm.woundLength),
+      woundWidth: numOrUndef(caseForm.woundWidth),
+      woundDepth: numOrUndef(caseForm.woundDepth),
+      tissueTypes: caseForm.tissueTypes,
+      edgeTypes: caseForm.edgeTypes,
+      exudateAmount: caseForm.exudateAmount,
+      exudateType: caseForm.exudateType,
+      exudateColor: caseForm.exudateColor,
+      painLevel: caseForm.painLevel,
+      odor: caseForm.odor,
+      hasInfectionSigns: caseForm.hasInfectionSigns,
+      infMalOlor: caseForm.infMalOlor,
+      infEritema: caseForm.infEritema,
+      infCalor: caseForm.infCalor,
+      infBiofilm: caseForm.infBiofilm,
+      infPurulenta: caseForm.infPurulenta,
+      infDolorAumentado: caseForm.infDolorAumentado,
+      bodyTemperature: numOrUndef(caseForm.bodyTemperature),
+      healingFrequency: caseForm.healingFrequency,
+      initialProcedure: caseForm.initialProcedure,
+      initialMaterials: caseForm.initialMaterials,
+      initialObservations: caseForm.initialObservations,
+      treatment: caseForm.treatment,
+    };
+
     if (editingCase) {
-      updateCase(patient.id, { ...editingCase, ...caseForm });
+      updateCase(patient.id, { ...editingCase, ...baseCase });
     } else {
-      addCase(patient.id, { ...caseForm, id: `c${Date.now()}`, patientId: patient.id, evolutions: [], photos: [] } as WoundCase);
+      const newCaseId = `c${Date.now()}`;
+      const newCase: WoundCase = {
+        ...baseCase,
+        id: newCaseId,
+        patientId: patient.id,
+        evolutions: [],
+        photos: [],
+      };
+
+      // Auto-create initial evolution mirroring the baseline data
+      if (caseForm.createInitialEvolution) {
+        newCase.evolutions = [{
+          id: `evo-${Date.now()}`,
+          date: caseForm.startDate,
+          time: '09:00',
+          professional: caseForm.professional,
+          description: 'Evaluación inicial. Datos basales de la herida registrados al ingreso del caso.',
+          procedure: caseForm.initialProcedure,
+          materials: caseForm.initialMaterials,
+          healingFrequency: caseForm.healingFrequency,
+          observations: caseForm.initialObservations,
+          nextControl: '',
+          photos: [],
+          healingDate: caseForm.startDate,
+          painLevel: caseForm.painLevel,
+          odor: caseForm.odor,
+          evolutionStatus: 'tratamiento_activo',
+          woundLength: baseCase.woundLength,
+          woundWidth: baseCase.woundWidth,
+          woundDepth: baseCase.woundDepth,
+          tissueTypes: caseForm.tissueTypes,
+          edgeTypes: caseForm.edgeTypes,
+          exudateAmount: caseForm.exudateAmount,
+          exudateType: caseForm.exudateType,
+          exudateColor: caseForm.exudateColor,
+          hasInfectionSigns: caseForm.hasInfectionSigns,
+          infMalOlor: caseForm.infMalOlor,
+          infEritema: caseForm.infEritema,
+          infCalor: caseForm.infCalor,
+          infBiofilm: caseForm.infBiofilm,
+          infPurulenta: caseForm.infPurulenta,
+          infDolorAumentado: caseForm.infDolorAumentado,
+          bodyTemperature: baseCase.bodyTemperature,
+        }];
+      }
+
+      addCase(patient.id, newCase);
     }
     setCaseDialogOpen(false);
   };
 
-  const setCField = (key: string, value: string) => setCaseForm(prev => ({ ...prev, [key]: value }));
+  const setCField = <K extends keyof CaseFormState>(key: K, value: CaseFormState[K]) =>
+    setCaseForm(prev => ({ ...prev, [key]: value }));
+
+  const toggleTissue = (t: TissueType) => setCaseForm(prev => ({
+    ...prev,
+    tissueTypes: prev.tissueTypes.includes(t) ? prev.tissueTypes.filter(x => x !== t) : [...prev.tissueTypes, t],
+  }));
+  const toggleEdge = (t: EdgeType) => setCaseForm(prev => ({
+    ...prev,
+    edgeTypes: prev.edgeTypes.includes(t) ? prev.edgeTypes.filter(x => x !== t) : [...prev.edgeTypes, t],
+  }));
+
+  const caseWoundArea = (() => {
+    const l = typeof caseForm.woundLength === 'number' ? caseForm.woundLength : parseFloat(String(caseForm.woundLength));
+    const w = typeof caseForm.woundWidth === 'number' ? caseForm.woundWidth : parseFloat(String(caseForm.woundWidth));
+    if (!isFinite(l) || !isFinite(w) || l <= 0 || w <= 0) return null;
+    return (l * w).toFixed(2);
+  })();
 
   const handleSaveAppointment = () => {
     if (!apptCaseId || !apptDate) return;
@@ -587,65 +769,364 @@ export default function PatientDetail() {
         </Dialog>
 
         <Dialog open={caseDialogOpen} onOpenChange={setCaseDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="heading-display text-xl">{editingCase ? 'Editar Herida' : 'Nueva Herida'}</DialogTitle>
+          <DialogContent className="max-w-2xl w-full sm:max-w-2xl h-[100dvh] sm:h-auto sm:max-h-[90vh] p-0 gap-0 flex flex-col rounded-none sm:rounded-lg">
+            <DialogHeader className="px-4 sm:px-6 pt-4 pb-3 border-b border-border/50 shrink-0">
+              <DialogTitle className="heading-display text-lg sm:text-xl">
+                {editingCase ? 'Editar Herida' : 'Nueva Herida'}
+              </DialogTitle>
             </DialogHeader>
-            <div className="grid sm:grid-cols-2 gap-4 mt-4">
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Tipo de herida</Label>
-                <Select value={caseForm.woundType} onValueChange={v => setCField('woundType', v)}>
-                  <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
+
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-5">
+              {/* Tipo de herida + ubicación */}
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de herida</Label>
+                  <Select value={caseForm.woundType} onValueChange={v => setCField('woundType', v)}>
+                    <SelectTrigger className="font-body h-11"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>
+                      {woundTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ubicación anatómica</Label>
+                  <Input value={caseForm.anatomicalLocation} onChange={e => setCField('anatomicalLocation', e.target.value)} className="font-body h-11" placeholder="Ej: Sacro, Pie derecho" />
+                </div>
+              </div>
+
+              {/* Fecha de inicio + estado */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fecha de inicio</Label>
+                  <Input type="date" value={caseForm.startDate} onChange={e => setCField('startDate', e.target.value)} className="font-body h-11" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Estado</Label>
+                  <Select value={caseForm.status} onValueChange={v => setCField('status', v as CaseFormState['status'])}>
+                    <SelectTrigger className="font-body h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {woundStatuses.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Profesional */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Profesional responsable</Label>
+                <Select value={caseForm.professional} onValueChange={v => setCField('professional', v)}>
+                  <SelectTrigger className="font-body h-11"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                   <SelectContent>
-                    {woundTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    {professionals.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Ubicación anatómica</Label>
-                <Input value={caseForm.anatomicalLocation} onChange={e => setCField('anatomicalLocation', e.target.value)} className="font-body" />
-              </div>
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Fecha de inicio</Label>
-                <Input type="date" value={caseForm.startDate} onChange={e => setCField('startDate', e.target.value)} className="font-body" />
-              </div>
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Tamaño</Label>
-                <Input value={caseForm.size} onChange={e => setCField('size', e.target.value)} placeholder="ej: 8 x 6 cm" className="font-body" />
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label className="font-body text-sm">Profundidad</Label>
-                <Input value={caseForm.depth} onChange={e => setCField('depth', e.target.value)} className="font-body" />
-              </div>
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Exudado</Label>
-                <Input value={caseForm.exudate} onChange={e => setCField('exudate', e.target.value)} className="font-body" />
-              </div>
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Infección</Label>
-                <Input value={caseForm.infection} onChange={e => setCField('infection', e.target.value)} className="font-body" />
-              </div>
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Dolor</Label>
-                <Input value={caseForm.pain} onChange={e => setCField('pain', e.target.value)} className="font-body" />
-              </div>
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Estado</Label>
-                <Select value={caseForm.status} onValueChange={v => setCField('status', v)}>
-                  <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
+
+              {/* Frecuencia de curación */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Frecuencia de curación</Label>
+                <Select value={caseForm.healingFrequency} onValueChange={v => setCField('healingFrequency', v)}>
+                  <SelectTrigger className="font-body h-11"><SelectValue placeholder="Seleccionar frecuencia" /></SelectTrigger>
                   <SelectContent>
-                    {woundStatuses.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                    {healingFrequencies.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label className="font-body text-sm">Tratamiento</Label>
-                <Textarea value={caseForm.treatment} onChange={e => setCField('treatment', e.target.value)} className="font-body" />
+
+              {/* Tamaño de la herida */}
+              <div className="space-y-2 rounded-lg border border-border/60 bg-muted/30 p-3">
+                <div className="flex items-baseline justify-between">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tamaño de la herida (cm)</Label>
+                  {caseWoundArea && (
+                    <span className="font-body text-xs font-semibold text-primary tabular-nums">
+                      Área: {caseWoundArea} cm²
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <Label className="font-body text-[11px] text-muted-foreground">Largo</Label>
+                    <Input type="number" inputMode="decimal" step="0.1" min="0"
+                      value={caseForm.woundLength}
+                      onChange={e => setCField('woundLength', e.target.value === '' ? '' : Number(e.target.value))}
+                      className="font-body h-11 text-center tabular-nums" placeholder="0" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="font-body text-[11px] text-muted-foreground">Ancho</Label>
+                    <Input type="number" inputMode="decimal" step="0.1" min="0"
+                      value={caseForm.woundWidth}
+                      onChange={e => setCField('woundWidth', e.target.value === '' ? '' : Number(e.target.value))}
+                      className="font-body h-11 text-center tabular-nums" placeholder="0" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="font-body text-[11px] text-muted-foreground">Profundidad</Label>
+                    <Input type="number" inputMode="decimal" step="0.1" min="0"
+                      value={caseForm.woundDepth}
+                      onChange={e => setCField('woundDepth', e.target.value === '' ? '' : Number(e.target.value))}
+                      className="font-body h-11 text-center tabular-nums" placeholder="0" />
+                  </div>
+                </div>
               </div>
+
+              {/* Tipo de tejido */}
+              <div className="space-y-2">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de tejido presente</Label>
+                <div className="flex flex-wrap gap-2">
+                  {tissueTypeOptions.map(t => {
+                    const active = caseForm.tissueTypes.includes(t.value);
+                    return (
+                      <button key={t.value} type="button" onClick={() => toggleTissue(t.value)}
+                        className={cn(
+                          "min-h-11 px-4 rounded-full border font-body text-sm font-medium transition-all active:scale-95",
+                          active
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-background text-foreground border-border hover:border-primary/50"
+                        )}>
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Tipo de borde */}
+              <div className="space-y-2">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de borde</Label>
+                <div className="flex flex-wrap gap-2">
+                  {edgeTypeOptions.map(t => {
+                    const active = caseForm.edgeTypes.includes(t.value);
+                    return (
+                      <button key={t.value} type="button" onClick={() => toggleEdge(t.value)}
+                        className={cn(
+                          "min-h-11 px-4 rounded-full border font-body text-sm font-medium transition-all active:scale-95",
+                          active
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-background text-foreground border-border hover:border-primary/50"
+                        )}>
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Dolor EVA */}
+              <div className="space-y-2">
+                <div className="flex items-baseline justify-between">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dolor (EVA)</Label>
+                  <span className={cn(
+                    "font-body text-sm font-bold tabular-nums px-2 py-0.5 rounded-md",
+                    caseForm.painLevel <= 3 && "bg-success/15 text-success",
+                    caseForm.painLevel > 3 && caseForm.painLevel <= 6 && "bg-warning/15 text-warning",
+                    caseForm.painLevel > 6 && "bg-destructive/15 text-destructive",
+                  )}>{caseForm.painLevel} / 10</span>
+                </div>
+                <Slider min={0} max={10} step={1} value={[caseForm.painLevel]}
+                  onValueChange={([v]) => setCField('painLevel', v)} className="py-2" />
+                <div className="flex justify-between font-body text-[10px] text-muted-foreground px-0.5">
+                  <span>Sin dolor</span><span>Moderado</span><span>Insoportable</span>
+                </div>
+              </div>
+
+              {/* Olor */}
+              <div className="space-y-2">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Olor</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {odorOptions.map(o => {
+                    const active = caseForm.odor === o.value;
+                    return (
+                      <button key={o.value} type="button" onClick={() => setCField('odor', o.value)}
+                        className={cn(
+                          "h-11 rounded-lg border font-body text-sm font-medium transition-all active:scale-95",
+                          active
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-background text-foreground border-border hover:border-primary/50"
+                        )}>
+                        {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Exudado */}
+              <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Droplets className="h-3.5 w-3.5" /> Exudado
+                </Label>
+
+                <div className="space-y-1.5">
+                  <p className="font-body text-[11px] text-muted-foreground">Cantidad</p>
+                  <div className="flex flex-wrap gap-2">
+                    {exudateAmountOptions.map(o => {
+                      const active = caseForm.exudateAmount === o.value;
+                      return (
+                        <button key={o.value} type="button"
+                          onClick={() => setCField('exudateAmount', active ? undefined : o.value)}
+                          className={cn(
+                            "min-h-11 px-4 rounded-full border font-body text-sm font-medium transition-all active:scale-95",
+                            active
+                              ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                              : "bg-background text-foreground border-border hover:border-primary/50"
+                          )}>{o.label}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <p className="font-body text-[11px] text-muted-foreground">Tipo</p>
+                  <div className="flex flex-wrap gap-2">
+                    {exudateTypeOptions.map(o => {
+                      const active = caseForm.exudateType === o.value;
+                      return (
+                        <button key={o.value} type="button"
+                          onClick={() => setCField('exudateType', active ? undefined : o.value)}
+                          className={cn(
+                            "min-h-11 px-4 rounded-full border font-body text-sm font-medium transition-all active:scale-95",
+                            active
+                              ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                              : "bg-background text-foreground border-border hover:border-primary/50"
+                          )}>{o.label}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <p className="font-body text-[11px] text-muted-foreground">Color</p>
+                  <div className="flex flex-wrap gap-2">
+                    {exudateColorOptions.map(o => {
+                      const active = caseForm.exudateColor === o.value;
+                      return (
+                        <button key={o.value} type="button"
+                          onClick={() => setCField('exudateColor', active ? undefined : o.value)}
+                          className={cn(
+                            "min-h-11 px-3 rounded-full border font-body text-sm font-medium transition-all active:scale-95 inline-flex items-center gap-2",
+                            active
+                              ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                              : "bg-background text-foreground border-border hover:border-primary/50"
+                          )}>
+                          <span className={cn("inline-block h-4 w-4 rounded-full shrink-0", o.swatch)} />
+                          {o.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Infección */}
+              <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="case-has-infection" className="font-body text-sm font-semibold flex items-center gap-1.5">
+                    <ShieldAlert className={cn("h-4 w-4", caseForm.hasInfectionSigns ? "text-destructive" : "text-muted-foreground")} />
+                    ¿Presenta signos de infección?
+                  </Label>
+                  <Switch id="case-has-infection" checked={caseForm.hasInfectionSigns}
+                    onCheckedChange={(v) => setCField('hasInfectionSigns', v)} />
+                </div>
+
+                {caseForm.hasInfectionSigns && (
+                  <div className="space-y-3 pt-1 animate-fade-in">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {infectionSignFields.map(f => {
+                        const checked = !!caseForm[f.key];
+                        return (
+                          <button key={f.key} type="button" onClick={() => setCField(f.key, !checked)}
+                            className={cn(
+                              "min-h-11 px-3 rounded-lg border font-body text-sm text-left flex items-center justify-between gap-2 transition-all active:scale-[0.98]",
+                              checked
+                                ? "bg-destructive/10 text-destructive border-destructive/40"
+                                : "bg-background text-foreground border-border hover:border-destructive/30"
+                            )}>
+                            <span>{f.label}</span>
+                            <span className={cn(
+                              "h-5 w-5 rounded-md border flex items-center justify-center shrink-0",
+                              checked ? "bg-destructive border-destructive" : "border-border"
+                            )}>
+                              {checked && <CheckCircle2 className="h-4 w-4 text-destructive-foreground" />}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="font-body text-[11px] text-muted-foreground flex items-center gap-1">
+                        <Thermometer className="h-3 w-3" /> Temperatura corporal (°C)
+                      </Label>
+                      <Input type="number" inputMode="decimal" step="0.1" min="30" max="45"
+                        value={caseForm.bodyTemperature}
+                        onChange={e => setCField('bodyTemperature', e.target.value === '' ? '' : Number(e.target.value))}
+                        className={cn(
+                          "font-body h-11 tabular-nums",
+                          typeof caseForm.bodyTemperature === 'number' && caseForm.bodyTemperature >= 38 && "border-destructive text-destructive font-semibold"
+                        )}
+                        placeholder="36.5" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Procedimiento inicial */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Procedimiento inicial</Label>
+                <Textarea value={caseForm.initialProcedure} onChange={e => setCField('initialProcedure', e.target.value)}
+                  className="font-body" rows={3}
+                  placeholder="Ej: Desbridamiento cortante, Lavado con SF, Aplicación de hidrogel..." />
+              </div>
+
+              {/* Materiales utilizados */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Package className="h-3.5 w-3.5" /> Material de curación utilizado
+                </Label>
+                <Textarea value={caseForm.initialMaterials} onChange={e => setCField('initialMaterials', e.target.value)}
+                  className="font-body" rows={3}
+                  placeholder="Ej: Apósito de espuma 10x10, Hidrogel, Gasas, Solución fisiológica..." />
+              </div>
+
+              {/* Plan de tratamiento */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Plan de tratamiento</Label>
+                <Textarea value={caseForm.treatment} onChange={e => setCField('treatment', e.target.value)}
+                  className="font-body" rows={2}
+                  placeholder="Resumen del abordaje terapéutico planificado para este caso." />
+              </div>
+
+              {/* Observaciones */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Observaciones</Label>
+                <Textarea value={caseForm.initialObservations} onChange={e => setCField('initialObservations', e.target.value)}
+                  className="font-body" rows={2} />
+              </div>
+
+              {/* Crear evolución inicial automática */}
+              {!editingCase && (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <Label htmlFor="auto-evo" className="font-body text-sm font-semibold flex items-center gap-1.5">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        Crear primera evolución automáticamente
+                      </Label>
+                      <p className="font-body text-xs text-muted-foreground mt-1">
+                        Se generará la Evolución #1 con los datos basales registrados aquí.
+                      </p>
+                    </div>
+                    <Switch id="auto-evo" checked={caseForm.createInitialEvolution}
+                      onCheckedChange={(v) => setCField('createInitialEvolution', v)} />
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <Button variant="outline" onClick={() => setCaseDialogOpen(false)} className="font-body">Cancelar</Button>
-              <Button onClick={handleSaveCase} className="font-body">{editingCase ? 'Guardar cambios' : 'Crear caso'}</Button>
+
+            <div className="shrink-0 border-t border-border/50 bg-background px-4 sm:px-6 py-3 flex gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <Button variant="outline" onClick={() => setCaseDialogOpen(false)} className="font-body h-12 flex-1 sm:flex-none">Cancelar</Button>
+              <Button onClick={handleSaveCase} className="font-body h-12 flex-[2] sm:flex-1 font-semibold">
+                {editingCase ? 'Guardar cambios' : 'Crear herida'}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
