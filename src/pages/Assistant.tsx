@@ -1,12 +1,13 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Send, Sparkles, Loader2, MessageSquare } from 'lucide-react';
+import { Send, Sparkles, Loader2, MessageSquare, CalendarCheck, Printer, Copy, Check } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useApp } from '@/context/AppContext';
 import { toast } from 'sonner';
 import { getPatientIndicator, indicatorMeta } from '@/lib/patientStatus';
@@ -29,7 +30,12 @@ export default function Assistant() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [agendaOpen, setAgendaOpen] = useState(false);
+  const [agendaText, setAgendaText] = useState('');
+  const [agendaLoading, setAgendaLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const printRef = useRef<HTMLDivElement>(null);
 
   // Build a compact context summary for the AI
   const context = useMemo(() => {
@@ -166,17 +172,139 @@ export default function Assistant() {
     send(text);
   };
 
+  const generateAgenda = async () => {
+    setAgendaOpen(true);
+    setAgendaText('');
+    setAgendaLoading(true);
+    setCopied(false);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const prompt = `Generá un RESUMEN DE AGENDA DEL DÍA (${today}) para el personal de enfermería, listo para imprimir.
+
+Incluí, en este orden y con encabezados Markdown claros:
+
+# Agenda del día — ${today}
+
+## 1. Turnos y controles de hoy
+Lista de pacientes con control programado HOY (fecha exacta = ${today}). Incluí: hora, nombre, tipo de herida, ubicación anatómica, y acción sugerida. Si no hay turnos hoy, indicá "Sin turnos programados para hoy".
+
+## 2. Próximos controles (próximos 7 días)
+Lista cronológica de pacientes con próximo control entre mañana y los próximos 7 días. Incluí fecha, hora, paciente y herida.
+
+## 3. Priorización por gravedad
+Ordená los pacientes activos de mayor a menor prioridad según signos de infección, deterioro, dolor, y estado de evolución. Justificá brevemente cada prioridad (alta / media / baja).
+
+## 4. Insumos y preparación
+Lista breve de insumos clave a tener listos según las heridas a curar hoy y mañana.
+
+## 5. Alertas clínicas
+Cualquier paciente con signos de alarma (infección, deterioro, biofilm, requiere evaluación médica).
+
+Sé breve, claro y accionable. Usá listas con bullets o numeradas. No uses bloques de código.`;
+
+    try {
+      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nurse-assistant`;
+      const resp = await fetch(CHAT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: prompt }],
+          context,
+        }),
+      });
+
+      if (resp.status === 429) { toast.error('Límite de solicitudes alcanzado.'); setAgendaLoading(false); return; }
+      if (resp.status === 402) { toast.error('Créditos de IA agotados.'); setAgendaLoading(false); return; }
+      if (!resp.ok || !resp.body) { toast.error('No se pudo generar la agenda.'); setAgendaLoading(false); return; }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = '';
+      let streamDone = false;
+      let acc = '';
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, nl);
+          textBuffer = textBuffer.slice(nl + 1);
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') { streamDone = true; break; }
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) { acc += content; setAgendaText(acc); }
+          } catch {
+            textBuffer = line + '\n' + textBuffer;
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Error al generar la agenda.');
+    } finally {
+      setAgendaLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(agendaText);
+      setCopied(true);
+      toast.success('Agenda copiada al portapapeles');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('No se pudo copiar');
+    }
+  };
+
+  const handlePrint = () => {
+    const html = printRef.current?.innerHTML;
+    if (!html) return;
+    const w = window.open('', '_blank', 'width=900,height=700');
+    if (!w) { toast.error('Permití ventanas emergentes para imprimir'); return; }
+    w.document.write(`<!doctype html><html><head><title>Agenda del día</title>
+      <style>
+        body { font-family: 'Open Sans', system-ui, sans-serif; padding: 32px; color: #111; line-height: 1.5; max-width: 800px; margin: 0 auto; }
+        h1 { color: #00965E; border-bottom: 2px solid #00965E; padding-bottom: 8px; }
+        h2 { color: #00965E; margin-top: 24px; }
+        ul, ol { padding-left: 20px; }
+        li { margin: 4px 0; }
+        @media print { body { padding: 16px; } }
+      </style>
+    </head><body>${html}</body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 300);
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6 max-w-5xl mx-auto">
-        <div>
-          <h1 className="heading-display text-3xl text-foreground flex items-center gap-3">
-            <Sparkles className="h-7 w-7 text-primary" />
-            Asistente IA
-          </h1>
-          <p className="font-body text-muted-foreground mt-1">
-            Tu copiloto clínico para organizar turnos, heridas y pacientes.
-          </p>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="heading-display text-3xl text-foreground flex items-center gap-3">
+              <Sparkles className="h-7 w-7 text-primary" />
+              Asistente IA
+            </h1>
+            <p className="font-body text-muted-foreground mt-1">
+              Tu copiloto clínico para organizar turnos, heridas y pacientes.
+            </p>
+          </div>
+          <Button onClick={generateAgenda} disabled={agendaLoading} className="font-body shrink-0">
+            {agendaLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarCheck className="mr-2 h-4 w-4" />}
+            Resumen de agenda del día
+          </Button>
         </div>
 
         <div className="grid lg:grid-cols-[1fr_280px] gap-6">
@@ -277,6 +405,38 @@ export default function Assistant() {
             </CardContent>
           </Card>
         </div>
+
+        <Dialog open={agendaOpen} onOpenChange={setAgendaOpen}>
+          <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="font-display text-xl flex items-center gap-2">
+                <CalendarCheck className="h-5 w-5 text-primary" />
+                Resumen de agenda del día
+              </DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="flex-1 pr-4 -mr-4">
+              <div ref={printRef} className="prose prose-sm max-w-none dark:prose-invert font-body py-2">
+                {agendaText ? (
+                  <ReactMarkdown>{agendaText}</ReactMarkdown>
+                ) : (
+                  <div className="flex items-center gap-2 text-muted-foreground py-8 justify-center">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    <span className="text-sm">Generando agenda...</span>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+            <DialogFooter className="flex-row justify-end gap-2 sm:gap-2">
+              <Button variant="outline" onClick={handleCopy} disabled={!agendaText || agendaLoading} className="font-body">
+                {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                {copied ? 'Copiado' : 'Copiar'}
+              </Button>
+              <Button onClick={handlePrint} disabled={!agendaText || agendaLoading} className="font-body">
+                <Printer className="mr-2 h-4 w-4" /> Imprimir
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
