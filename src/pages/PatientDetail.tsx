@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Edit, Trash2, ChevronRight, User, Phone, Mail, MapPin, Stethoscope, CalendarClock, Clock, FileDown } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, ChevronRight, User, Phone, Mail, MapPin, CalendarClock, CalendarDays, FileDown, ShieldAlert, BadgeCheck, UserCog, FileDown as FileDownIcon } from 'lucide-react';
 import { exportPatientPdf } from '@/lib/exportPdf';
 import { WoundCase, woundTypes, woundStatuses, getStatusLabel, professionals } from '@/data/demoData';
 import { Calendar } from '@/components/ui/calendar';
@@ -126,28 +126,52 @@ export default function PatientDetail() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pb-4">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2">
-              <InfoRow icon={<User className="h-3.5 w-3.5" />} label="Edad / Género" value={`${patient.age} años · ${patient.gender}`} />
-              <InfoRow icon={<User className="h-3.5 w-3.5" />} label="DNI" value={patient.dni} />
-              <InfoRow icon={<Phone className="h-3.5 w-3.5" />} label="Teléfono" value={patient.phone} />
-              <InfoRow icon={<Mail className="h-3.5 w-3.5" />} label="Email" value={patient.email} />
-              <InfoRow icon={<MapPin className="h-3.5 w-3.5" />} label="Dirección" value={patient.address} />
-              <InfoRow icon={<Stethoscope className="h-3.5 w-3.5" />} label="Profesional" value={patient.assignedProfessional} />
-              <InfoRow icon={<Clock className="h-3.5 w-3.5" />} label="Intervalo controles" value={`Cada ${patient.controlIntervalDays} día${patient.controlIntervalDays !== 1 ? 's' : ''}`} />
+            {/* Datos personales */}
+            <div>
+              <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Datos personales</p>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2">
+                <InfoRow icon={<User className="h-3.5 w-3.5" />} label="Edad / Sexo" value={`${patient.age} años · ${patient.gender}`} />
+                <InfoRow icon={<User className="h-3.5 w-3.5" />} label="DNI / Documento" value={patient.dni} />
+                <InfoRow icon={<Phone className="h-3.5 w-3.5" />} label="Teléfono" value={patient.phone} />
+                {patient.email && <InfoRow icon={<Mail className="h-3.5 w-3.5" />} label="Email" value={patient.email} />}
+                <InfoRow icon={<MapPin className="h-3.5 w-3.5" />} label="Domicilio" value={patient.address} />
+                <InfoRow icon={<CalendarDays className="h-3.5 w-3.5" />} label="Fecha de ingreso" value={patient.admissionDate || '—'} />
+              </div>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-3 pt-2 border-t border-border/50">
+            {/* Datos clínicos */}
+            <div className="pt-3 border-t border-border/50 grid sm:grid-cols-2 gap-3">
               <div>
-                <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground mb-0.5">Diagnóstico</p>
-                <p className="font-body text-sm leading-snug">{patient.diagnosis}</p>
+                <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground mb-0.5">Antecedentes y comorbilidades</p>
+                <p className="font-body text-sm leading-snug">{patient.diagnosis || <span className="text-muted-foreground italic">Sin datos</span>}</p>
               </div>
-              {patient.observations && (
-                <div>
-                  <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground mb-0.5">Observaciones</p>
-                  <p className="font-body text-sm leading-snug">{patient.observations}</p>
-                </div>
-              )}
+              <div>
+                <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground mb-0.5 flex items-center gap-1">
+                  <ShieldAlert className="h-3 w-3" /> Alergias
+                </p>
+                <p className="font-body text-sm leading-snug">{patient.allergies || <span className="text-muted-foreground italic">Sin alergias registradas</span>}</p>
+              </div>
             </div>
+
+            {/* Datos administrativos y contacto */}
+            {(patient.insurance || patient.emergencyContactName || patient.emergencyContactPhone) && (
+              <div className="pt-3 border-t border-border/50">
+                <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Datos administrativos y contacto</p>
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
+                  {patient.insurance && <InfoRow icon={<BadgeCheck className="h-3.5 w-3.5" />} label="Obra social / Cobertura" value={patient.insurance} />}
+                  {patient.emergencyContactName && <InfoRow icon={<UserCog className="h-3.5 w-3.5" />} label="Contacto de emergencia" value={patient.emergencyContactName} />}
+                  {patient.emergencyContactPhone && <InfoRow icon={<Phone className="h-3.5 w-3.5" />} label="Tel. de emergencia" value={patient.emergencyContactPhone} />}
+                </div>
+              </div>
+            )}
+
+            {/* Notas generales */}
+            {patient.observations && (
+              <div className="pt-3 border-t border-border/50">
+                <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground mb-0.5">Notas generales</p>
+                <p className="font-body text-sm leading-snug">{patient.observations}</p>
+              </div>
+            )}
 
             {/* Resumen de Casos / Heridas integrado */}
             <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-border/50">
