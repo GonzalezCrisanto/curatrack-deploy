@@ -1115,7 +1115,7 @@ export default function PatientDetail() {
 
               {/* Procedimiento inicial */}
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Procedimiento inicial</Label>
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Procedimiento inicial<OptionalTag /></Label>
                 <Textarea value={caseForm.initialProcedure} onChange={e => setCField('initialProcedure', e.target.value)}
                   className="font-body" rows={3}
                   placeholder="Ej: Desbridamiento cortante, Lavado con SF, Aplicación de hidrogel..." />
