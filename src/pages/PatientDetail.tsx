@@ -1092,11 +1092,15 @@ export default function PatientDetail() {
                   placeholder="Resumen del abordaje terapéutico planificado para este caso." />
               </div>
 
-              {/* Observaciones */}
+              {/* Observaciones (opcional) */}
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Observaciones</Label>
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                  Observaciones
+                  <span className="font-body text-[10px] font-normal normal-case tracking-normal text-muted-foreground/70">(opcional)</span>
+                </Label>
                 <Textarea value={caseForm.initialObservations} onChange={e => setCField('initialObservations', e.target.value)}
-                  className="font-body" rows={2} />
+                  className="font-body" rows={2}
+                  placeholder="Notas adicionales, antecedentes relevantes, comentarios del paciente, etc." />
               </div>
 
               {/* Crear evolución inicial automática */}
