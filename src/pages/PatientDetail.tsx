@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
@@ -15,11 +15,11 @@ import { Switch } from '@/components/ui/switch';
 import {
   ArrowLeft, Plus, Edit, Trash2, ChevronRight, User, Phone, Mail, MapPin, CalendarClock, CalendarDays,
   FileDown, ShieldAlert, BadgeCheck, UserCog, FileDown as FileDownIcon, Share2, Crown, Users as UsersIcon,
-  Droplets, Thermometer, Package, CheckCircle2,
+  Droplets, Thermometer, Package, CheckCircle2, Camera, Upload, X,
 } from 'lucide-react';
 import { exportPatientPdf } from '@/lib/exportPdf';
 import {
-  WoundCase, woundTypes, woundStatuses, getStatusLabel, professionals,
+  WoundCase, Photo, woundTypes, woundStatuses, getStatusLabel, professionals,
   healingFrequencies, odorOptions, tissueTypeOptions, edgeTypeOptions,
   exudateAmountOptions, exudateTypeOptions, exudateColorOptions, infectionSignFields,
   TissueType, EdgeType, OdorLevel, ExudateAmount, ExudateType, ExudateColor,
