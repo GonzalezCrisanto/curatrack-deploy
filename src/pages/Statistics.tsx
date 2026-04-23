@@ -18,7 +18,13 @@ import {
 import {
   Activity, Users, CheckCircle2, Download, FileText, FileSpreadsheet,
   Stethoscope, Camera, Calendar, AlertTriangle, Thermometer, MapPin,
+  ListChecks, ClipboardCheck,
 } from 'lucide-react';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import {
   Patient, WoundCase, Evolution,
   evolutionStatuses, tissueTypeOptions, edgeTypeOptions,
@@ -422,6 +428,165 @@ export default function Statistics() {
         return { month: `${months[parseInt(m, 10) - 1]} ${y.slice(2)}`, count: v };
       });
   }, [allEvolutions]);
+
+  // ---------- Audit: completeness of new clinical fields ----------
+  const audit = useMemo(() => {
+    // Field definitions per entity
+    const patientFields: { key: keyof Patient; label: string }[] = [
+      { key: 'dni', label: 'DNI' },
+      { key: 'phone', label: 'Teléfono' },
+      { key: 'email', label: 'Email' },
+      { key: 'address', label: 'Dirección' },
+      { key: 'diagnosis', label: 'Diagnóstico' },
+      { key: 'assignedProfessional', label: 'Profesional asignado' },
+      { key: 'allergies', label: 'Alergias' },
+      { key: 'insurance', label: 'Cobertura' },
+      { key: 'emergencyContactName', label: 'Contacto de emergencia' },
+      { key: 'emergencyContactPhone', label: 'Tel. emergencia' },
+      { key: 'controlIntervalDays', label: 'Intervalo de control' },
+    ];
+    const caseFields: { key: keyof WoundCase; label: string }[] = [
+      { key: 'woundLength', label: 'Largo (cm)' },
+      { key: 'woundWidth', label: 'Ancho (cm)' },
+      { key: 'woundDepth', label: 'Profundidad (cm)' },
+      { key: 'tissueTypes', label: 'Tipos de tejido' },
+      { key: 'edgeTypes', label: 'Tipos de borde' },
+      { key: 'exudateAmount', label: 'Exudado — cantidad' },
+      { key: 'exudateType', label: 'Exudado — tipo' },
+      { key: 'exudateColor', label: 'Exudado — color' },
+      { key: 'painLevel', label: 'Dolor (0–10)' },
+      { key: 'odor', label: 'Olor' },
+      { key: 'hasInfectionSigns', label: 'Signos de infección' },
+      { key: 'bodyTemperature', label: 'Temperatura corporal' },
+      { key: 'healingFrequency', label: 'Frecuencia de curación' },
+      { key: 'healingFrequencyDays', label: 'Frecuencia (días)' },
+      { key: 'treatment', label: 'Tratamiento' },
+    ];
+    const evolutionFields: { key: keyof Evolution; label: string }[] = [
+      { key: 'painLevel', label: 'Dolor (0–10)' },
+      { key: 'odor', label: 'Olor' },
+      { key: 'evolutionStatus', label: 'Estado de evolución' },
+      { key: 'woundLength', label: 'Largo (cm)' },
+      { key: 'woundWidth', label: 'Ancho (cm)' },
+      { key: 'woundDepth', label: 'Profundidad (cm)' },
+      { key: 'tissueTypes', label: 'Tipos de tejido' },
+      { key: 'edgeTypes', label: 'Tipos de borde' },
+      { key: 'exudateAmount', label: 'Exudado — cantidad' },
+      { key: 'exudateType', label: 'Exudado — tipo' },
+      { key: 'exudateColor', label: 'Exudado — color' },
+      { key: 'hasInfectionSigns', label: 'Signos de infección' },
+      { key: 'bodyTemperature', label: 'Temperatura corporal' },
+      { key: 'healingFrequency', label: 'Frecuencia de curación' },
+      { key: 'healingFrequencyDays', label: 'Frecuencia (días)' },
+      { key: 'materials', label: 'Materiales' },
+      { key: 'procedure', label: 'Procedimiento' },
+      { key: 'nextControl', label: 'Próximo control' },
+    ];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const isMissing = (v: any) => {
+      if (v === undefined || v === null) return true;
+      if (typeof v === 'string') return v.trim() === '';
+      if (Array.isArray(v)) return v.length === 0;
+      return false;
+    };
+
+    const patientMissing = new Map<string, number>();
+    const caseMissing = new Map<string, number>();
+    const evolutionMissing = new Map<string, number>();
+
+    type Gap = {
+      kind: 'Paciente' | 'Caso' | 'Evolución';
+      patient: string;
+      context: string;
+      date?: string;
+      missing: string[];
+    };
+    const gaps: Gap[] = [];
+
+    filteredPatients.forEach(p => {
+      const pMiss: string[] = [];
+      patientFields.forEach(f => {
+        if (isMissing(p[f.key])) {
+          pMiss.push(f.label);
+          patientMissing.set(f.label, (patientMissing.get(f.label) || 0) + 1);
+        }
+      });
+      if (pMiss.length > 0) {
+        gaps.push({ kind: 'Paciente', patient: `${p.firstName} ${p.lastName}`, context: '—', missing: pMiss });
+      }
+
+      p.cases.forEach(c => {
+        const cMiss: string[] = [];
+        caseFields.forEach(f => {
+          if (isMissing(c[f.key])) {
+            cMiss.push(f.label);
+            caseMissing.set(f.label, (caseMissing.get(f.label) || 0) + 1);
+          }
+        });
+        if (cMiss.length > 0) {
+          gaps.push({
+            kind: 'Caso', patient: `${p.firstName} ${p.lastName}`,
+            context: `${c.woundType} — ${c.anatomicalLocation || 'sin localización'}`,
+            date: c.startDate, missing: cMiss,
+          });
+        }
+
+        c.evolutions.forEach(e => {
+          const eMiss: string[] = [];
+          evolutionFields.forEach(f => {
+            if (isMissing(e[f.key])) {
+              eMiss.push(f.label);
+              evolutionMissing.set(f.label, (evolutionMissing.get(f.label) || 0) + 1);
+            }
+          });
+          if (eMiss.length > 0) {
+            gaps.push({
+              kind: 'Evolución', patient: `${p.firstName} ${p.lastName}`,
+              context: `${c.woundType} — ${c.anatomicalLocation || 'sin localización'}`,
+              date: e.date, missing: eMiss,
+            });
+          }
+        });
+      });
+    });
+
+    const totalPatients = filteredPatients.length;
+    const totalCases = filteredPatients.reduce((a, p) => a + p.cases.length, 0);
+    const totalEvolutions = filteredPatients.reduce(
+      (a, p) => a + p.cases.reduce((b, c) => b + c.evolutions.length, 0), 0,
+    );
+
+    const toBars = (m: Map<string, number>, total: number, fields: { label: string }[]) =>
+      fields
+        .map(f => ({
+          name: f.label,
+          missing: m.get(f.label) || 0,
+          total,
+          pct: total > 0 ? Math.round(((m.get(f.label) || 0) / total) * 100) : 0,
+        }))
+        .filter(d => d.missing > 0)
+        .sort((a, b) => b.missing - a.missing);
+
+    const patientBars = toBars(patientMissing, totalPatients, patientFields);
+    const caseBars = toBars(caseMissing, totalCases, caseFields);
+    const evolutionBars = toBars(evolutionMissing, totalEvolutions, evolutionFields);
+
+    const patientsWithGaps = new Set(gaps.filter(g => g.kind === 'Paciente').map(g => g.patient)).size;
+    const casesWithGaps = gaps.filter(g => g.kind === 'Caso').length;
+    const evolutionsWithGaps = gaps.filter(g => g.kind === 'Evolución').length;
+
+    const patientCompleteness = totalPatients > 0 ? Math.round(((totalPatients - patientsWithGaps) / totalPatients) * 100) : 100;
+    const caseCompleteness = totalCases > 0 ? Math.round(((totalCases - casesWithGaps) / totalCases) * 100) : 100;
+    const evolutionCompleteness = totalEvolutions > 0 ? Math.round(((totalEvolutions - evolutionsWithGaps) / totalEvolutions) * 100) : 100;
+
+    return {
+      totals: { totalPatients, totalCases, totalEvolutions, patientsWithGaps, casesWithGaps, evolutionsWithGaps,
+        patientCompleteness, caseCompleteness, evolutionCompleteness },
+      patientBars, caseBars, evolutionBars,
+      gaps: gaps.sort((a, b) => b.missing.length - a.missing.length),
+    };
+  }, [filteredPatients]);
 
   // ---------- Export ----------
   const handleExportCsv = () => {
