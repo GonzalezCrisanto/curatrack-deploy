@@ -688,23 +688,48 @@ export default function PatientDetail() {
                       <p className="font-body text-sm text-muted-foreground">No hay turnos programados.</p>
                     )}
 
-                    {suggestedDates.length > 0 && (
+                    {suggestionsByCase.length > 0 && (
                       <>
-                        <h3 className="font-body text-sm font-semibold text-muted-foreground mt-4">Fechas sugeridas (cada {interval} días)</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {suggestedDates.slice(0, 6).map((d, i) => {
-                            const ds = d.toISOString().split('T')[0];
-                            const clash = otherDateStrings.has(ds);
+                        <h3 className="font-body text-sm font-semibold text-muted-foreground mt-4">Turnos sugeridos según frecuencia de curación</h3>
+                        <div className="space-y-2">
+                          {activeCases.map(c => {
+                            const sugs = suggestionsByCase.filter(s => s.caseId === c.id).slice(0, 4);
+                            if (sugs.length === 0) return null;
+                            const days = sugs[0].days;
+                            const freqLabel =
+                              days === 1 ? 'Diaria' :
+                              days === 2 ? 'Cada 48hs' :
+                              days === 3 ? 'Cada 72hs' :
+                              days === 7 ? 'Semanal' :
+                              `Cada ${days} días`;
                             return (
-                              <Badge
-                                key={`sug-${i}`}
-                                variant="outline"
-                                className={`font-body text-xs cursor-pointer ${clash ? 'border-warning/60 text-warning' : 'border-dashed border-muted-foreground/50 hover:border-primary'}`}
-                                onClick={() => openNewAppointment(ds)}
-                                title={clash ? 'Ese día ya hay turno con otro paciente' : 'Programar turno en esta fecha'}
-                              >
-                                {ds}{clash ? ' ⚠' : ''}
-                              </Badge>
+                              <div key={`sugcase-${c.id}`} className="p-2.5 rounded-lg border border-border/40 bg-muted/20">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: caseColor[c.id] }} />
+                                  <span className="font-body text-xs font-semibold truncate">
+                                    {c.woundType}{c.anatomicalLocation ? ` · ${c.anatomicalLocation}` : ''}
+                                  </span>
+                                  <Badge variant="outline" className="font-body text-[10px] ml-auto shrink-0">{freqLabel}</Badge>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {sugs.map((s, i) => {
+                                    const ds = s.date.toISOString().split('T')[0];
+                                    const clash = otherDateStrings.has(ds);
+                                    return (
+                                      <Badge
+                                        key={`sug-${c.id}-${i}`}
+                                        variant="outline"
+                                        className={`font-body text-xs cursor-pointer ${clash ? 'border-warning/60 text-warning' : 'hover:bg-accent'}`}
+                                        style={!clash ? { borderColor: caseColor[c.id], color: caseColor[c.id], borderStyle: 'dashed' } : undefined}
+                                        onClick={() => openNewAppointment(ds, c.id)}
+                                        title={clash ? 'Ese día ya hay turno con otro paciente' : `Programar turno para ${c.woundType}`}
+                                      >
+                                        {ds}{clash ? ' ⚠' : ''}
+                                      </Badge>
+                                    );
+                                  })}
+                                </div>
+                              </div>
                             );
                           })}
                         </div>
