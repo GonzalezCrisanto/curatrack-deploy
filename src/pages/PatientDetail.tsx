@@ -190,6 +190,19 @@ export default function PatientDetail() {
   };
 
   const handleSaveCase = () => {
+    // Validación de campos obligatorios
+    const missing: string[] = [];
+    if (!caseForm.woundType) missing.push('Tipo de herida');
+    if (!caseForm.anatomicalLocation.trim()) missing.push('Ubicación anatómica');
+    if (!caseForm.startDate) missing.push('Fecha de inicio');
+    if (missing.length > 0) {
+      toast({
+        title: 'Faltan campos obligatorios',
+        description: `Completá: ${missing.join(', ')}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
     const numOrUndef = (v: number | '') => (v === '' ? undefined : Number(v));
     const baseCase = {
       woundType: caseForm.woundType,
