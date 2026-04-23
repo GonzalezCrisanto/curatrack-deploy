@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,16 +21,46 @@ const emptyPatient: Omit<Patient, 'id' | 'cases'> = {
   controlIntervalDays: 7,
 };
 
+const FILTER_LABELS: Record<string, string> = {
+  patients: 'Todos los pacientes',
+  active: 'Casos activos',
+  critical: 'Casos críticos',
+  improving: 'En mejoría',
+  resolved: 'Resueltos',
+  evolutions: 'Con evoluciones',
+};
+
 export default function Patients() {
   const { patients, addPatient, updatePatient, deletePatient } = useApp();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterKey = searchParams.get('filter') || 'all';
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
   const [form, setForm] = useState(emptyPatient);
   const [woundPickerPatient, setWoundPickerPatient] = useState<Patient | null>(null);
 
-  const filtered = patients.filter(p =>
+  const statusFiltered = useMemo(() => {
+    switch (filterKey) {
+      case 'active':
+        return patients.filter(p => p.cases.some(c => c.status === 'activo' || c.status === 'critico' || c.status === 'en_mejoria'));
+      case 'critical':
+        return patients.filter(p => p.cases.some(c => c.status === 'critico'));
+      case 'improving':
+        return patients.filter(p => p.cases.some(c => c.status === 'en_mejoria'));
+      case 'resolved':
+        return patients.filter(p => p.cases.length > 0 && p.cases.every(c => c.status === 'resuelto'));
+      case 'evolutions':
+        return patients.filter(p => p.cases.some(c => c.evolutions.length > 0));
+      case 'patients':
+      case 'all':
+      default:
+        return patients;
+    }
+  }, [patients, filterKey]);
+
+  const filtered = statusFiltered.filter(p =>
     `${p.firstName} ${p.lastName} ${p.dni} ${p.diagnosis}`.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -39,6 +69,12 @@ export default function Patients() {
 
   const activePatients = filtered.filter(p => !isHealedPatient(p));
   const healedPatients = filtered.filter(isHealedPatient);
+
+  const clearFilter = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('filter');
+    setSearchParams(next, { replace: true });
+  };
 
   const openNew = () => {
     setEditing(null);
@@ -71,7 +107,21 @@ export default function Patients() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="heading-display text-2xl md:text-3xl">Pacientes</h1>
-            <p className="font-body text-sm text-muted-foreground">{patients.length} pacientes registrados</p>
+            <p className="font-body text-sm text-muted-foreground">
+              {filterKey !== 'all' && filterKey !== 'patients'
+                ? `${filtered.length} de ${patients.length} pacientes`
+                : `${patients.length} pacientes registrados`}
+            </p>
+            {FILTER_LABELS[filterKey] && filterKey !== 'all' && filterKey !== 'patients' && (
+              <Badge
+                variant="secondary"
+                className="font-body text-[11px] gap-1 mt-2 cursor-pointer hover:bg-secondary/80"
+                onClick={clearFilter}
+              >
+                Filtro: {FILTER_LABELS[filterKey]}
+                <span aria-hidden>×</span>
+              </Badge>
+            )}
           </div>
           <Button onClick={openNew} className="font-body">
             <Plus className="mr-2 h-4 w-4" /> Nuevo Paciente
