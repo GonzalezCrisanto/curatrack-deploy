@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
@@ -15,11 +15,11 @@ import { Switch } from '@/components/ui/switch';
 import {
   ArrowLeft, Plus, Edit, Trash2, ChevronRight, User, Phone, Mail, MapPin, CalendarClock, CalendarDays,
   FileDown, ShieldAlert, BadgeCheck, UserCog, FileDown as FileDownIcon, Share2, Crown, Users as UsersIcon,
-  Droplets, Thermometer, Package, CheckCircle2,
+  Droplets, Thermometer, Package, CheckCircle2, Camera, Upload, X,
 } from 'lucide-react';
 import { exportPatientPdf } from '@/lib/exportPdf';
 import {
-  WoundCase, woundTypes, woundStatuses, getStatusLabel, professionals,
+  WoundCase, Photo, woundTypes, woundStatuses, getStatusLabel, professionals,
   healingFrequencies, odorOptions, tissueTypeOptions, edgeTypeOptions,
   exudateAmountOptions, exudateTypeOptions, exudateColorOptions, infectionSignFields,
   TissueType, EdgeType, OdorLevel, ExudateAmount, ExudateType, ExudateColor,
@@ -101,6 +101,29 @@ export default function PatientDetail() {
   const [caseForm, setCaseForm] = useState(emptyCase);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
+  // Photos for the new/edit case form (optional)
+  const [casePhotos, setCasePhotos] = useState<Photo[]>([]);
+  const casePhotoInputRef = useRef<HTMLInputElement>(null);
+  const caseCameraInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCaseFileUpload = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const url = ev.target?.result as string;
+        const photo: Photo = {
+          id: `ph-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          url,
+          caption: file.name,
+          date: new Date().toISOString().split('T')[0],
+        };
+        setCasePhotos(prev => [...prev, photo]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   // New appointment dialog state
   const [apptDialogOpen, setApptDialogOpen] = useState(false);
   const [apptCaseId, setApptCaseId] = useState<string>('');
@@ -147,6 +170,7 @@ export default function PatientDetail() {
       startDate: new Date().toISOString().split('T')[0],
       professional: currentUserName || patient.assignedProfessional || '',
     });
+    setCasePhotos([]);
     setCaseDialogOpen(true);
   };
 
@@ -183,6 +207,7 @@ export default function PatientDetail() {
       initialObservations: c.initialObservations ?? '',
       treatment: c.treatment ?? '',
     });
+    setCasePhotos([...(c.photos ?? [])]);
     setCaseDialogOpen(true);
   };
 
@@ -232,7 +257,7 @@ export default function PatientDetail() {
     };
 
     if (editingCase) {
-      updateCase(patient.id, { ...editingCase, ...baseCase });
+      updateCase(patient.id, { ...editingCase, ...baseCase, photos: casePhotos });
     } else {
       const newCaseId = `c${Date.now()}`;
       const newCase: WoundCase = {
@@ -240,7 +265,7 @@ export default function PatientDetail() {
         id: newCaseId,
         patientId: patient.id,
         evolutions: [],
-        photos: [],
+        photos: casePhotos,
       };
 
       // Auto-create initial evolution mirroring the baseline data
@@ -255,7 +280,7 @@ export default function PatientDetail() {
         healingFrequency: caseForm.healingFrequency,
         observations: caseForm.initialObservations,
         nextControl: '',
-        photos: [],
+        photos: casePhotos,
         healingDate: caseForm.startDate,
         painLevel: caseForm.painLevel,
         odor: caseForm.odor,
@@ -1145,6 +1170,55 @@ export default function PatientDetail() {
                   placeholder="Notas adicionales, antecedentes relevantes, comentarios del paciente, etc." />
               </div>
 
+
+              {/* Fotos (opcional) */}
+              <div className="space-y-2">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                  Fotos
+                  <OptionalTag />
+                </Label>
+                <div className="flex gap-2">
+                  <input
+                    ref={caseCameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={e => { handleCaseFileUpload(e.target.files); e.target.value = ''; }}
+                  />
+                  <input
+                    ref={casePhotoInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={e => { handleCaseFileUpload(e.target.files); e.target.value = ''; }}
+                  />
+                  <Button type="button" variant="outline" size="sm" className="font-body flex-1 h-11" onClick={() => caseCameraInputRef.current?.click()}>
+                    <Camera className="mr-1.5 h-4 w-4" /> Cámara
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" className="font-body flex-1 h-11" onClick={() => casePhotoInputRef.current?.click()}>
+                    <Upload className="mr-1.5 h-4 w-4" /> Subir
+                  </Button>
+                </div>
+                {casePhotos.length > 0 && (
+                  <div className="flex gap-2 flex-wrap mt-2">
+                    {casePhotos.map(ph => (
+                      <div key={ph.id} className="relative w-20 h-16 rounded-md overflow-hidden border border-border/50 group">
+                        <img src={ph.url} alt={ph.caption} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setCasePhotos(prev => prev.filter(p => p.id !== ph.id))}
+                          className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                          aria-label="Eliminar foto"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               {/* Aviso: se genera Evolución #1 automáticamente */}
               {!editingCase && (
                 <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex items-start gap-2">
