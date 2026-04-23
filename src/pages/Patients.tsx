@@ -83,6 +83,7 @@ export default function Patients() {
 
   const openNew = () => {
     setEditing(null);
+    setErrors({});
     setForm({ ...emptyPatient, admissionDate: new Date().toISOString().split('T')[0] });
     setDialogOpen(true);
   };
@@ -90,12 +91,37 @@ export default function Patients() {
   const openEdit = (p: Patient, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditing(p);
+    setErrors({});
     const { id, cases, ...rest } = p;
     setForm(rest);
     setDialogOpen(true);
   };
 
+  const validate = () => {
+    const next: Record<string, string> = {};
+    if (!form.firstName.trim()) next.firstName = 'Ingresá el nombre';
+    if (!form.lastName.trim()) next.lastName = 'Ingresá el apellido';
+    if (!form.age || form.age <= 0) next.age = 'Edad inválida';
+    if (!form.gender) next.gender = 'Seleccioná el sexo';
+    if (!form.dni.trim()) next.dni = 'Ingresá el documento';
+    if (!form.phone.trim()) next.phone = 'Ingresá un teléfono de contacto';
+    if (!form.address.trim()) next.address = 'Ingresá el domicilio';
+    if (!form.admissionDate) next.admissionDate = 'Indicá la fecha de ingreso';
+    return next;
+  };
+
   const handleSave = () => {
+    const v = validate();
+    setErrors(v);
+    if (Object.keys(v).length > 0) {
+      // Scroll al primer error dentro del diálogo
+      requestAnimationFrame(() => {
+        const el = document.querySelector('[data-error="true"]') as HTMLElement | null;
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        (el?.querySelector('input,textarea,button') as HTMLElement | null)?.focus();
+      });
+      return;
+    }
     if (editing) {
       updatePatient({ ...editing, ...form });
     } else {
@@ -104,7 +130,15 @@ export default function Patients() {
     setDialogOpen(false);
   };
 
-  const setField = (key: string, value: string | number) => setForm(prev => ({ ...prev, [key]: value }));
+  const setField = (key: string, value: string | number) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+    // Limpia el error de ese campo apenas el usuario edita
+    setErrors(prev => {
+      if (!prev[key]) return prev;
+      const { [key]: _, ...rest } = prev;
+      return rest;
+    });
+  };
 
   return (
     <AppLayout>
