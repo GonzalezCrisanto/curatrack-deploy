@@ -632,17 +632,7 @@ export default function CaseDetail() {
             const exudateType = ev.exudateType
               ? exudateTypeOptions.find(o => o.value === ev.exudateType)?.label
               : null;
-            const aiSnippet = ev.aiSummary
-              ? ev.aiSummary
-                  .replace(/^#+\s+.*$/gm, '')
-                  .replace(/\*\*?/g, '')
-                  .replace(/^[-*]\s+/gm, '• ')
-                  .split('\n')
-                  .map(s => s.trim())
-                  .filter(Boolean)
-                  .join(' ')
-                  .slice(0, 220)
-              : null;
+            const hasAiSummary = !!ev.aiSummary && ev.aiSummary.trim().length > 0;
 
             return (
               <div key={ev.id} className="relative pl-12 animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
