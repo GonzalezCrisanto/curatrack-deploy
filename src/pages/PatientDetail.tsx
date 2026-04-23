@@ -74,7 +74,6 @@ interface CaseFormState {
   initialMaterials: string;
   initialObservations: string;
   treatment: string;
-  createInitialEvolution: boolean;
 }
 
 const emptyCase: CaseFormState = {
@@ -90,7 +89,6 @@ const emptyCase: CaseFormState = {
   healingFrequency: '',
   initialProcedure: '', initialMaterials: '', initialObservations: '',
   treatment: '',
-  createInitialEvolution: true,
 };
 
 export default function PatientDetail() {
@@ -184,7 +182,6 @@ export default function PatientDetail() {
       initialMaterials: c.initialMaterials ?? '',
       initialObservations: c.initialObservations ?? '',
       treatment: c.treatment ?? '',
-      createInitialEvolution: false,
     });
     setCaseDialogOpen(true);
   };
@@ -247,41 +244,39 @@ export default function PatientDetail() {
       };
 
       // Auto-create initial evolution mirroring the baseline data
-      if (caseForm.createInitialEvolution) {
-        newCase.evolutions = [{
-          id: `evo-${Date.now()}`,
-          date: caseForm.startDate,
-          time: '09:00',
-          professional: caseForm.professional,
-          description: 'Evaluación inicial. Datos basales de la herida registrados al ingreso del caso.',
-          procedure: caseForm.initialProcedure,
-          materials: caseForm.initialMaterials,
-          healingFrequency: caseForm.healingFrequency,
-          observations: caseForm.initialObservations,
-          nextControl: '',
-          photos: [],
-          healingDate: caseForm.startDate,
-          painLevel: caseForm.painLevel,
-          odor: caseForm.odor,
-          evolutionStatus: 'tratamiento_activo',
-          woundLength: baseCase.woundLength,
-          woundWidth: baseCase.woundWidth,
-          woundDepth: baseCase.woundDepth,
-          tissueTypes: caseForm.tissueTypes,
-          edgeTypes: caseForm.edgeTypes,
-          exudateAmount: caseForm.exudateAmount,
-          exudateType: caseForm.exudateType,
-          exudateColor: caseForm.exudateColor,
-          hasInfectionSigns: caseForm.hasInfectionSigns,
-          infMalOlor: caseForm.infMalOlor,
-          infEritema: caseForm.infEritema,
-          infCalor: caseForm.infCalor,
-          infBiofilm: caseForm.infBiofilm,
-          infPurulenta: caseForm.infPurulenta,
-          infDolorAumentado: caseForm.infDolorAumentado,
-          bodyTemperature: baseCase.bodyTemperature,
-        }];
-      }
+      newCase.evolutions = [{
+        id: `evo-${Date.now()}`,
+        date: caseForm.startDate,
+        time: '09:00',
+        professional: caseForm.professional,
+        description: 'Evaluación inicial. Datos basales de la herida registrados al ingreso del caso.',
+        procedure: caseForm.initialProcedure,
+        materials: caseForm.initialMaterials,
+        healingFrequency: caseForm.healingFrequency,
+        observations: caseForm.initialObservations,
+        nextControl: '',
+        photos: [],
+        healingDate: caseForm.startDate,
+        painLevel: caseForm.painLevel,
+        odor: caseForm.odor,
+        evolutionStatus: 'tratamiento_activo',
+        woundLength: baseCase.woundLength,
+        woundWidth: baseCase.woundWidth,
+        woundDepth: baseCase.woundDepth,
+        tissueTypes: caseForm.tissueTypes,
+        edgeTypes: caseForm.edgeTypes,
+        exudateAmount: caseForm.exudateAmount,
+        exudateType: caseForm.exudateType,
+        exudateColor: caseForm.exudateColor,
+        hasInfectionSigns: caseForm.hasInfectionSigns,
+        infMalOlor: caseForm.infMalOlor,
+        infEritema: caseForm.infEritema,
+        infCalor: caseForm.infCalor,
+        infBiofilm: caseForm.infBiofilm,
+        infPurulenta: caseForm.infPurulenta,
+        infDolorAumentado: caseForm.infDolorAumentado,
+        bodyTemperature: baseCase.bodyTemperature,
+      }];
 
       addCase(patient.id, newCase);
     }
@@ -1150,22 +1145,13 @@ export default function PatientDetail() {
                   placeholder="Notas adicionales, antecedentes relevantes, comentarios del paciente, etc." />
               </div>
 
-              {/* Crear evolución inicial automática */}
+              {/* Aviso: se genera Evolución #1 automáticamente */}
               {!editingCase && (
-                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <Label htmlFor="auto-evo" className="font-body text-sm font-semibold flex items-center gap-1.5">
-                        <CheckCircle2 className="h-4 w-4 text-primary" />
-                        Crear primera evolución automáticamente
-                      </Label>
-                      <p className="font-body text-xs text-muted-foreground mt-1">
-                        Se generará la Evolución #1 con los datos basales registrados aquí.
-                      </p>
-                    </div>
-                    <Switch id="auto-evo" checked={caseForm.createInitialEvolution}
-                      onCheckedChange={(v) => setCField('createInitialEvolution', v)} />
-                  </div>
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <p className="font-body text-xs text-muted-foreground">
+                    Al crear la herida se generará automáticamente la <span className="font-semibold text-foreground">Evolución #1</span> con los datos basales registrados aquí.
+                  </p>
                 </div>
               )}
             </div>
