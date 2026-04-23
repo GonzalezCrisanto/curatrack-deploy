@@ -21,16 +21,46 @@ const emptyPatient: Omit<Patient, 'id' | 'cases'> = {
   controlIntervalDays: 7,
 };
 
+const FILTER_LABELS: Record<string, string> = {
+  patients: 'Todos los pacientes',
+  active: 'Casos activos',
+  critical: 'Casos críticos',
+  improving: 'En mejoría',
+  resolved: 'Resueltos',
+  evolutions: 'Con evoluciones',
+};
+
 export default function Patients() {
   const { patients, addPatient, updatePatient, deletePatient } = useApp();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterKey = searchParams.get('filter') || 'all';
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
   const [form, setForm] = useState(emptyPatient);
   const [woundPickerPatient, setWoundPickerPatient] = useState<Patient | null>(null);
 
-  const filtered = patients.filter(p =>
+  const statusFiltered = useMemo(() => {
+    switch (filterKey) {
+      case 'active':
+        return patients.filter(p => p.cases.some(c => c.status === 'activo' || c.status === 'critico' || c.status === 'en_mejoria'));
+      case 'critical':
+        return patients.filter(p => p.cases.some(c => c.status === 'critico'));
+      case 'improving':
+        return patients.filter(p => p.cases.some(c => c.status === 'en_mejoria'));
+      case 'resolved':
+        return patients.filter(p => p.cases.length > 0 && p.cases.every(c => c.status === 'resuelto'));
+      case 'evolutions':
+        return patients.filter(p => p.cases.some(c => c.evolutions.length > 0));
+      case 'patients':
+      case 'all':
+      default:
+        return patients;
+    }
+  }, [patients, filterKey]);
+
+  const filtered = statusFiltered.filter(p =>
     `${p.firstName} ${p.lastName} ${p.dni} ${p.diagnosis}`.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -39,6 +69,12 @@ export default function Patients() {
 
   const activePatients = filtered.filter(p => !isHealedPatient(p));
   const healedPatients = filtered.filter(isHealedPatient);
+
+  const clearFilter = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('filter');
+    setSearchParams(next, { replace: true });
+  };
 
   const openNew = () => {
     setEditing(null);
