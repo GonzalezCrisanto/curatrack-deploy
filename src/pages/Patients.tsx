@@ -107,7 +107,21 @@ export default function Patients() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="heading-display text-2xl md:text-3xl">Pacientes</h1>
-            <p className="font-body text-sm text-muted-foreground">{patients.length} pacientes registrados</p>
+            <p className="font-body text-sm text-muted-foreground">
+              {filterKey !== 'all' && filterKey !== 'patients'
+                ? `${filtered.length} de ${patients.length} pacientes`
+                : `${patients.length} pacientes registrados`}
+            </p>
+            {FILTER_LABELS[filterKey] && filterKey !== 'all' && filterKey !== 'patients' && (
+              <Badge
+                variant="secondary"
+                className="font-body text-[11px] gap-1 mt-2 cursor-pointer hover:bg-secondary/80"
+                onClick={clearFilter}
+              >
+                Filtro: {FILTER_LABELS[filterKey]}
+                <span aria-hidden>×</span>
+              </Badge>
+            )}
           </div>
           <Button onClick={openNew} className="font-body">
             <Plus className="mr-2 h-4 w-4" /> Nuevo Paciente
