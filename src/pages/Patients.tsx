@@ -9,9 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search, Trash2, Edit, ChevronRight, CalendarClock, Activity, ArrowLeft } from 'lucide-react';
 import { Patient, professionals } from '@/data/demoData';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { getPatientIndicator, indicatorMeta, getActiveWoundCount, getLastEvolutionDate } from '@/lib/patientStatus';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -344,21 +347,20 @@ export default function Patients() {
                 <Textarea value={form.diagnosis} onChange={e => setField('diagnosis', e.target.value)} className="font-body" />
               </div>
               <div className="space-y-2">
-                <Label className="font-body text-sm">Profesional asignado</Label>
-                <Select value={form.assignedProfessional} onValueChange={v => setField('assignedProfessional', v)}>
-                  <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {professionals.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
                 <Label className="font-body text-sm">Fecha de ingreso</Label>
                 <Input type="date" value={form.admissionDate} onChange={e => setField('admissionDate', e.target.value)} className="font-body" />
               </div>
               <div className="space-y-2">
-                <Label className="font-body text-sm">Intervalo entre controles (días)</Label>
-                <Input type="number" min={1} max={90} value={form.controlIntervalDays} onChange={e => setField('controlIntervalDays', e.target.value)} className="font-body" placeholder="ej: 7" />
+                <Label className="font-body text-sm">Profesional asignado <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                <ProfessionalCombobox
+                  value={form.assignedProfessional}
+                  onChange={v => setField('assignedProfessional', v)}
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <p className="font-body text-[11px] text-muted-foreground -mt-1">
+                  El profesional se puede elegir del listado, escribir otro nombre o dejar en blanco para asignar después. El intervalo entre controles se define al crear cada herida.
+                </p>
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label className="font-body text-sm">Observaciones</Label>
@@ -431,5 +433,100 @@ export default function Patients() {
         </Dialog>
       </div>
     </AppLayout>
+  );
+}
+
+interface ProfessionalComboboxProps {
+  value: string;
+  onChange: (v: string) => void;
+}
+
+function ProfessionalCombobox({ value, onChange }: ProfessionalComboboxProps) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+
+  const showCreate =
+    query.trim().length > 0 &&
+    !professionals.some(p => p.toLowerCase() === query.trim().toLowerCase());
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-body font-normal"
+        >
+          <span className={value ? '' : 'text-muted-foreground'}>
+            {value || 'Sin asignar'}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command>
+          <CommandInput
+            placeholder="Buscar o escribir nombre..."
+            value={query}
+            onValueChange={setQuery}
+            className="font-body"
+          />
+          <CommandList>
+            <CommandEmpty className="py-2 px-2 text-sm font-body text-muted-foreground">
+              {query.trim() ? 'Presioná "Usar" para asignar este nombre.' : 'Sin coincidencias.'}
+            </CommandEmpty>
+            {value && (
+              <CommandGroup heading="Actual">
+                <CommandItem
+                  value="__clear__"
+                  onSelect={() => {
+                    onChange('');
+                    setQuery('');
+                    setOpen(false);
+                  }}
+                  className="font-body text-muted-foreground"
+                >
+                  Quitar asignación (dejar en blanco)
+                </CommandItem>
+              </CommandGroup>
+            )}
+            <CommandGroup heading="Profesionales sugeridos">
+              {professionals.map(p => (
+                <CommandItem
+                  key={p}
+                  value={p}
+                  onSelect={() => {
+                    onChange(p);
+                    setQuery('');
+                    setOpen(false);
+                  }}
+                  className="font-body"
+                >
+                  <Check className={`mr-2 h-4 w-4 ${value === p ? 'opacity-100' : 'opacity-0'}`} />
+                  {p}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            {showCreate && (
+              <CommandGroup heading="Otro">
+                <CommandItem
+                  value={`__use__${query}`}
+                  onSelect={() => {
+                    onChange(query.trim());
+                    setQuery('');
+                    setOpen(false);
+                  }}
+                  className="font-body"
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Usar "{query.trim()}"
+                </CommandItem>
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
