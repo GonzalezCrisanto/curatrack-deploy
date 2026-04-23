@@ -164,6 +164,10 @@ export interface Patient {
   observations: string;
   admissionDate: string;
   controlIntervalDays: number;
+  allergies?: string;
+  insurance?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
   cases: WoundCase[];
 }
 
