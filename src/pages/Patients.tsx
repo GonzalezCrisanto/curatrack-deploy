@@ -489,7 +489,7 @@ export default function Patients() {
                   </div>
                   <div className="space-y-2 sm:col-span-2">
                     <p className="font-body text-[11px] text-muted-foreground -mt-1">
-                      El intervalo entre controles se define al crear cada herida.
+                      La frecuencia de curación se define al crear cada herida (preestablecida o en días).
                     </p>
                   </div>
                 </div>
