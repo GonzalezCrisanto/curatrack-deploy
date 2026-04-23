@@ -405,6 +405,38 @@ Sé breve, claro y accionable. Usá listas con bullets o numeradas. No uses bloq
             </CardContent>
           </Card>
         </div>
+
+        <Dialog open={agendaOpen} onOpenChange={setAgendaOpen}>
+          <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="font-display text-xl flex items-center gap-2">
+                <CalendarCheck className="h-5 w-5 text-primary" />
+                Resumen de agenda del día
+              </DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="flex-1 pr-4 -mr-4">
+              <div ref={printRef} className="prose prose-sm max-w-none dark:prose-invert font-body py-2">
+                {agendaText ? (
+                  <ReactMarkdown>{agendaText}</ReactMarkdown>
+                ) : (
+                  <div className="flex items-center gap-2 text-muted-foreground py-8 justify-center">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    <span className="text-sm">Generando agenda...</span>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+            <DialogFooter className="flex-row justify-end gap-2 sm:gap-2">
+              <Button variant="outline" onClick={handleCopy} disabled={!agendaText || agendaLoading} className="font-body">
+                {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                {copied ? 'Copiado' : 'Copiar'}
+              </Button>
+              <Button onClick={handlePrint} disabled={!agendaText || agendaLoading} className="font-body">
+                <Printer className="mr-2 h-4 w-4" /> Imprimir
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
