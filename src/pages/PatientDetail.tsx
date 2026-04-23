@@ -10,13 +10,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Edit, Trash2, ChevronRight, User, Phone, Mail, MapPin, CalendarClock, CalendarDays, FileDown, ShieldAlert, BadgeCheck, UserCog, FileDown as FileDownIcon, Share2, Crown, Users as UsersIcon } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import {
+  ArrowLeft, Plus, Edit, Trash2, ChevronRight, User, Phone, Mail, MapPin, CalendarClock, CalendarDays,
+  FileDown, ShieldAlert, BadgeCheck, UserCog, FileDown as FileDownIcon, Share2, Crown, Users as UsersIcon,
+  Droplets, Thermometer, Package, CheckCircle2,
+} from 'lucide-react';
 import { exportPatientPdf } from '@/lib/exportPdf';
-import { WoundCase, woundTypes, woundStatuses, getStatusLabel, professionals } from '@/data/demoData';
+import {
+  WoundCase, woundTypes, woundStatuses, getStatusLabel, professionals,
+  healingFrequencies, odorOptions, tissueTypeOptions, edgeTypeOptions,
+  exudateAmountOptions, exudateTypeOptions, exudateColorOptions, infectionSignFields,
+  TissueType, EdgeType, OdorLevel, ExudateAmount, ExudateType, ExudateColor,
+} from '@/data/demoData';
 import { ROLE_LABEL_SHORT } from '@/data/demoUsers';
 import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { SharePatientDialog } from '@/components/SharePatientDialog';
+import { cn } from '@/lib/utils';
 
 const statusBadgeClass: Record<string, string> = {
   activo: 'bg-info/10 text-info border-info/30',
@@ -25,9 +37,52 @@ const statusBadgeClass: Record<string, string> = {
   resuelto: 'bg-success/15 text-success border-success/40',
 };
 
-const emptyCase: { woundType: string; anatomicalLocation: string; startDate: string; size: string; depth: string; exudate: string; infection: string; pain: string; treatment: string; status: 'activo' | 'en_mejoria' | 'critico' | 'resuelto' } = {
-  woundType: '', anatomicalLocation: '', startDate: '', size: '', depth: '',
-  exudate: '', infection: '', pain: '', treatment: '', status: 'activo',
+interface CaseFormState {
+  woundType: string;
+  anatomicalLocation: string;
+  startDate: string;
+  status: 'activo' | 'en_mejoria' | 'critico' | 'resuelto';
+  professional: string;
+  woundLength: number | '';
+  woundWidth: number | '';
+  woundDepth: number | '';
+  tissueTypes: TissueType[];
+  edgeTypes: EdgeType[];
+  exudateAmount?: ExudateAmount;
+  exudateType?: ExudateType;
+  exudateColor?: ExudateColor;
+  painLevel: number;
+  odor: OdorLevel;
+  hasInfectionSigns: boolean;
+  infMalOlor: boolean;
+  infEritema: boolean;
+  infCalor: boolean;
+  infBiofilm: boolean;
+  infPurulenta: boolean;
+  infDolorAumentado: boolean;
+  bodyTemperature: number | '';
+  healingFrequency: string;
+  initialProcedure: string;
+  initialMaterials: string;
+  initialObservations: string;
+  treatment: string;
+  createInitialEvolution: boolean;
+}
+
+const emptyCase: CaseFormState = {
+  woundType: '', anatomicalLocation: '', startDate: '', status: 'activo',
+  professional: '',
+  woundLength: '', woundWidth: '', woundDepth: '',
+  tissueTypes: [], edgeTypes: [],
+  exudateAmount: undefined, exudateType: undefined, exudateColor: undefined,
+  painLevel: 0, odor: 'sin_olor',
+  hasInfectionSigns: false,
+  infMalOlor: false, infEritema: false, infCalor: false, infBiofilm: false, infPurulenta: false, infDolorAumentado: false,
+  bodyTemperature: '',
+  healingFrequency: '',
+  initialProcedure: '', initialMaterials: '', initialObservations: '',
+  treatment: '',
+  createInitialEvolution: true,
 };
 
 export default function PatientDetail() {
