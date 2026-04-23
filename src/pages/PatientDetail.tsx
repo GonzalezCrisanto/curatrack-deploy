@@ -868,7 +868,7 @@ export default function PatientDetail() {
 
               {/* Frecuencia de curación */}
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Frecuencia de curación</Label>
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Frecuencia de curación<OptionalTag /></Label>
                 <Select value={caseForm.healingFrequency} onValueChange={v => setCField('healingFrequency', v)}>
                   <SelectTrigger className="font-body h-11"><SelectValue placeholder="Seleccionar frecuencia" /></SelectTrigger>
                   <SelectContent>
