@@ -89,7 +89,6 @@ const emptyCase: CaseFormState = {
   healingFrequency: '',
   initialProcedure: '', initialMaterials: '', initialObservations: '',
   treatment: '',
-  createInitialEvolution: true,
 };
 
 export default function PatientDetail() {
