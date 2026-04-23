@@ -108,16 +108,17 @@ export function exportPatientPdf(patient: Patient) {
   <div class="patient-info">
     <h2>${patient.lastName}, ${patient.firstName}</h2>
     <div class="patient-grid">
-      <div class="item"><span class="label">DNI:</span><span>${patient.dni}</span></div>
-      <div class="item"><span class="label">Edad:</span><span>${patient.age} años · ${patient.gender}</span></div>
-      <div class="item"><span class="label">Teléfono:</span><span>${patient.phone}</span></div>
-      <div class="item"><span class="label">Email:</span><span>${patient.email}</span></div>
-      <div class="item"><span class="label">Dirección:</span><span>${patient.address}</span></div>
-      <div class="item"><span class="label">Ingreso:</span><span>${patient.admissionDate}</span></div>
-      <div class="item"><span class="label">Diagnóstico:</span><span>${patient.diagnosis}</span></div>
-      <div class="item"><span class="label">Profesional:</span><span>${patient.assignedProfessional}</span></div>
-      ${patient.observations ? `<div class="item" style="grid-column:1/-1"><span class="label">Observaciones:</span><span>${patient.observations}</span></div>` : ''}
-      <div class="item"><span class="label">Intervalo control:</span><span>Cada ${patient.controlIntervalDays} días</span></div>
+      <div class="item"><span class="label">DNI / Documento:</span><span>${patient.dni || '—'}</span></div>
+      <div class="item"><span class="label">Edad / Sexo:</span><span>${patient.age} años · ${patient.gender || '—'}</span></div>
+      <div class="item"><span class="label">Teléfono:</span><span>${patient.phone || '—'}</span></div>
+      ${patient.email ? `<div class="item"><span class="label">Email:</span><span>${patient.email}</span></div>` : ''}
+      <div class="item" style="grid-column:1/-1"><span class="label">Domicilio:</span><span>${patient.address || '—'}</span></div>
+      <div class="item"><span class="label">Fecha de ingreso:</span><span>${patient.admissionDate || '—'}</span></div>
+      ${patient.insurance ? `<div class="item"><span class="label">Obra social / Cobertura:</span><span>${patient.insurance}</span></div>` : ''}
+      <div class="item" style="grid-column:1/-1"><span class="label">Antecedentes y comorbilidades:</span><span>${patient.diagnosis || '—'}</span></div>
+      <div class="item" style="grid-column:1/-1"><span class="label">Alergias:</span><span>${patient.allergies || 'Sin alergias registradas'}</span></div>
+      ${(patient.emergencyContactName || patient.emergencyContactPhone) ? `<div class="item" style="grid-column:1/-1"><span class="label">Contacto de emergencia:</span><span>${[patient.emergencyContactName, patient.emergencyContactPhone].filter(Boolean).join(' · ')}</span></div>` : ''}
+      ${patient.observations ? `<div class="item" style="grid-column:1/-1"><span class="label">Notas generales:</span><span>${patient.observations}</span></div>` : ''}
     </div>
   </div>
 

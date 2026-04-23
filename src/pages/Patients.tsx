@@ -223,7 +223,9 @@ export default function Patients() {
                     <p className="font-body text-xs text-muted-foreground mt-1 truncate">{p.diagnosis}</p>
                     <div className="flex items-center gap-3 mt-2 flex-wrap">
                       <span className="font-body text-xs text-muted-foreground">DNI: {p.dni}</span>
-                      <span className="font-body text-xs text-muted-foreground">· {p.assignedProfessional}</span>
+                      {p.admissionDate && (
+                        <span className="font-body text-xs text-muted-foreground">· Ingreso: {p.admissionDate}</span>
+                      )}
                       <Badge variant="outline" className="font-body text-xs flex items-center gap-1">
                         <Activity className="h-3 w-3" />
                         {activeCount} herida{activeCount !== 1 ? 's' : ''} activa{activeCount !== 1 ? 's' : ''}

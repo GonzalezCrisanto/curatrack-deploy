@@ -402,7 +402,8 @@ export default function CaseDetail() {
     <div><b>Sexo:</b> ${escape(patient.gender || '—')}</div>
     <div><b>Teléfono:</b> ${escape(patient.phone || '—')}</div>
     <div><b>Domicilio:</b> ${escape(patient.address || '—')}</div>
-    <div style="grid-column:1/-1"><b>Diagnóstico:</b> ${escape(patient.diagnosis || '—')}</div>
+    <div style="grid-column:1/-1"><b>Antecedentes y comorbilidades:</b> ${escape(patient.diagnosis || '—')}</div>
+    ${patient.allergies ? `<div style="grid-column:1/-1"><b>Alergias:</b> ${escape(patient.allergies)}</div>` : ''}
   </div>
 </div>
 
