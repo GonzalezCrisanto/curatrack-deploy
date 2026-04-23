@@ -921,25 +921,56 @@ export default function PatientDetail() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="font-body text-sm">Fecha</Label>
-                  <Input type="date" value={apptDate} onChange={e => setApptDate(e.target.value)} className="font-body" />
+                  <Input
+                    type="date"
+                    value={apptDate}
+                    onChange={e => {
+                      const newDate = e.target.value;
+                      setApptDate(newDate);
+                      const takenThatDay = new Set<string>();
+                      patients.forEach(p => p.cases.forEach(c => c.evolutions.forEach(ev => {
+                        if (ev.nextControl === newDate && ev.time) takenThatDay.add(ev.time);
+                      })));
+                      setApptTime(pickAvailableTime(takenThatDay));
+                    }}
+                    className="font-body"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="font-body text-sm">Hora</Label>
-                  <Input type="time" value={apptTime} onChange={e => setApptTime(e.target.value)} className="font-body" />
+                  <Input
+                    type="time"
+                    step={900}
+                    value={apptTime}
+                    onChange={e => setApptTime(e.target.value)}
+                    className={cn(
+                      "font-body",
+                      apptTakenTimes.has(apptTime) && "border-destructive focus-visible:ring-destructive"
+                    )}
+                  />
+                  {apptTakenTimes.has(apptTime) && (
+                    <p className="font-body text-[11px] text-destructive">
+                      Ese horario ya está ocupado por otro turno.
+                    </p>
+                  )}
                 </div>
               </div>
 
               {apptConflicts.length > 0 && (
-                <div className="rounded-md border border-warning/40 bg-warning/10 p-3 space-y-1.5">
-                  <p className="font-body text-xs font-semibold text-warning">
-                    ⚠ Ya hay {apptConflicts.length} turno{apptConflicts.length !== 1 ? 's' : ''} con otros pacientes ese día:
+                <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 space-y-1.5">
+                  <p className="font-body text-xs font-semibold text-destructive">
+                    ⚠ Ya hay {apptConflicts.length} turno{apptConflicts.length !== 1 ? 's' : ''} agendado{apptConflicts.length !== 1 ? 's' : ''} ese día:
                   </p>
                   <ul className="space-y-0.5">
-                    {apptConflicts.slice(0, 5).map((c, i) => (
-                      <li key={i} className="font-body text-[11px] text-foreground/80">
-                        • {c.patientName}{c.time ? ` — ${c.time}` : ''} ({c.woundType})
-                      </li>
-                    ))}
+                    {apptConflicts
+                      .slice()
+                      .sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+                      .slice(0, 8)
+                      .map((c, i) => (
+                        <li key={i} className="font-body text-[11px] text-destructive/90">
+                          • {c.patientName}{c.time ? ` — ${c.time}` : ''} ({c.woundType})
+                        </li>
+                      ))}
                   </ul>
                 </div>
               )}
