@@ -546,9 +546,6 @@ export default function PatientDetail() {
             }
           };
 
-          // Patient-level fallback interval
-          const interval = patient.controlIntervalDays || 7;
-
           // Suggested future dates PER CASE based on its healingFrequency.
           // Anchor: latest evolution date with that frequency, else next existing nextControl, else today.
           const existingDateStrings = new Set(appointmentsByCase.map(a => a.date.toISOString().split('T')[0]));
@@ -559,7 +556,10 @@ export default function PatientDetail() {
             const sortedEvos = [...c.evolutions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
             const evoFreq = sortedEvos.find(e => e.healingFrequency)?.healingFrequency;
             const freq = evoFreq || c.healingFrequency;
-            const days = frequencyToDays(freq) ?? interval;
+            // Effective days: preset frequency, else manual days from latest evolution, else case-level manual days
+            const evoManual = sortedEvos.find(e => typeof e.healingFrequencyDays === 'number' && (e.healingFrequencyDays as number) > 0)?.healingFrequencyDays;
+            const manualDays = (typeof evoManual === 'number' ? evoManual : c.healingFrequencyDays) || null;
+            const days = frequencyToDays(freq) ?? manualDays;
             if (!days) return;
 
             // Anchor date: last existing nextControl for this case, else last evolution date, else today
@@ -629,7 +629,8 @@ export default function PatientDetail() {
 
           const openNewAppointment = (preselectDate?: string, preselectCaseId?: string) => {
             setApptCaseId(preselectCaseId || activeCases[0]?.id || '');
-            setApptDate(preselectDate || new Date(today.getTime() + interval * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+            // Default suggested date: 7 days ahead if nothing better
+            setApptDate(preselectDate || new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
             setApptTime('09:00');
             setApptDialogOpen(true);
           };
