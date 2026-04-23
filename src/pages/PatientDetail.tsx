@@ -641,7 +641,6 @@ export default function PatientDetail() {
                 <CardTitle className="heading-display text-lg flex items-center gap-2">
                   <CalendarClock className="h-5 w-5 text-primary" />
                   Calendario de Controles
-                  <Badge variant="outline" className="font-body text-xs ml-2">Cada {interval} día{interval !== 1 ? 's' : ''}</Badge>
                 </CardTitle>
                 <Button
                   size="sm"
