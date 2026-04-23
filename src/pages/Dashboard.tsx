@@ -339,10 +339,15 @@ export default function Dashboard() {
             const showOverdue = appointmentFilter === 'all' || appointmentFilter === 'overdue';
 
             const selectedISO = selectedDay ? toISODate(selectedDay) : null;
+            // When no day filter is active, cap the rendered list to keep the card compact.
+            // When a day is selected, show ALL turns for that day.
+            const VISIBLE_LIMIT = 6;
             const visibleUpcoming = (showUpcoming ? upcomingAppointments : [])
-              .filter(ap => !selectedISO || ap.nextControl === selectedISO);
+              .filter(ap => !selectedISO || ap.nextControl === selectedISO)
+              .slice(0, selectedISO ? undefined : VISIBLE_LIMIT);
             const visiblePast = (showOverdue ? pastAppointments : [])
-              .filter(ap => !selectedISO || ap.nextControl === selectedISO);
+              .filter(ap => !selectedISO || ap.nextControl === selectedISO)
+              .slice(0, selectedISO ? undefined : VISIBLE_LIMIT);
 
             // Bucket appointments by date so multiple wounds/patients on the same day
             // render as a single multi-color (conic-gradient) marker instead of
