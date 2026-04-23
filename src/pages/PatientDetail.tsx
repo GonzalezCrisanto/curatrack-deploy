@@ -649,6 +649,13 @@ export default function PatientDetail() {
             </div>
           </DialogContent>
         </Dialog>
+
+        <SharePatientDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          patientId={patient.id}
+          patientName={`${patient.lastName}, ${patient.firstName}`}
+        />
       </div>
     </AppLayout>
   );
