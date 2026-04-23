@@ -291,14 +291,20 @@ Sé breve, claro y accionable. Usá listas con bullets o numeradas. No uses bloq
   return (
     <AppLayout>
       <div className="space-y-6 max-w-5xl mx-auto">
-        <div>
-          <h1 className="heading-display text-3xl text-foreground flex items-center gap-3">
-            <Sparkles className="h-7 w-7 text-primary" />
-            Asistente IA
-          </h1>
-          <p className="font-body text-muted-foreground mt-1">
-            Tu copiloto clínico para organizar turnos, heridas y pacientes.
-          </p>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="heading-display text-3xl text-foreground flex items-center gap-3">
+              <Sparkles className="h-7 w-7 text-primary" />
+              Asistente IA
+            </h1>
+            <p className="font-body text-muted-foreground mt-1">
+              Tu copiloto clínico para organizar turnos, heridas y pacientes.
+            </p>
+          </div>
+          <Button onClick={generateAgenda} disabled={agendaLoading} className="font-body shrink-0">
+            {agendaLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarCheck className="mr-2 h-4 w-4" />}
+            Resumen de agenda del día
+          </Button>
         </div>
 
         <div className="grid lg:grid-cols-[1fr_280px] gap-6">
