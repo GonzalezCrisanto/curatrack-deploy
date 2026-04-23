@@ -1331,8 +1331,8 @@ export default function CaseDetail() {
 
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
               {summaryViewerEvo?.aiSummary ? (
-                <div className="font-body text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
-                  {summaryViewerEvo.aiSummary}
+                <div className="font-body text-sm leading-relaxed text-foreground/90 prose prose-sm max-w-none prose-headings:font-display prose-headings:text-foreground prose-strong:text-foreground prose-li:my-0.5 prose-p:my-2 prose-ul:my-2 prose-ol:my-2">
+                  <ReactMarkdown>{summaryViewerEvo.aiSummary}</ReactMarkdown>
                 </div>
               ) : (
                 <p className="font-body text-sm text-muted-foreground">No hay resumen disponible.</p>
