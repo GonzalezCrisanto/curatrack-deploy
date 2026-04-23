@@ -26,6 +26,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import AISummaryCard from '@/components/AISummaryCard';
+import ReactMarkdown from 'react-markdown';
+import { marked } from 'marked';
 
 const statusBadgeClass: Record<string, string> = {
   activo: 'bg-info/10 text-info border-info/30',
