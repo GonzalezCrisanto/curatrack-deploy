@@ -1358,52 +1358,14 @@ export default function CaseDetail() {
               <Button
                 variant="outline"
                 className="font-body h-11 flex-1 sm:flex-none"
-                onClick={() => {
-                  if (!summaryViewerEvo?.aiSummary) return;
-                  const ev = summaryViewerEvo;
-                  const win = window.open('', '_blank');
-                  if (!win) return;
-                  const safe = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
-                  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Resumen IA</title>
-                    <style>
-                      body { font-family: 'Open Sans', system-ui, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 24px; color: #111; }
-                      h1 { font-family: 'Montserrat', system-ui, sans-serif; color: #00965E; font-size: 22px; margin: 0 0 4px; }
-                      .meta { color: #555; font-size: 13px; margin-bottom: 24px; }
-                      .content { white-space: pre-wrap; line-height: 1.55; font-size: 14px; }
-                      @media print { body { margin: 0; padding: 16mm; } }
-                    </style></head><body>
-                    <h1>Resumen con IA</h1>
-                    <div class="meta">Evolución del ${safe(ev.date)}${ev.time ? ` · ${safe(ev.time)} hs` : ''}${ev.professional ? ` · ${safe(ev.professional)}` : ''}</div>
-                    <div class="content">${safe(ev.aiSummary || '')}</div>
-                    <script>window.onload = () => { window.print(); };</script>
-                  </body></html>`);
-                  win.document.close();
-                }}
+                onClick={() => openSummaryPrintWindow(summaryViewerEvo)}
               >
                 <Printer className="mr-1.5 h-4 w-4" /> Imprimir
               </Button>
               <Button
                 className="font-body h-11 flex-1 sm:flex-none"
                 onClick={() => {
-                  if (!summaryViewerEvo?.aiSummary) return;
-                  const ev = summaryViewerEvo;
-                  const win = window.open('', '_blank');
-                  if (!win) return;
-                  const safe = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
-                  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Resumen-IA-${safe(ev.date)}</title>
-                    <style>
-                      body { font-family: 'Open Sans', system-ui, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 24px; color: #111; }
-                      h1 { font-family: 'Montserrat', system-ui, sans-serif; color: #00965E; font-size: 22px; margin: 0 0 4px; }
-                      .meta { color: #555; font-size: 13px; margin-bottom: 24px; }
-                      .content { white-space: pre-wrap; line-height: 1.55; font-size: 14px; }
-                      @media print { body { margin: 0; padding: 16mm; } }
-                    </style></head><body>
-                    <h1>Resumen con IA</h1>
-                    <div class="meta">Evolución del ${safe(ev.date)}${ev.time ? ` · ${safe(ev.time)} hs` : ''}${ev.professional ? ` · ${safe(ev.professional)}` : ''}</div>
-                    <div class="content">${safe(ev.aiSummary || '')}</div>
-                    <script>window.onload = () => { window.print(); };</script>
-                  </body></html>`);
-                  win.document.close();
+                  openSummaryPrintWindow(summaryViewerEvo);
                   toast.info('Elegí "Guardar como PDF" en el diálogo de impresión.');
                 }}
               >
