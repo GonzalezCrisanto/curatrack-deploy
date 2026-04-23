@@ -262,7 +262,7 @@ export default function PatientDetail() {
         <div className="flex items-center justify-between">
           <h2 className="heading-display text-xl">Casos / Heridas</h2>
           <Button onClick={openNewCase} className="font-body" size="sm">
-            <Plus className="mr-2 h-4 w-4" /> Nuevo Caso
+            <Plus className="mr-2 h-4 w-4" /> Nueva Herida
           </Button>
         </div>
 
