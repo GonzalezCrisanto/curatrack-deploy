@@ -77,55 +77,55 @@ export default function PatientDetail() {
         </div>
 
         {/* Patient info */}
-        <div className="grid lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2 border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="heading-display text-xl flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                {patient.lastName}, {patient.firstName}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <InfoRow icon={<User className="h-4 w-4" />} label="Edad / Género" value={`${patient.age} años · ${patient.gender}`} />
-                <InfoRow icon={<User className="h-4 w-4" />} label="DNI" value={patient.dni} />
-                <InfoRow icon={<Phone className="h-4 w-4" />} label="Teléfono" value={patient.phone} />
-                <InfoRow icon={<Mail className="h-4 w-4" />} label="Email" value={patient.email} />
-                <InfoRow icon={<MapPin className="h-4 w-4" />} label="Dirección" value={patient.address} />
-                <InfoRow icon={<Stethoscope className="h-4 w-4" />} label="Profesional" value={patient.assignedProfessional} />
-                <InfoRow icon={<Clock className="h-4 w-4" />} label="Intervalo entre controles" value={`Cada ${patient.controlIntervalDays} día${patient.controlIntervalDays !== 1 ? 's' : ''}`} />
-              </div>
+        <Card className="border-border/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="heading-display text-xl flex items-center gap-2">
+              <User className="h-5 w-5 text-primary" />
+              {patient.lastName}, {patient.firstName}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <InfoRow icon={<User className="h-4 w-4" />} label="Edad / Género" value={`${patient.age} años · ${patient.gender}`} />
+              <InfoRow icon={<User className="h-4 w-4" />} label="DNI" value={patient.dni} />
+              <InfoRow icon={<Phone className="h-4 w-4" />} label="Teléfono" value={patient.phone} />
+              <InfoRow icon={<Mail className="h-4 w-4" />} label="Email" value={patient.email} />
+              <InfoRow icon={<MapPin className="h-4 w-4" />} label="Dirección" value={patient.address} />
+              <InfoRow icon={<Stethoscope className="h-4 w-4" />} label="Profesional" value={patient.assignedProfessional} />
+              <InfoRow icon={<Clock className="h-4 w-4" />} label="Intervalo entre controles" value={`Cada ${patient.controlIntervalDays} día${patient.controlIntervalDays !== 1 ? 's' : ''}`} />
+            </div>
+            <div>
+              <p className="font-body text-xs text-muted-foreground mb-1">Diagnóstico</p>
+              <p className="font-body text-sm">{patient.diagnosis}</p>
+            </div>
+            {patient.observations && (
               <div>
-                <p className="font-body text-xs text-muted-foreground mb-1">Diagnóstico</p>
-                <p className="font-body text-sm">{patient.diagnosis}</p>
+                <p className="font-body text-xs text-muted-foreground mb-1">Observaciones</p>
+                <p className="font-body text-sm">{patient.observations}</p>
               </div>
-              {patient.observations && (
-                <div>
-                  <p className="font-body text-xs text-muted-foreground mb-1">Observaciones</p>
-                  <p className="font-body text-sm">{patient.observations}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            )}
 
-          <Card className="border-border/50">
-            <CardContent className="p-6 text-center">
-              <div className="heading-display text-4xl text-primary mb-1">{patient.cases.length}</div>
-              <p className="font-body text-sm text-muted-foreground">Casos / Heridas</p>
-              <div className="mt-4 space-y-2">
-                {woundStatuses.map(s => {
-                  const count = patient.cases.filter(c => c.status === s.value).length;
-                  return count > 0 ? (
-                    <div key={s.value} className="flex items-center justify-between">
-                      <Badge className={`font-body text-xs ${statusBadgeClass[s.value]}`}>{s.label}</Badge>
-                      <span className="font-body text-sm font-medium">{count}</span>
-                    </div>
-                  ) : null;
-                })}
+            {/* Resumen de Casos / Heridas integrado */}
+            <div className="pt-4 border-t border-border/50">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="heading-display text-3xl text-primary leading-none">{patient.cases.length}</div>
+                  <p className="font-body text-sm text-muted-foreground">Casos / Heridas</p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {woundStatuses.map(s => {
+                    const count = patient.cases.filter(c => c.status === s.value).length;
+                    return count > 0 ? (
+                      <Badge key={s.value} className={`font-body text-xs ${statusBadgeClass[s.value]}`}>
+                        {s.label} · {count}
+                      </Badge>
+                    ) : null;
+                  })}
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Calendario de Turnos del Paciente — un color por herida */}
         {(() => {
