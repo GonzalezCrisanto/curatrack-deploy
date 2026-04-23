@@ -795,31 +795,57 @@ export default function PatientDetail() {
               <DialogTitle className="heading-display text-lg sm:text-xl">
                 {editingCase ? 'Editar Herida' : 'Nueva Herida'}
               </DialogTitle>
+              <p className="font-body text-xs text-muted-foreground mt-1">
+                Los campos marcados con <span className="text-destructive font-semibold">*</span> son obligatorios.
+              </p>
             </DialogHeader>
 
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-5">
               {/* Tipo de herida + ubicación */}
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de herida</Label>
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Tipo de herida<RequiredMark />
+                  </Label>
                   <Select value={caseForm.woundType} onValueChange={v => setCField('woundType', v)}>
-                    <SelectTrigger className="font-body h-11"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectTrigger
+                      className={cn("font-body h-11", !caseForm.woundType && "border-destructive/40")}
+                      aria-required="true"
+                    >
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
                     <SelectContent>
                       {woundTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ubicación anatómica</Label>
-                  <Input value={caseForm.anatomicalLocation} onChange={e => setCField('anatomicalLocation', e.target.value)} className="font-body h-11" placeholder="Ej: Sacro, Pie derecho" />
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Ubicación anatómica<RequiredMark />
+                  </Label>
+                  <Input
+                    value={caseForm.anatomicalLocation}
+                    onChange={e => setCField('anatomicalLocation', e.target.value)}
+                    className={cn("font-body h-11", !caseForm.anatomicalLocation.trim() && "border-destructive/40")}
+                    placeholder="Ej: Sacro, Pie derecho"
+                    aria-required="true"
+                  />
                 </div>
               </div>
 
               {/* Fecha de inicio + estado */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fecha de inicio</Label>
-                  <Input type="date" value={caseForm.startDate} onChange={e => setCField('startDate', e.target.value)} className="font-body h-11" />
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Fecha de inicio<RequiredMark />
+                  </Label>
+                  <Input
+                    type="date"
+                    value={caseForm.startDate}
+                    onChange={e => setCField('startDate', e.target.value)}
+                    className={cn("font-body h-11", !caseForm.startDate && "border-destructive/40")}
+                    aria-required="true"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Estado</Label>
