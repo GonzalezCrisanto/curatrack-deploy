@@ -469,17 +469,6 @@ export default function Dashboard() {
                     </div>
 
                     <div className="flex-1 space-y-5">
-                      {showOverdue && visiblePast.length > 0 && (
-                        <div>
-                          <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-destructive mb-2">
-                            Controles vencidos ({visiblePast.length})
-                          </h3>
-                          <div className="grid sm:grid-cols-2 gap-3 content-start">
-                            {visiblePast.map(ap => renderApt(ap, { past: true }))}
-                          </div>
-                        </div>
-                      )}
-
                       {showUpcoming && (
                         <div>
                           <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
@@ -496,6 +485,17 @@ export default function Dashboard() {
                               <p className="font-body text-xs text-muted-foreground mt-1">Cuando programes controles, aparecerán aquí.</p>
                             </div>
                           )}
+                        </div>
+                      )}
+
+                      {showOverdue && visiblePast.length > 0 && (
+                        <div>
+                          <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-destructive mb-2">
+                            Controles vencidos ({visiblePast.length})
+                          </h3>
+                          <div className="grid sm:grid-cols-2 gap-3 content-start">
+                            {visiblePast.map(ap => renderApt(ap, { past: true }))}
+                          </div>
                         </div>
                       )}
 
