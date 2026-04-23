@@ -43,6 +43,7 @@ export default function Patients() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
   const [form, setForm] = useState(emptyPatient);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [woundPickerPatient, setWoundPickerPatient] = useState<Patient | null>(null);
 
   const statusFiltered = useMemo(() => {
