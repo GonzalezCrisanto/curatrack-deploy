@@ -321,7 +321,7 @@ export default function CaseDetail() {
     // The summary persists on the evolution and will appear in the timeline card when ready.
     setEvoDialogOpen(false);
     toast.info('Generando resumen con IA…');
-    generateAISummary(payload.id);
+    generateAISummary(payload);
   };
 
   const handleSaveEvo = () => {
