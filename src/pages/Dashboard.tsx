@@ -77,7 +77,7 @@ export default function Dashboard() {
 
   const allCases = patients.flatMap(p => p.cases);
   const activeCases = allCases.filter(c => c.status === 'activo');
-  const criticalCases = allCases.filter(c => c.status === 'critico').filter(c => !attendedAlerts.has(c.id));
+  const criticalCases = allCases.filter(c => c.status === 'critico');
   const improvingCases = allCases.filter(c => c.status === 'en_mejoria');
   const resolvedCases = allCases.filter(c => c.status === 'resuelto');
   const totalEvolutions = allCases.reduce((sum, c) => sum + c.evolutions.length, 0);
