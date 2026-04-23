@@ -29,6 +29,14 @@ import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { SharePatientDialog } from '@/components/SharePatientDialog';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
+
+const RequiredMark = () => (
+  <span className="text-destructive ml-0.5" aria-label="campo obligatorio">*</span>
+);
+const OptionalTag = () => (
+  <span className="font-body text-[10px] font-normal normal-case tracking-normal text-muted-foreground/70 ml-1">(opcional)</span>
+);
 
 const statusBadgeClass: Record<string, string> = {
   activo: 'bg-info/10 text-info border-info/30',
@@ -182,6 +190,19 @@ export default function PatientDetail() {
   };
 
   const handleSaveCase = () => {
+    // Validación de campos obligatorios
+    const missing: string[] = [];
+    if (!caseForm.woundType) missing.push('Tipo de herida');
+    if (!caseForm.anatomicalLocation.trim()) missing.push('Ubicación anatómica');
+    if (!caseForm.startDate) missing.push('Fecha de inicio');
+    if (missing.length > 0) {
+      toast({
+        title: 'Faltan campos obligatorios',
+        description: `Completá: ${missing.join(', ')}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
     const numOrUndef = (v: number | '') => (v === '' ? undefined : Number(v));
     const baseCase = {
       woundType: caseForm.woundType,
@@ -774,31 +795,57 @@ export default function PatientDetail() {
               <DialogTitle className="heading-display text-lg sm:text-xl">
                 {editingCase ? 'Editar Herida' : 'Nueva Herida'}
               </DialogTitle>
+              <p className="font-body text-xs text-muted-foreground mt-1">
+                Los campos marcados con <span className="text-destructive font-semibold">*</span> son obligatorios.
+              </p>
             </DialogHeader>
 
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-5">
               {/* Tipo de herida + ubicación */}
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de herida</Label>
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Tipo de herida<RequiredMark />
+                  </Label>
                   <Select value={caseForm.woundType} onValueChange={v => setCField('woundType', v)}>
-                    <SelectTrigger className="font-body h-11"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectTrigger
+                      className={cn("font-body h-11", !caseForm.woundType && "border-destructive/40")}
+                      aria-required="true"
+                    >
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
                     <SelectContent>
                       {woundTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ubicación anatómica</Label>
-                  <Input value={caseForm.anatomicalLocation} onChange={e => setCField('anatomicalLocation', e.target.value)} className="font-body h-11" placeholder="Ej: Sacro, Pie derecho" />
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Ubicación anatómica<RequiredMark />
+                  </Label>
+                  <Input
+                    value={caseForm.anatomicalLocation}
+                    onChange={e => setCField('anatomicalLocation', e.target.value)}
+                    className={cn("font-body h-11", !caseForm.anatomicalLocation.trim() && "border-destructive/40")}
+                    placeholder="Ej: Sacro, Pie derecho"
+                    aria-required="true"
+                  />
                 </div>
               </div>
 
               {/* Fecha de inicio + estado */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fecha de inicio</Label>
-                  <Input type="date" value={caseForm.startDate} onChange={e => setCField('startDate', e.target.value)} className="font-body h-11" />
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Fecha de inicio<RequiredMark />
+                  </Label>
+                  <Input
+                    type="date"
+                    value={caseForm.startDate}
+                    onChange={e => setCField('startDate', e.target.value)}
+                    className={cn("font-body h-11", !caseForm.startDate && "border-destructive/40")}
+                    aria-required="true"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Estado</Label>
@@ -821,7 +868,7 @@ export default function PatientDetail() {
 
               {/* Frecuencia de curación */}
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Frecuencia de curación</Label>
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Frecuencia de curación<OptionalTag /></Label>
                 <Select value={caseForm.healingFrequency} onValueChange={v => setCField('healingFrequency', v)}>
                   <SelectTrigger className="font-body h-11"><SelectValue placeholder="Seleccionar frecuencia" /></SelectTrigger>
                   <SelectContent>
@@ -833,7 +880,7 @@ export default function PatientDetail() {
               {/* Tamaño de la herida */}
               <div className="space-y-2 rounded-lg border border-border/60 bg-muted/30 p-3">
                 <div className="flex items-baseline justify-between">
-                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tamaño de la herida (cm)</Label>
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tamaño de la herida (cm)<OptionalTag /></Label>
                   {caseWoundArea && (
                     <span className="font-body text-xs font-semibold text-primary tabular-nums">
                       Área: {caseWoundArea} cm²
@@ -867,7 +914,7 @@ export default function PatientDetail() {
 
               {/* Tipo de tejido */}
               <div className="space-y-2">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de tejido presente</Label>
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de tejido presente<OptionalTag /></Label>
                 <div className="flex flex-wrap gap-2">
                   {tissueTypeOptions.map(t => {
                     const active = caseForm.tissueTypes.includes(t.value);
@@ -888,7 +935,7 @@ export default function PatientDetail() {
 
               {/* Tipo de borde */}
               <div className="space-y-2">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de borde</Label>
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de borde<OptionalTag /></Label>
                 <div className="flex flex-wrap gap-2">
                   {edgeTypeOptions.map(t => {
                     const active = caseForm.edgeTypes.includes(t.value);
@@ -910,7 +957,7 @@ export default function PatientDetail() {
               {/* Dolor EVA */}
               <div className="space-y-2">
                 <div className="flex items-baseline justify-between">
-                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dolor (EVA)</Label>
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dolor (EVA)<OptionalTag /></Label>
                   <span className={cn(
                     "font-body text-sm font-bold tabular-nums px-2 py-0.5 rounded-md",
                     caseForm.painLevel <= 3 && "bg-success/15 text-success",
@@ -927,7 +974,7 @@ export default function PatientDetail() {
 
               {/* Olor */}
               <div className="space-y-2">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Olor</Label>
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Olor<OptionalTag /></Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {odorOptions.map(o => {
                     const active = caseForm.odor === o.value;
@@ -949,7 +996,7 @@ export default function PatientDetail() {
               {/* Exudado */}
               <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
                 <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                  <Droplets className="h-3.5 w-3.5" /> Exudado
+                  <Droplets className="h-3.5 w-3.5" /> Exudado<OptionalTag />
                 </Label>
 
                 <div className="space-y-1.5">
@@ -1068,7 +1115,7 @@ export default function PatientDetail() {
 
               {/* Procedimiento inicial */}
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Procedimiento inicial</Label>
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Procedimiento inicial<OptionalTag /></Label>
                 <Textarea value={caseForm.initialProcedure} onChange={e => setCField('initialProcedure', e.target.value)}
                   className="font-body" rows={3}
                   placeholder="Ej: Desbridamiento cortante, Lavado con SF, Aplicación de hidrogel..." />
@@ -1077,7 +1124,7 @@ export default function PatientDetail() {
               {/* Materiales utilizados */}
               <div className="space-y-1.5">
                 <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                  <Package className="h-3.5 w-3.5" /> Material de curación utilizado
+                  <Package className="h-3.5 w-3.5" /> Material de curación utilizado<OptionalTag />
                 </Label>
                 <Textarea value={caseForm.initialMaterials} onChange={e => setCField('initialMaterials', e.target.value)}
                   className="font-body" rows={3}
@@ -1086,7 +1133,7 @@ export default function PatientDetail() {
 
               {/* Plan de tratamiento */}
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Plan de tratamiento</Label>
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Plan de tratamiento<OptionalTag /></Label>
                 <Textarea value={caseForm.treatment} onChange={e => setCField('treatment', e.target.value)}
                   className="font-body" rows={2}
                   placeholder="Resumen del abordaje terapéutico planificado para este caso." />
