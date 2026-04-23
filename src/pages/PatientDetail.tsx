@@ -276,6 +276,12 @@ export default function PatientDetail() {
                         <span className="h-3 w-3 rounded-full border-2 border-dashed border-muted-foreground/50" />
                         <span className="font-body text-xs text-muted-foreground">Sugerido</span>
                       </div>
+                      {otherDates.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-3 w-3 rounded-full bg-muted border border-muted-foreground/40" />
+                          <span className="font-body text-xs text-muted-foreground">Otro paciente</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
