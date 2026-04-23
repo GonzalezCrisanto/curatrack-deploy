@@ -74,7 +74,6 @@ interface CaseFormState {
   initialMaterials: string;
   initialObservations: string;
   treatment: string;
-  createInitialEvolution: boolean;
 }
 
 const emptyCase: CaseFormState = {
