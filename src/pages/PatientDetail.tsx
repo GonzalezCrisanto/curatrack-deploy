@@ -127,20 +127,43 @@ export default function PatientDetail() {
           </Card>
         </div>
 
-        {/* Calendario de Turnos del Paciente */}
+        {/* Calendario de Turnos del Paciente — un color por herida */}
         {(() => {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
 
-          // Collect existing next-control dates from evolutions
-          const appointmentsByCase = patient.cases
-            .filter(c => c.status !== 'resuelto')
-            .flatMap(c => c.evolutions
-              .filter(e => e.nextControl && e.nextControl.trim() !== '' && new Date(e.nextControl + 'T12:00:00') >= today)
-              .map(e => ({ date: new Date(e.nextControl + 'T12:00:00'), caseId: c.id, status: c.status, woundType: c.woundType }))
-            );
+          const activeCases = patient.cases.filter(c => c.status !== 'resuelto');
 
-          // Generate suggested future dates based on interval
+          // Color palette: one HSL hue per wound (case)
+          const palette = [
+            'hsl(var(--primary))',
+            'hsl(var(--destructive))',
+            'hsl(var(--success))',
+            'hsl(var(--warning))',
+            'hsl(265 70% 55%)',
+            'hsl(180 60% 40%)',
+            'hsl(25 90% 55%)',
+            'hsl(330 75% 55%)',
+          ];
+          const caseColor: Record<string, string> = {};
+          activeCases.forEach((c, idx) => {
+            caseColor[c.id] = palette[idx % palette.length];
+          });
+
+          // Existing appointments grouped by case
+          const appointmentsByCase = activeCases.flatMap(c =>
+            c.evolutions
+              .filter(e => e.nextControl && e.nextControl.trim() !== '' && new Date(e.nextControl + 'T12:00:00') >= today)
+              .map(e => ({
+                date: new Date(e.nextControl + 'T12:00:00'),
+                caseId: c.id,
+                status: c.status,
+                woundType: c.woundType,
+                anatomicalLocation: c.anatomicalLocation,
+              }))
+          );
+
+          // Suggested future dates based on interval (per patient)
           const interval = patient.controlIntervalDays || 7;
           const suggestedDates: Date[] = [];
           const existingDateStrings = new Set(appointmentsByCase.map(a => a.date.toISOString().split('T')[0]));
@@ -148,28 +171,32 @@ export default function PatientDetail() {
             const d = new Date(today);
             d.setDate(d.getDate() + interval * i);
             const ds = d.toISOString().split('T')[0];
-            if (!existingDateStrings.has(ds)) {
-              suggestedDates.push(new Date(d));
-            }
+            if (!existingDateStrings.has(ds)) suggestedDates.push(new Date(d));
           }
 
-          const criticalDates = appointmentsByCase.filter(a => a.status === 'critico').map(a => a.date);
-          const activeDates = appointmentsByCase.filter(a => a.status === 'activo').map(a => a.date);
-          const improvingDates = appointmentsByCase.filter(a => a.status === 'en_mejoria').map(a => a.date);
-
-          const modifiers = {
-            critical: criticalDates,
-            active: activeDates,
-            improving: improvingDates,
-            suggested: suggestedDates,
+          // Build dynamic modifiers: one modifier key per case
+          const modifiers: Record<string, Date[]> = { suggested: suggestedDates };
+          const modifiersStyles: Record<string, React.CSSProperties> = {
+            suggested: {
+              backgroundColor: 'transparent',
+              color: 'hsl(var(--muted-foreground))',
+              borderRadius: '9999px',
+              border: '1.5px dashed hsl(var(--muted-foreground) / 0.5)',
+            },
           };
-
-          const modifiersStyles = {
-            critical: { backgroundColor: 'hsl(var(--destructive))', color: 'hsl(var(--destructive-foreground))', borderRadius: '9999px' },
-            active: { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))', borderRadius: '9999px' },
-            improving: { backgroundColor: 'hsl(var(--success))', color: '#fff', borderRadius: '9999px' },
-            suggested: { backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))', borderRadius: '9999px', border: '2px dashed hsl(var(--primary) / 0.5)' },
-          };
+          activeCases.forEach(c => {
+            const dates = appointmentsByCase.filter(a => a.caseId === c.id).map(a => a.date);
+            if (dates.length > 0) {
+              const key = `case_${c.id}`;
+              modifiers[key] = dates;
+              modifiersStyles[key] = {
+                backgroundColor: caseColor[c.id],
+                color: '#fff',
+                borderRadius: '9999px',
+                fontWeight: 600,
+              };
+            }
+          });
 
           return (
             <Card className="border-border/50">
@@ -191,26 +218,19 @@ export default function PatientDetail() {
                       modifiersStyles={modifiersStyles}
                     />
                     <div className="flex flex-wrap gap-3 mt-3 px-1">
-                      {criticalDates.length > 0 && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="h-3 w-3 rounded-full bg-destructive" />
-                          <span className="font-body text-xs text-muted-foreground">Crítico</span>
+                      {activeCases.map(c => (
+                        <div key={`leg-${c.id}`} className="flex items-center gap-1.5">
+                          <span
+                            className="h-3 w-3 rounded-full"
+                            style={{ backgroundColor: caseColor[c.id] }}
+                          />
+                          <span className="font-body text-xs text-muted-foreground">
+                            {c.woundType}{c.anatomicalLocation ? ` · ${c.anatomicalLocation}` : ''}
+                          </span>
                         </div>
-                      )}
-                      {activeDates.length > 0 && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="h-3 w-3 rounded-full bg-primary" />
-                          <span className="font-body text-xs text-muted-foreground">Activo</span>
-                        </div>
-                      )}
-                      {improvingDates.length > 0 && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="h-3 w-3 rounded-full bg-success" />
-                          <span className="font-body text-xs text-muted-foreground">En mejoría</span>
-                        </div>
-                      )}
+                      ))}
                       <div className="flex items-center gap-1.5">
-                        <span className="h-3 w-3 rounded-full border-2 border-dashed border-primary/50 bg-accent" />
+                        <span className="h-3 w-3 rounded-full border-2 border-dashed border-muted-foreground/50" />
                         <span className="font-body text-xs text-muted-foreground">Sugerido</span>
                       </div>
                     </div>
@@ -223,17 +243,18 @@ export default function PatientDetail() {
                       .map((ap, i) => (
                         <div
                           key={`ap-${i}`}
-                          className="p-3 rounded-lg border border-border/50 bg-card hover:shadow-sm transition-shadow cursor-pointer"
+                          className="p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow cursor-pointer"
+                          style={{ borderLeft: `4px solid ${caseColor[ap.caseId]}` }}
                           onClick={() => navigate(`/patients/${patient.id}/cases/${ap.caseId}`)}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <CalendarClock className="h-4 w-4 text-primary" />
-                              <span className="font-body text-sm font-semibold text-primary">{ap.date.toISOString().split('T')[0]}</span>
+                              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: caseColor[ap.caseId] }} />
+                              <span className="font-body text-sm font-semibold">{ap.date.toISOString().split('T')[0]}</span>
                             </div>
                             <Badge className={`font-body text-xs ${statusBadgeClass[ap.status]}`}>{getStatusLabel(ap.status)}</Badge>
                           </div>
-                          <p className="font-body text-sm mt-1">{ap.woundType}</p>
+                          <p className="font-body text-sm mt-1">{ap.woundType}{ap.anatomicalLocation ? ` · ${ap.anatomicalLocation}` : ''}</p>
                         </div>
                       )) : (
                       <p className="font-body text-sm text-muted-foreground">No hay turnos programados.</p>
@@ -244,7 +265,7 @@ export default function PatientDetail() {
                         <h3 className="font-body text-sm font-semibold text-muted-foreground mt-4">Fechas sugeridas (cada {interval} días)</h3>
                         <div className="flex flex-wrap gap-2">
                           {suggestedDates.slice(0, 6).map((d, i) => (
-                            <Badge key={`sug-${i}`} variant="outline" className="font-body text-xs border-dashed border-primary/50">
+                            <Badge key={`sug-${i}`} variant="outline" className="font-body text-xs border-dashed border-muted-foreground/50">
                               {d.toISOString().split('T')[0]}
                             </Badge>
                           ))}
