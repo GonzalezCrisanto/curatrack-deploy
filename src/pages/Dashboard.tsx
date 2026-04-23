@@ -344,18 +344,20 @@ export default function Dashboard() {
             const visiblePast = (showOverdue ? pastAppointments : [])
               .filter(ap => !selectedISO || ap.nextControl === selectedISO);
 
-            const upcomingDates = visibleUpcoming.map(ap => {
+            // Modifiers reflect all appointments matching the type filter (not the day filter),
+            // so the calendar always shows clickable colored dates.
+            const modifierUpcoming = (showUpcoming ? upcomingAppointments : []).map(ap => {
               const caseData = allCases.find(c => c.id === ap.caseId);
               return { date: new Date(ap.nextControl + 'T12:00:00'), status: caseData?.status || 'activo' };
             });
-            const pastDates = visiblePast.map(ap => new Date(ap.nextControl + 'T12:00:00'));
+            const modifierPast = (showOverdue ? pastAppointments : []).map(ap => new Date(ap.nextControl + 'T12:00:00'));
 
             const modifiers = {
-              critical: upcomingDates.filter(d => d.status === 'critico').map(d => d.date),
-              active: upcomingDates.filter(d => d.status === 'activo').map(d => d.date),
-              improving: upcomingDates.filter(d => d.status === 'en_mejoria').map(d => d.date),
-              resolved: upcomingDates.filter(d => d.status === 'resuelto').map(d => d.date),
-              overdue: pastDates,
+              critical: modifierUpcoming.filter(d => d.status === 'critico').map(d => d.date),
+              active: modifierUpcoming.filter(d => d.status === 'activo').map(d => d.date),
+              improving: modifierUpcoming.filter(d => d.status === 'en_mejoria').map(d => d.date),
+              resolved: modifierUpcoming.filter(d => d.status === 'resuelto').map(d => d.date),
+              overdue: modifierPast,
             };
 
             const modifiersStyles = {
