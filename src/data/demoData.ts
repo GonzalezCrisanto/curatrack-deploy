@@ -28,6 +28,7 @@ export interface Evolution {
   procedure: string;
   materials: string;
   healingFrequency: string;
+  healingFrequencyDays?: number;
   observations: string;
   nextControl: string;
   photos: Photo[];
@@ -162,6 +163,7 @@ export interface WoundCase {
   infDolorAumentado?: boolean;
   bodyTemperature?: number;
   healingFrequency?: string;
+  healingFrequencyDays?: number;
   initialProcedure?: string;
   initialMaterials?: string;
   initialObservations?: string;
