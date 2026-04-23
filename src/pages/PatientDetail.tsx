@@ -974,7 +974,7 @@ export default function PatientDetail() {
 
               {/* Olor */}
               <div className="space-y-2">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Olor</Label>
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Olor<OptionalTag /></Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {odorOptions.map(o => {
                     const active = caseForm.odor === o.value;
