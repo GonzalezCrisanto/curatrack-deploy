@@ -170,6 +170,7 @@ export default function PatientDetail() {
       startDate: new Date().toISOString().split('T')[0],
       professional: currentUserName || patient.assignedProfessional || '',
     });
+    setCasePhotos([]);
     setCaseDialogOpen(true);
   };
 
@@ -206,6 +207,7 @@ export default function PatientDetail() {
       initialObservations: c.initialObservations ?? '',
       treatment: c.treatment ?? '',
     });
+    setCasePhotos([...(c.photos ?? [])]);
     setCaseDialogOpen(true);
   };
 
@@ -255,7 +257,7 @@ export default function PatientDetail() {
     };
 
     if (editingCase) {
-      updateCase(patient.id, { ...editingCase, ...baseCase });
+      updateCase(patient.id, { ...editingCase, ...baseCase, photos: casePhotos });
     } else {
       const newCaseId = `c${Date.now()}`;
       const newCase: WoundCase = {
@@ -263,7 +265,7 @@ export default function PatientDetail() {
         id: newCaseId,
         patientId: patient.id,
         evolutions: [],
-        photos: [],
+        photos: casePhotos,
       };
 
       // Auto-create initial evolution mirroring the baseline data
@@ -278,7 +280,7 @@ export default function PatientDetail() {
         healingFrequency: caseForm.healingFrequency,
         observations: caseForm.initialObservations,
         nextControl: '',
-        photos: [],
+        photos: casePhotos,
         healingDate: caseForm.startDate,
         painLevel: caseForm.painLevel,
         odor: caseForm.odor,
