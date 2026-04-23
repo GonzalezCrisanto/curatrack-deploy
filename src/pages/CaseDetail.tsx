@@ -528,8 +528,8 @@ export default function CaseDetail() {
 
         {/* Case Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3 mb-1 flex-wrap">
               <h1 className="heading-display text-2xl">{woundCase.woundType}</h1>
               <Badge className={`font-body text-xs ${statusBadgeClass[woundCase.status]}`}>
                 {woundCase.status === 'resuelto' ? 'CERRADA ✅' : getStatusLabel(woundCase.status)}
@@ -537,6 +537,20 @@ export default function CaseDetail() {
             </div>
             <p className="font-body text-sm text-muted-foreground">{woundCase.anatomicalLocation} · {patient.firstName} {patient.lastName}</p>
           </div>
+          <Button
+            size="lg"
+            onClick={() => {
+              setAiError(null);
+              setCaseSummaryOpen(true);
+              if (!woundCase.aiSummary && woundCase.evolutions.length > 0) {
+                generateAISummary();
+              }
+            }}
+            className="font-body h-12 px-5 text-base font-semibold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md shrink-0"
+          >
+            <Sparkles className="mr-2 h-5 w-5" />
+            {woundCase.aiSummary ? 'Ver resumen con IA' : 'Generar resumen con IA'}
+          </Button>
         </div>
 
         {/* Case Info Grid */}
