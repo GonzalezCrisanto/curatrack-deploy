@@ -733,12 +733,17 @@ export default function CaseDetail() {
                           <p className="font-body text-sm">{ev.observations}</p>
                         </div>
                       )}
-                      {aiSnippet && (
-                        <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5">
-                          <p className="font-body text-[11px] uppercase tracking-wide text-primary/80 mb-1 flex items-center gap-1">
-                            <Sparkles className="h-3 w-3" /> Resumen IA
-                          </p>
-                          <p className="font-body text-xs leading-relaxed text-foreground/85 line-clamp-3">{aiSnippet}</p>
+                      {hasAiSummary && (
+                        <div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="font-body h-8 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+                            onClick={() => setSummaryViewerEvo(ev)}
+                          >
+                            <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Ver resumen IA
+                          </Button>
                         </div>
                       )}
                       {ev.nextControl && (
