@@ -328,7 +328,7 @@ export default function PatientDetail() {
         <Dialog open={caseDialogOpen} onOpenChange={setCaseDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="heading-display text-xl">{editingCase ? 'Editar Caso' : 'Nuevo Caso'}</DialogTitle>
+              <DialogTitle className="heading-display text-xl">{editingCase ? 'Editar Herida' : 'Nueva Herida'}</DialogTitle>
             </DialogHeader>
             <div className="grid sm:grid-cols-2 gap-4 mt-4">
               <div className="space-y-2">
