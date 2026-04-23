@@ -914,7 +914,7 @@ export default function PatientDetail() {
 
               {/* Tipo de tejido */}
               <div className="space-y-2">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de tejido presente</Label>
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de tejido presente<OptionalTag /></Label>
                 <div className="flex flex-wrap gap-2">
                   {tissueTypeOptions.map(t => {
                     const active = caseForm.tissueTypes.includes(t.value);
