@@ -814,12 +814,9 @@ export default function PatientDetail() {
               {/* Profesional */}
               <div className="space-y-1.5">
                 <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Profesional responsable</Label>
-                <Select value={caseForm.professional} onValueChange={v => setCField('professional', v)}>
-                  <SelectTrigger className="font-body h-11"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>
-                    {Array.from(new Set([currentUserName, ...professionals].filter(Boolean))).map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <div className="font-body h-11 flex items-center px-3 rounded-md border border-input bg-muted/40 text-sm">
+                  {caseForm.professional || currentUserName || '—'}
+                </div>
               </div>
 
               {/* Frecuencia de curación */}
