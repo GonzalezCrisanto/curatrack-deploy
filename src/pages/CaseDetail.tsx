@@ -14,7 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   ArrowLeft, Plus, Edit, Trash2, Clock, Camera, FileText,
   Stethoscope, Ruler, Droplets, ShieldAlert, Thermometer, Pill, X, Image, Upload, ImagePlus, Package, RefreshCw, CheckCircle2, Save,
-  TrendingDown, TrendingUp, Minus, Sparkles, Archive, Copy, Printer, Download
+  TrendingDown, TrendingUp, Minus, Sparkles, Archive, Copy, Printer, Download, Loader2
 } from 'lucide-react';
 import { Evolution, Photo, professionals, getStatusLabel, woundStatuses, healingFrequencies, odorOptions, evolutionStatuses, OdorLevel, EvolutionStatus, tissueTypeOptions, edgeTypeOptions, TissueType, EdgeType, exudateAmountOptions, exudateTypeOptions, exudateColorOptions, ExudateAmount, ExudateType, ExudateColor, infectionSignFields } from '@/data/demoData';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -25,7 +25,7 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import AISummaryCard from '@/components/AISummaryCard';
+
 import ReactMarkdown from 'react-markdown';
 import { marked } from 'marked';
 
@@ -65,12 +65,11 @@ export default function CaseDetail() {
   const [evoPhotos, setEvoPhotos] = useState<Photo[]>([]);
   const [photoViewer, setPhotoViewer] = useState<string | null>(null);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
-  // Per-evolution AI summary viewer dialog
-  const [summaryViewerEvo, setSummaryViewerEvo] = useState<Evolution | null>(null);
+  // Case-level AI summary viewer
+  const [caseSummaryOpen, setCaseSummaryOpen] = useState(false);
 
   const casePhotoInput = useRef<HTMLInputElement>(null);
   const caseCameraInput = useRef<HTMLInputElement>(null);
@@ -141,9 +140,6 @@ export default function CaseDetail() {
       professional: 'Lic. María González',
     });
     setEvoPhotos([]);
-    setAiSummary(null);
-    setAiError(null);
-    setAiLoading(false);
     setEvoDialogOpen(true);
   };
 
@@ -178,70 +174,76 @@ export default function CaseDetail() {
       medicalOrder: rest.medicalOrder ?? '',
     });
     setEvoPhotos([...photos]);
-    setAiSummary(null);
-    setAiError(null);
-    setAiLoading(false);
     setEvoDialogOpen(true);
   };
 
-  const buildEvolutionPromptData = () => {
+  // Build a comprehensive prompt that covers the WHOLE case + ALL its evolutions.
+  const buildCasePromptData = () => {
     const labelOf = <T extends string>(arr: { value: T; label: string }[], v?: T) =>
       v ? arr.find(o => o.value === v)?.label ?? v : undefined;
+
+    const evos = [...woundCase.evolutions]
+      .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+      .map(ev => {
+        const l = typeof ev.woundLength === 'number' ? ev.woundLength : null;
+        const w = typeof ev.woundWidth === 'number' ? ev.woundWidth : null;
+        const area = l && w ? Number((l * w).toFixed(2)) : null;
+        return {
+          fecha: ev.date,
+          hora: ev.time || null,
+          profesional: ev.professional || null,
+          estado_evolucion: labelOf(evolutionStatuses, ev.evolutionStatus),
+          tamaño_cm: { largo: l, ancho: w, profundidad: ev.woundDepth ?? null, area_cm2: area },
+          tipos_tejido: (ev.tissueTypes || []).map(t => labelOf(tissueTypeOptions, t)),
+          tipos_borde: (ev.edgeTypes || []).map(t => labelOf(edgeTypeOptions, t)),
+          dolor_eva: ev.painLevel ?? null,
+          olor: labelOf(odorOptions, ev.odor),
+          exudado: {
+            cantidad: labelOf(exudateAmountOptions, ev.exudateAmount),
+            tipo: labelOf(exudateTypeOptions, ev.exudateType),
+            color: labelOf(exudateColorOptions, ev.exudateColor),
+          },
+          infeccion: ev.hasInfectionSigns
+            ? {
+                presenta_signos: true,
+                signos: infectionSignFields.filter(f => (ev as unknown as Record<string, unknown>)[f.key]).map(f => f.label),
+                temperatura_c: ev.bodyTemperature ?? null,
+              }
+            : { presenta_signos: false },
+          frecuencia_curacion: ev.healingFrequency || null,
+          frecuencia_dias: ev.healingFrequencyDays ?? null,
+          procedimiento: ev.procedure || null,
+          materiales_usados: ev.materials || null,
+          descripcion: ev.description || null,
+          observaciones: ev.observations || null,
+          proximo_control: ev.nextControl || null,
+        };
+      });
 
     return {
       paciente: `${patient.firstName} ${patient.lastName}`,
       edad: patient.age,
       diagnostico_base: patient.diagnosis,
-      herida: {
+      caso: {
         tipo: woundCase.woundType,
         ubicacion: woundCase.anatomicalLocation,
         inicio: woundCase.startDate,
-        tratamiento_actual: woundCase.treatment,
+        estado_actual: labelOf(woundStatuses, woundCase.status as never) ?? woundCase.status,
+        tratamiento_actual: woundCase.treatment || null,
+        frecuencia_curacion_caso: woundCase.healingFrequency || null,
+        frecuencia_dias_caso: woundCase.healingFrequencyDays ?? null,
+        cantidad_evoluciones: evos.length,
       },
-      evolucion: {
-        fecha_curacion: evoForm.healingDate,
-        profesional: evoForm.professional,
-        frecuencia_curacion: evoForm.healingFrequency,
-        tamaño_cm: {
-          largo: evoForm.woundLength || null,
-          ancho: evoForm.woundWidth || null,
-          profundidad: evoForm.woundDepth || null,
-          area_cm2: woundArea,
-        },
-        tipos_tejido: evoForm.tissueTypes.map(t => labelOf(tissueTypeOptions, t)),
-        tipos_borde: evoForm.edgeTypes.map(t => labelOf(edgeTypeOptions, t)),
-        dolor_eva: evoForm.painLevel,
-        olor: labelOf(odorOptions, evoForm.odor),
-        exudado: {
-          cantidad: labelOf(exudateAmountOptions, evoForm.exudateAmount),
-          tipo: labelOf(exudateTypeOptions, evoForm.exudateType),
-          color: labelOf(exudateColorOptions, evoForm.exudateColor),
-        },
-        infeccion: evoForm.hasInfectionSigns
-          ? {
-              presenta_signos: true,
-              signos: infectionSignFields.filter(f => evoForm[f.key]).map(f => f.label),
-              temperatura_c: evoForm.bodyTemperature || null,
-            }
-          : { presenta_signos: false },
-        estado_evolucion: labelOf(evolutionStatuses, evoForm.evolutionStatus),
-        descripcion: evoForm.description,
-        procedimiento: evoForm.procedure,
-        materiales_usados: evoForm.materials,
-        observaciones: evoForm.observations,
-        proximo_control: evoForm.nextControl,
-        orden_medica: evoForm.requiresMedicalOrder ? evoForm.medicalOrder : null,
-      },
+      evoluciones: evos,
     };
   };
 
-  const generateAISummary = async (targetEvo?: Evolution) => {
+  const generateAISummary = async () => {
     setAiLoading(true);
     setAiError(null);
-    setAiSummary(null);
     try {
       const { data, error } = await supabase.functions.invoke('generate-evolution-summary', {
-        body: { evolutionData: buildEvolutionPromptData() },
+        body: { evolutionData: buildCasePromptData() },
       });
       if (error) {
         const msg = (error as { message?: string })?.message || 'Error al generar el resumen';
@@ -259,17 +261,12 @@ export default function CaseDetail() {
         setAiError('La IA no devolvió contenido.');
         return;
       }
-      setAiSummary(summary);
-      // Persist the summary onto the just-saved evolution.
-      // IMPORTANT: use the freshly-saved payload (not a re-lookup from `woundCase`,
-      // which is captured from the render BEFORE the edit was persisted and would
-      // revert the user's changes).
-      const base = targetEvo ?? editingEvo;
-      if (base) {
-        const merged: Evolution = { ...base, aiSummary: summary };
-        updateEvolution(patient.id, woundCase.id, merged);
-        setEditingEvo(merged);
-      }
+      // Persist the summary onto the CASE itself.
+      updateCase(patient.id, {
+        ...woundCase,
+        aiSummary: summary,
+        aiSummaryUpdatedAt: new Date().toISOString(),
+      });
       toast.success('Resumen clínico generado');
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Error desconocido';
@@ -317,11 +314,9 @@ export default function CaseDetail() {
     toast.success(isNew ? 'Evolución registrada' : 'Evolución actualizada');
     setCloseConfirmOpen(false);
 
-    // Close the dialog immediately and generate the AI summary in background.
-    // The summary persists on the evolution and will appear in the timeline card when ready.
+    // Close the dialog. The case-level AI summary stays as is until the user
+    // explicitly regenerates it from the case header button.
     setEvoDialogOpen(false);
-    toast.info('Generando resumen con IA…');
-    generateAISummary(payload);
   };
 
   const handleSaveEvo = () => {
@@ -340,8 +335,9 @@ export default function CaseDetail() {
     persistEvo(false);
   };
 
-  const openSummaryPrintWindow = (ev: Evolution | null): boolean => {
-    if (!ev?.aiSummary) {
+  const openCaseSummaryPrintWindow = (): boolean => {
+    const summary = woundCase.aiSummary;
+    if (!summary) {
       toast.error('No hay resumen disponible para imprimir.');
       return false;
     }
@@ -352,8 +348,9 @@ export default function CaseDetail() {
         return false;
       }
       const safe = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
-      const bodyHtml = marked.parse(ev.aiSummary, { async: false }) as string;
-      win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Resumen-IA-${safe(ev.date)}</title>
+      const bodyHtml = marked.parse(summary, { async: false }) as string;
+      const updated = woundCase.aiSummaryUpdatedAt ? new Date(woundCase.aiSummaryUpdatedAt).toLocaleString('es-AR') : '';
+      win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Resumen-IA-${safe(woundCase.woundType)}</title>
         <style>
           body { font-family: 'Open Sans', system-ui, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 24px; color: #111; }
           h1.title { font-family: 'Montserrat', system-ui, sans-serif; color: #00965E; font-size: 22px; margin: 0 0 4px; }
@@ -370,15 +367,15 @@ export default function CaseDetail() {
           .content code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 13px; }
           @media print { body { margin: 0; padding: 16mm; } }
         </style></head><body>
-        <h1 class="title">Resumen con IA</h1>
-        <div class="meta">Evolución del ${safe(ev.date)}${ev.time ? ` · ${safe(ev.time)} hs` : ''}${ev.professional ? ` · ${safe(ev.professional)}` : ''}</div>
+        <h1 class="title">Resumen con IA — ${safe(woundCase.woundType)}</h1>
+        <div class="meta">${safe(patient.firstName)} ${safe(patient.lastName)} · ${safe(woundCase.anatomicalLocation || '')}${updated ? ` · Generado ${safe(updated)}` : ''}</div>
         <div class="content">${bodyHtml}</div>
         <script>window.onload = () => { try { window.print(); } catch(e) {} };</script>
       </body></html>`);
       win.document.close();
       return true;
     } catch (err) {
-      console.error('openSummaryPrintWindow failed', err);
+      console.error('openCaseSummaryPrintWindow failed', err);
       toast.error('Ocurrió un error al preparar el documento. Probá copiar el resumen como alternativa.');
       return false;
     }
@@ -531,8 +528,8 @@ export default function CaseDetail() {
 
         {/* Case Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3 mb-1 flex-wrap">
               <h1 className="heading-display text-2xl">{woundCase.woundType}</h1>
               <Badge className={`font-body text-xs ${statusBadgeClass[woundCase.status]}`}>
                 {woundCase.status === 'resuelto' ? 'CERRADA ✅' : getStatusLabel(woundCase.status)}
@@ -540,6 +537,20 @@ export default function CaseDetail() {
             </div>
             <p className="font-body text-sm text-muted-foreground">{woundCase.anatomicalLocation} · {patient.firstName} {patient.lastName}</p>
           </div>
+          <Button
+            size="lg"
+            onClick={() => {
+              setAiError(null);
+              setCaseSummaryOpen(true);
+              if (!woundCase.aiSummary && woundCase.evolutions.length > 0) {
+                generateAISummary();
+              }
+            }}
+            className="font-body h-12 px-5 text-base font-semibold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md shrink-0"
+          >
+            <Sparkles className="mr-2 h-5 w-5" />
+            {woundCase.aiSummary ? 'Ver resumen con IA' : 'Generar resumen con IA'}
+          </Button>
         </div>
 
         {/* Case Info Grid */}
@@ -687,7 +698,7 @@ export default function CaseDetail() {
             const exudateType = ev.exudateType
               ? exudateTypeOptions.find(o => o.value === ev.exudateType)?.label
               : null;
-            const hasAiSummary = !!ev.aiSummary && ev.aiSummary.trim().length > 0;
+            
 
             return (
               <div key={ev.id} className="relative pl-12 animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
@@ -788,19 +799,7 @@ export default function CaseDetail() {
                           <p className="font-body text-sm">{ev.observations}</p>
                         </div>
                       )}
-                      {hasAiSummary && (
-                        <div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="font-body h-8 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
-                            onClick={() => setSummaryViewerEvo(ev)}
-                          >
-                            <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Ver resumen IA
-                          </Button>
-                        </div>
-                      )}
+                      {/* AI summary moved to case header — no per-evolution button */}
                       {ev.nextControl && (
                         <div className="flex items-center gap-1 text-xs font-body text-muted-foreground">
                           <Clock className="h-3.5 w-3.5" /> Próximo control: {ev.nextControl}
@@ -1323,16 +1322,7 @@ export default function CaseDetail() {
                 )}
               </div>
 
-              {/* AI Summary Card — appears after saving a new evolution */}
-              {(aiLoading || aiSummary || aiError) && (
-                <AISummaryCard
-                  summary={aiSummary}
-                  loading={aiLoading}
-                  error={aiError}
-                  onRegenerate={generateAISummary}
-                  onEmitOrder={emitMedicalOrder}
-                />
-              )}
+              {/* AI summary moved to case header — no longer rendered inside the evolution dialog */}
             </div>
 
             {/* Footer */}
@@ -1383,73 +1373,110 @@ export default function CaseDetail() {
           </DialogContent>
         </Dialog>
 
-        {/* AI Summary viewer */}
-        <Dialog open={!!summaryViewerEvo} onOpenChange={(o) => !o && setSummaryViewerEvo(null)}>
-          <DialogContent className="max-w-2xl w-full sm:max-w-2xl h-[100dvh] sm:h-auto sm:max-h-[85vh] p-0 gap-0 flex flex-col rounded-none sm:rounded-lg">
+        {/* Case-level AI Summary viewer */}
+        <Dialog open={caseSummaryOpen} onOpenChange={setCaseSummaryOpen}>
+          <DialogContent className="max-w-3xl w-full sm:max-w-3xl h-[100dvh] sm:h-auto sm:max-h-[88vh] p-0 gap-0 flex flex-col rounded-none sm:rounded-lg">
             <DialogHeader className="px-4 sm:px-6 pt-4 pb-3 border-b border-border/50 shrink-0">
               <DialogTitle className="heading-display flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" /> Resumen con IA
+                <Sparkles className="h-5 w-5 text-primary" /> Resumen con IA — {woundCase.woundType}
               </DialogTitle>
-              {summaryViewerEvo && (
-                <p className="font-body text-sm text-muted-foreground mt-1">
-                  Evolución del {summaryViewerEvo.date}
-                  {summaryViewerEvo.time ? ` · ${summaryViewerEvo.time} hs` : ''}
-                  {summaryViewerEvo.professional ? ` · ${summaryViewerEvo.professional}` : ''}
-                </p>
-              )}
+              <p className="font-body text-sm text-muted-foreground mt-1">
+                {patient.firstName} {patient.lastName}
+                {woundCase.anatomicalLocation ? ` · ${woundCase.anatomicalLocation}` : ''}
+                {' · '}{woundCase.evolutions.length} evolución{woundCase.evolutions.length === 1 ? '' : 'es'} considerada{woundCase.evolutions.length === 1 ? '' : 's'}
+                {woundCase.aiSummaryUpdatedAt ? ` · Generado ${new Date(woundCase.aiSummaryUpdatedAt).toLocaleString('es-AR')}` : ''}
+              </p>
             </DialogHeader>
 
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
-              {summaryViewerEvo?.aiSummary ? (
-                <div className="font-body text-sm leading-relaxed text-foreground/90 prose prose-sm max-w-none prose-headings:font-display prose-headings:text-foreground prose-strong:text-foreground prose-li:my-0.5 prose-p:my-2 prose-ul:my-2 prose-ol:my-2">
-                  <ReactMarkdown>{summaryViewerEvo.aiSummary}</ReactMarkdown>
+              {aiLoading && (
+                <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="font-body text-sm">Generando resumen clínico con todos los datos del caso…</p>
                 </div>
-              ) : (
-                <p className="font-body text-sm text-muted-foreground">No hay resumen disponible.</p>
+              )}
+              {!aiLoading && aiError && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+                  <p className="font-body text-sm text-destructive">{aiError}</p>
+                  <Button size="sm" variant="outline" onClick={generateAISummary} className="font-body">
+                    <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Reintentar
+                  </Button>
+                </div>
+              )}
+              {!aiLoading && !aiError && woundCase.aiSummary && (
+                <div className="font-body text-sm leading-relaxed text-foreground/90 prose prose-sm max-w-none prose-headings:font-display prose-headings:text-foreground prose-strong:text-foreground prose-li:my-0.5 prose-p:my-2 prose-ul:my-2 prose-ol:my-2">
+                  <ReactMarkdown>{woundCase.aiSummary}</ReactMarkdown>
+                </div>
+              )}
+              {!aiLoading && !aiError && !woundCase.aiSummary && (
+                <div className="text-center py-12 space-y-4">
+                  <Sparkles className="h-10 w-10 text-primary/60 mx-auto" />
+                  <div className="space-y-1">
+                    <p className="font-body text-base font-semibold">Aún no se generó un resumen para este caso.</p>
+                    <p className="font-body text-sm text-muted-foreground">
+                      Generá un resumen clínico que contemple todas las evoluciones registradas.
+                    </p>
+                  </div>
+                  <Button onClick={generateAISummary} className="font-body" disabled={woundCase.evolutions.length === 0}>
+                    <Sparkles className="mr-1.5 h-4 w-4" /> Generar resumen con IA
+                  </Button>
+                  {woundCase.evolutions.length === 0 && (
+                    <p className="font-body text-xs text-muted-foreground">Registrá al menos una evolución antes de generar el resumen.</p>
+                  )}
+                </div>
               )}
             </div>
 
-            <div className="shrink-0 border-t border-border/50 bg-background px-4 sm:px-6 py-3 flex flex-wrap gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-              <Button
-                variant="outline"
-                className="font-body h-11 flex-1 sm:flex-none"
-                onClick={async () => {
-                  if (!summaryViewerEvo?.aiSummary) return;
-                  try {
-                    await navigator.clipboard.writeText(summaryViewerEvo.aiSummary);
-                    toast.success('Resumen copiado al portapapeles');
-                  } catch {
-                    toast.error('No se pudo copiar');
-                  }
-                }}
-              >
-                <Copy className="mr-1.5 h-4 w-4" /> Copiar
-              </Button>
-              <Button
-                variant="outline"
-                className="font-body h-11 flex-1 sm:flex-none"
-                onClick={() => openSummaryPrintWindow(summaryViewerEvo)}
-              >
-                <Printer className="mr-1.5 h-4 w-4" /> Imprimir
-              </Button>
-              <Button
-                className="font-body h-11 flex-1 sm:flex-none"
-                onClick={() => {
-                  if (openSummaryPrintWindow(summaryViewerEvo)) {
-                    toast.info('Elegí "Guardar como PDF" en el diálogo de impresión.');
-                  }
-                }}
-              >
-                <Download className="mr-1.5 h-4 w-4" /> Descargar PDF
-              </Button>
-              <Button
-                variant="ghost"
-                className="font-body h-11"
-                onClick={() => setSummaryViewerEvo(null)}
-              >
-                Cerrar
-              </Button>
-            </div>
+            {!aiLoading && woundCase.aiSummary && (
+              <div className="shrink-0 border-t border-border/50 bg-background px-4 sm:px-6 py-3 flex flex-wrap gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <Button
+                  variant="outline"
+                  className="font-body h-11 flex-1 sm:flex-none"
+                  onClick={generateAISummary}
+                >
+                  <RefreshCw className="mr-1.5 h-4 w-4" /> Regenerar
+                </Button>
+                <Button
+                  variant="outline"
+                  className="font-body h-11 flex-1 sm:flex-none"
+                  onClick={async () => {
+                    if (!woundCase.aiSummary) return;
+                    try {
+                      await navigator.clipboard.writeText(woundCase.aiSummary);
+                      toast.success('Resumen copiado al portapapeles');
+                    } catch {
+                      toast.error('No se pudo copiar');
+                    }
+                  }}
+                >
+                  <Copy className="mr-1.5 h-4 w-4" /> Copiar
+                </Button>
+                <Button
+                  variant="outline"
+                  className="font-body h-11 flex-1 sm:flex-none"
+                  onClick={() => openCaseSummaryPrintWindow()}
+                >
+                  <Printer className="mr-1.5 h-4 w-4" /> Imprimir
+                </Button>
+                <Button
+                  className="font-body h-11 flex-1 sm:flex-none"
+                  onClick={() => {
+                    if (openCaseSummaryPrintWindow()) {
+                      toast.info('Elegí "Guardar como PDF" en el diálogo de impresión.');
+                    }
+                  }}
+                >
+                  <Download className="mr-1.5 h-4 w-4" /> Descargar PDF
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="font-body h-11"
+                  onClick={() => setCaseSummaryOpen(false)}
+                >
+                  Cerrar
+                </Button>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
