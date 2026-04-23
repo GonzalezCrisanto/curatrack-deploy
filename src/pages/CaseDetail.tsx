@@ -235,7 +235,7 @@ export default function CaseDetail() {
     };
   };
 
-  const generateAISummary = async (targetEvoId?: string) => {
+  const generateAISummary = async (targetEvo?: Evolution) => {
     setAiLoading(true);
     setAiError(null);
     setAiSummary(null);
@@ -260,17 +260,15 @@ export default function CaseDetail() {
         return;
       }
       setAiSummary(summary);
-      // Persist the summary onto the saved evolution so it appears in the timeline snippet
-      const evoId = targetEvoId ?? editingEvo?.id;
-      if (evoId) {
-        const saved = woundCase.evolutions.find(e => e.id === evoId);
-        const merged: Evolution | undefined = saved
-          ? { ...saved, aiSummary: summary }
-          : (editingEvo ? { ...editingEvo, aiSummary: summary } as Evolution : undefined);
-        if (merged) {
-          updateEvolution(patient.id, woundCase.id, merged);
-          setEditingEvo(merged);
-        }
+      // Persist the summary onto the just-saved evolution.
+      // IMPORTANT: use the freshly-saved payload (not a re-lookup from `woundCase`,
+      // which is captured from the render BEFORE the edit was persisted and would
+      // revert the user's changes).
+      const base = targetEvo ?? editingEvo;
+      if (base) {
+        const merged: Evolution = { ...base, aiSummary: summary };
+        updateEvolution(patient.id, woundCase.id, merged);
+        setEditingEvo(merged);
       }
       toast.success('Resumen clínico generado');
     } catch (e) {
