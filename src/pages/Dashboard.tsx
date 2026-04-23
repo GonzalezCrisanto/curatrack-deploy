@@ -108,14 +108,14 @@ export default function Dashboard() {
   const allAppointments = allCases
     .flatMap(c => c.evolutions.map(e => ({ ...e, caseId: c.id, patientId: c.patientId, woundType: c.woundType })))
     .filter(e => e.nextControl && e.nextControl.trim() !== '');
+  // NOTE: do NOT slice these — the calendar modifiers and the day-filter rely on the full list.
+  // The visible list is sliced later, after the day filter is applied.
   const upcomingAppointments = allAppointments
     .filter(e => e.nextControl >= today)
-    .sort((a, b) => a.nextControl.localeCompare(b.nextControl))
-    .slice(0, 6);
+    .sort((a, b) => a.nextControl.localeCompare(b.nextControl));
   const pastAppointments = allAppointments
     .filter(e => e.nextControl < today)
-    .sort((a, b) => b.nextControl.localeCompare(a.nextControl))
-    .slice(0, 6);
+    .sort((a, b) => b.nextControl.localeCompare(a.nextControl));
 
   // Stat cards config — clinical palette with semantic tokens
   type Trend = { value: string; dir: 'up' | 'down' | 'flat' };
@@ -339,10 +339,15 @@ export default function Dashboard() {
             const showOverdue = appointmentFilter === 'all' || appointmentFilter === 'overdue';
 
             const selectedISO = selectedDay ? toISODate(selectedDay) : null;
+            // When no day filter is active, cap the rendered list to keep the card compact.
+            // When a day is selected, show ALL turns for that day.
+            const VISIBLE_LIMIT = 6;
             const visibleUpcoming = (showUpcoming ? upcomingAppointments : [])
-              .filter(ap => !selectedISO || ap.nextControl === selectedISO);
+              .filter(ap => !selectedISO || ap.nextControl === selectedISO)
+              .slice(0, selectedISO ? undefined : VISIBLE_LIMIT);
             const visiblePast = (showOverdue ? pastAppointments : [])
-              .filter(ap => !selectedISO || ap.nextControl === selectedISO);
+              .filter(ap => !selectedISO || ap.nextControl === selectedISO)
+              .slice(0, selectedISO ? undefined : VISIBLE_LIMIT);
 
             // Bucket appointments by date so multiple wounds/patients on the same day
             // render as a single multi-color (conic-gradient) marker instead of
