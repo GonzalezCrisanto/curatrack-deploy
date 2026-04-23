@@ -299,6 +299,7 @@ export default function PatientDetail() {
         procedure: caseForm.initialProcedure,
         materials: caseForm.initialMaterials,
         healingFrequency: caseForm.healingFrequency,
+        healingFrequencyDays: caseForm.healingFrequencyDays === '' ? undefined : Number(caseForm.healingFrequencyDays),
         observations: caseForm.initialObservations,
         nextControl: '',
         photos: casePhotos,
