@@ -343,44 +343,88 @@ export default function Patients() {
               <section className="space-y-3">
                 <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-muted-foreground">Datos personales</h3>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Nombre</Label>
-                    <Input value={form.firstName} onChange={e => setField('firstName', e.target.value)} className="font-body" />
+                  <div className="space-y-1.5" data-error={!!errors.firstName}>
+                    <Label className="font-body text-sm">Nombre <span className="text-destructive">*</span></Label>
+                    <Input
+                      value={form.firstName}
+                      onChange={e => setField('firstName', e.target.value)}
+                      className={`font-body ${errors.firstName ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                      aria-invalid={!!errors.firstName}
+                    />
+                    {errors.firstName && <p className="font-body text-[11px] text-destructive">{errors.firstName}</p>}
                   </div>
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Apellido</Label>
-                    <Input value={form.lastName} onChange={e => setField('lastName', e.target.value)} className="font-body" />
+                  <div className="space-y-1.5" data-error={!!errors.lastName}>
+                    <Label className="font-body text-sm">Apellido <span className="text-destructive">*</span></Label>
+                    <Input
+                      value={form.lastName}
+                      onChange={e => setField('lastName', e.target.value)}
+                      className={`font-body ${errors.lastName ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                      aria-invalid={!!errors.lastName}
+                    />
+                    {errors.lastName && <p className="font-body text-[11px] text-destructive">{errors.lastName}</p>}
                   </div>
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Edad</Label>
-                    <Input type="number" value={form.age || ''} onChange={e => setField('age', parseInt(e.target.value) || 0)} className="font-body" />
+                  <div className="space-y-1.5" data-error={!!errors.age}>
+                    <Label className="font-body text-sm">Edad <span className="text-destructive">*</span></Label>
+                    <Input
+                      type="number"
+                      value={form.age || ''}
+                      onChange={e => setField('age', parseInt(e.target.value) || 0)}
+                      className={`font-body ${errors.age ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                      aria-invalid={!!errors.age}
+                    />
+                    {errors.age && <p className="font-body text-[11px] text-destructive">{errors.age}</p>}
                   </div>
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Sexo</Label>
+                  <div className="space-y-1.5" data-error={!!errors.gender}>
+                    <Label className="font-body text-sm">Sexo <span className="text-destructive">*</span></Label>
                     <Select value={form.gender} onValueChange={v => setField('gender', v)}>
-                      <SelectTrigger className="font-body"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectTrigger
+                        className={`font-body ${errors.gender ? 'border-destructive focus:ring-destructive' : ''}`}
+                        aria-invalid={!!errors.gender}
+                      >
+                        <SelectValue placeholder="Seleccionar" />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Masculino">Masculino</SelectItem>
                         <SelectItem value="Femenino">Femenino</SelectItem>
                         <SelectItem value="Otro">Otro</SelectItem>
                       </SelectContent>
                     </Select>
+                    {errors.gender && <p className="font-body text-[11px] text-destructive">{errors.gender}</p>}
                   </div>
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">DNI / Documento</Label>
-                    <Input value={form.dni} onChange={e => setField('dni', e.target.value)} className="font-body" placeholder="DNI, pasaporte u otro" />
+                  <div className="space-y-1.5" data-error={!!errors.dni}>
+                    <Label className="font-body text-sm">DNI / Documento <span className="text-destructive">*</span></Label>
+                    <Input
+                      value={form.dni}
+                      onChange={e => setField('dni', e.target.value)}
+                      className={`font-body ${errors.dni ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                      placeholder="DNI, pasaporte u otro"
+                      aria-invalid={!!errors.dni}
+                    />
+                    {errors.dni && <p className="font-body text-[11px] text-destructive">{errors.dni}</p>}
                   </div>
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Teléfono de contacto</Label>
-                    <Input value={form.phone} onChange={e => setField('phone', e.target.value)} className="font-body" />
+                  <div className="space-y-1.5" data-error={!!errors.phone}>
+                    <Label className="font-body text-sm">Teléfono de contacto <span className="text-destructive">*</span></Label>
+                    <Input
+                      value={form.phone}
+                      onChange={e => setField('phone', e.target.value)}
+                      className={`font-body ${errors.phone ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                      aria-invalid={!!errors.phone}
+                    />
+                    {errors.phone && <p className="font-body text-[11px] text-destructive">{errors.phone}</p>}
                   </div>
                   <div className="space-y-2 sm:col-span-2">
                     <Label className="font-body text-sm">Email <span className="text-muted-foreground font-normal">(opcional)</span></Label>
                     <Input value={form.email} onChange={e => setField('email', e.target.value)} className="font-body" />
                   </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label className="font-body text-sm">Domicilio</Label>
-                    <Input value={form.address} onChange={e => setField('address', e.target.value)} className="font-body" />
+                  <div className="space-y-1.5 sm:col-span-2" data-error={!!errors.address}>
+                    <Label className="font-body text-sm">Domicilio <span className="text-destructive">*</span></Label>
+                    <Input
+                      value={form.address}
+                      onChange={e => setField('address', e.target.value)}
+                      className={`font-body ${errors.address ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                      aria-invalid={!!errors.address}
+                    />
+                    {errors.address && <p className="font-body text-[11px] text-destructive">{errors.address}</p>}
                   </div>
                 </div>
               </section>
