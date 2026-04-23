@@ -263,16 +263,6 @@ export default function Dashboard() {
     setActiveFilter(prev => (prev === key ? 'all' : key));
   };
 
-  const markAlertAttended = (caseId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setAttendedAlerts(prev => {
-      const next = new Set(prev);
-      next.add(caseId);
-      return next;
-    });
-    toast({ title: 'Alerta marcada como atendida', description: 'Se ocultó de la lista de alertas críticas.' });
-  };
-
   return (
     <AppLayout>
       <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
