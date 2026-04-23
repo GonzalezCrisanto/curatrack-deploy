@@ -94,10 +94,7 @@ export default function Dashboard() {
   const evosPrev7 = allEvos.filter(e => inLastDays(e.date, 7, 14)).length;
   const evoTrend = evosLast7 - evosPrev7;
 
-  const recentEvolutions = allCases
-    .flatMap(c => c.evolutions.map(e => ({ ...e, caseId: c.id, patientId: c.patientId, woundType: c.woundType, status: c.status })))
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 6);
+
 
   const today = new Date().toISOString().split('T')[0];
   const allAppointments = allCases
