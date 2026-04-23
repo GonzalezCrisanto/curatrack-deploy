@@ -139,7 +139,7 @@ export default function PatientDetail() {
     setCaseForm({
       ...emptyCase,
       startDate: new Date().toISOString().split('T')[0],
-      professional: patient.assignedProfessional || '',
+      professional: currentUserName || patient.assignedProfessional || '',
     });
     setCaseDialogOpen(true);
   };
