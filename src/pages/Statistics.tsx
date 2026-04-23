@@ -1228,10 +1228,12 @@ function SummaryCard({ icon, label, value }: { icon: React.ReactNode; label: str
   return (
     <Card>
       <CardContent className="pt-5 pb-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground truncate">{label}</p>
-            <p className="font-heading text-2xl font-bold text-foreground mt-1">{value}</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-body text-[11px] font-semibold uppercase tracking-wide text-muted-foreground leading-tight break-words">
+              {label}
+            </p>
+            <p className="font-heading text-3xl font-bold text-foreground mt-2 leading-none">{value}</p>
           </div>
           <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
             {icon}
