@@ -104,6 +104,11 @@ export default function Patients() {
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
+        <div>
+          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="font-body text-sm -ml-2">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Dashboard
+          </Button>
+        </div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="heading-display text-2xl md:text-3xl">Pacientes</h1>
