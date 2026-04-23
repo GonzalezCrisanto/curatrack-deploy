@@ -823,6 +823,114 @@ export default function Statistics() {
           <SummaryCard icon={<CheckCircle2 className="h-5 w-5" />} label="Cerradas este mes" value={summary.closedThisMonth} />
         </div>
 
+        {/* ===== Auditoría de completitud ===== */}
+        <Card className="border-warning/40">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-heading text-base flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4 text-warning" />
+              Auditoría de datos clínicos
+            </CardTitle>
+            <p className="font-body text-xs text-muted-foreground">
+              Detecta pacientes, casos y evoluciones con campos clínicos nuevos sin completar. Ignora el rango de fechas: refleja el estado actual de toda la cohorte filtrada por paciente.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Completeness summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <CompletenessTile
+                label="Pacientes completos"
+                pct={audit.totals.patientCompleteness}
+                detail={`${audit.totals.totalPatients - audit.totals.patientsWithGaps} de ${audit.totals.totalPatients} sin huecos`}
+                missing={audit.totals.patientsWithGaps}
+              />
+              <CompletenessTile
+                label="Casos completos"
+                pct={audit.totals.caseCompleteness}
+                detail={`${audit.totals.totalCases - audit.totals.casesWithGaps} de ${audit.totals.totalCases} sin huecos`}
+                missing={audit.totals.casesWithGaps}
+              />
+              <CompletenessTile
+                label="Evoluciones completas"
+                pct={audit.totals.evolutionCompleteness}
+                detail={`${audit.totals.totalEvolutions - audit.totals.evolutionsWithGaps} de ${audit.totals.totalEvolutions} sin huecos`}
+                missing={audit.totals.evolutionsWithGaps}
+              />
+            </div>
+
+            {/* Per-attribute breakdowns */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <MissingFieldsList title="Pacientes" total={audit.totals.totalPatients} bars={audit.patientBars} />
+              <MissingFieldsList title="Casos (heridas)" total={audit.totals.totalCases} bars={audit.caseBars} />
+              <MissingFieldsList title="Evoluciones" total={audit.totals.totalEvolutions} bars={audit.evolutionBars} />
+            </div>
+
+            {/* Records with gaps */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <ListChecks className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-heading text-sm font-semibold">Registros con datos faltantes</h3>
+                <Badge variant="secondary" className="ml-auto">{audit.gaps.length} registros</Badge>
+              </div>
+              {audit.gaps.length === 0 ? (
+                <div className="h-24 flex items-center justify-center text-sm text-muted-foreground border border-dashed border-border rounded-lg">
+                  ¡Todos los registros están completos!
+                </div>
+              ) : (
+                <div className="border border-border rounded-lg overflow-hidden max-h-[420px] overflow-y-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-card z-10">
+                      <TableRow>
+                        <TableHead className="w-24">Tipo</TableHead>
+                        <TableHead>Paciente</TableHead>
+                        <TableHead>Contexto</TableHead>
+                        <TableHead className="w-28">Fecha</TableHead>
+                        <TableHead>Campos faltantes</TableHead>
+                        <TableHead className="w-20 text-right">Faltan</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {audit.gaps.slice(0, 200).map((g, i) => (
+                        <TableRow key={i}>
+                          <TableCell>
+                            <Badge variant={g.kind === 'Paciente' ? 'outline' : g.kind === 'Caso' ? 'secondary' : 'default'} className="font-body text-[10px]">
+                              {g.kind}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-body text-xs font-medium">{g.patient}</TableCell>
+                          <TableCell className="font-body text-xs text-muted-foreground">{g.context}</TableCell>
+                          <TableCell className="font-body text-xs text-muted-foreground">{g.date || '—'}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {g.missing.slice(0, 6).map(m => (
+                                <Badge key={m} variant="outline" className="font-body text-[10px] border-warning/50 text-warning-foreground/80">
+                                  {m}
+                                </Badge>
+                              ))}
+                              {g.missing.length > 6 && (
+                                <Badge variant="outline" className="font-body text-[10px]">
+                                  +{g.missing.length - 6}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-heading text-sm font-bold text-warning">
+                            {g.missing.length}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {audit.gaps.length > 200 && (
+                    <div className="px-4 py-2 text-xs text-muted-foreground bg-muted/40 border-t border-border">
+                      Mostrando los primeros 200 registros de {audit.gaps.length}.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Status & evolution status */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <ChartCard title="Estado actual de heridas" subtitle="Distribución según última evolución registrada.">
