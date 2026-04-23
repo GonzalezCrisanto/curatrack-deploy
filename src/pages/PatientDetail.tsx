@@ -43,6 +43,22 @@ export default function PatientDetail() {
   const [apptDate, setApptDate] = useState<string>('');
   const [apptTime, setApptTime] = useState<string>('09:00');
 
+  // Compute conflicts for currently selected appointment date (must run before early return)
+  const apptConflicts = useMemo(() => {
+    if (!apptDate) return [] as { patientName: string; time: string; woundType: string }[];
+    return patients
+      .filter(p => p.id !== patientId)
+      .flatMap(p => p.cases.flatMap(c =>
+        c.evolutions
+          .filter(e => e.nextControl === apptDate)
+          .map(e => ({
+            patientName: `${p.lastName}, ${p.firstName}`,
+            time: e.time || '',
+            woundType: c.woundType,
+          }))
+      ));
+  }, [patients, patientId, apptDate]);
+
   if (!patient) return <AppLayout><div className="p-8 text-center font-body text-muted-foreground">Paciente no encontrado</div></AppLayout>;
 
   const openNewCase = () => {
