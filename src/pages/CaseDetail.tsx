@@ -67,6 +67,9 @@ export default function CaseDetail() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
+  // Per-evolution AI summary viewer dialog
+  const [summaryViewerEvo, setSummaryViewerEvo] = useState<Evolution | null>(null);
+
   const casePhotoInput = useRef<HTMLInputElement>(null);
   const caseCameraInput = useRef<HTMLInputElement>(null);
   const evoPhotoInput = useRef<HTMLInputElement>(null);
