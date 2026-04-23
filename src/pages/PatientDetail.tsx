@@ -133,20 +133,44 @@ export default function PatientDetail() {
   const [apptTime, setApptTime] = useState<string>('09:00');
 
   // Compute conflicts for currently selected appointment date (must run before early return)
+  // Includes both the current patient's own appointments and other patients' appointments.
   const apptConflicts = useMemo(() => {
-    if (!apptDate) return [] as { patientName: string; time: string; woundType: string }[];
-    return patients
-      .filter(p => p.id !== patientId)
-      .flatMap(p => p.cases.flatMap(c =>
-        c.evolutions
-          .filter(e => e.nextControl === apptDate)
-          .map(e => ({
-            patientName: `${p.lastName}, ${p.firstName}`,
-            time: e.time || '',
-            woundType: c.woundType,
-          }))
-      ));
+    if (!apptDate) return [] as { patientName: string; time: string; woundType: string; isCurrent: boolean }[];
+    return patients.flatMap(p => p.cases.flatMap(c =>
+      c.evolutions
+        .filter(e => e.nextControl === apptDate)
+        .map(e => ({
+          patientName: p.id === patientId ? 'Este paciente' : `${p.lastName}, ${p.firstName}`,
+          time: e.time || '',
+          woundType: c.woundType,
+          isCurrent: p.id === patientId,
+        }))
+    ));
   }, [patients, patientId, apptDate]);
+
+  // Set of HH:MM times already taken on the selected day (any patient)
+  const apptTakenTimes = useMemo(() => {
+    return new Set(apptConflicts.map(c => c.time).filter(Boolean));
+  }, [apptConflicts]);
+
+  // Pick the next available 15-min slot starting from 09:00 (then walking forward, fallback to next day search not needed)
+  const pickAvailableTime = (taken: Set<string>): string => {
+    const minutes = (h: number, m: number) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    for (let h = 9; h < 20; h++) {
+      for (let m = 0; m < 60; m += 15) {
+        const t = minutes(h, m);
+        if (!taken.has(t)) return t;
+      }
+    }
+    // Fallback: try earlier morning
+    for (let h = 7; h < 9; h++) {
+      for (let m = 0; m < 60; m += 15) {
+        const t = minutes(h, m);
+        if (!taken.has(t)) return t;
+      }
+    }
+    return '09:00';
+  };
 
   if (!patient) return (
     <AppLayout>
