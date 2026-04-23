@@ -552,14 +552,16 @@ export default function PatientDetail() {
           const suggestionsByCase: Array<{ caseId: string; date: Date; days: number }> = [];
 
           activeCases.forEach(c => {
-            // Find effective frequency: latest evolution's healingFrequency, else case-level
+            // Take the MOST RECENT evolution that defines either a preset frequency or manual days.
+            // This way, updating an evolution to manual days overrides any older preset.
             const sortedEvos = [...c.evolutions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-            const evoFreq = sortedEvos.find(e => e.healingFrequency)?.healingFrequency;
-            const freq = evoFreq || c.healingFrequency;
-            // Effective days: preset frequency, else manual days from latest evolution, else case-level manual days
-            const evoManual = sortedEvos.find(e => typeof e.healingFrequencyDays === 'number' && (e.healingFrequencyDays as number) > 0)?.healingFrequencyDays;
-            const manualDays = (typeof evoManual === 'number' ? evoManual : c.healingFrequencyDays) || null;
-            const days = frequencyToDays(freq) ?? manualDays;
+            const latestWithFreq = sortedEvos.find(e =>
+              (e.healingFrequency && e.healingFrequency.trim() !== '') ||
+              (typeof e.healingFrequencyDays === 'number' && e.healingFrequencyDays > 0)
+            );
+            const freq = latestWithFreq?.healingFrequency || (latestWithFreq ? '' : c.healingFrequency);
+            const manualDays = latestWithFreq?.healingFrequencyDays ?? c.healingFrequencyDays ?? null;
+            const days = frequencyToDays(freq) ?? (manualDays && manualDays > 0 ? manualDays : null);
             if (!days) return;
 
             // Anchor date: last existing nextControl for this case, else last evolution date, else today
