@@ -111,14 +111,31 @@ const infectionLabel = Object.fromEntries(infectionSignFields.map(o => [o.key, o
 export default function Statistics() {
   const { patients } = useApp();
   const [patientFilter, setPatientFilter] = useState<string>('all');
-  // Default range: last 30 days through today (inclusive).
+  // Default range: span the last 30 days, but extend to cover all existing
+  // evolution dates so charts never appear empty on first load. If no
+  // evolutions exist, fall back to a 30-day window ending today.
   const defaultRange = useMemo(() => {
-    const today = new Date();
-    const from = new Date();
-    from.setDate(today.getDate() - 30);
     const iso = (d: Date) => d.toISOString().slice(0, 10);
-    return { from: iso(from), to: iso(today) };
-  }, []);
+    const today = new Date();
+    const todayIso = iso(today);
+    const thirtyAgo = new Date();
+    thirtyAgo.setDate(today.getDate() - 30);
+    const thirtyAgoIso = iso(thirtyAgo);
+
+    const allDates: string[] = [];
+    patients.forEach(p => p.cases.forEach(c => {
+      if (c.startDate) allDates.push(c.startDate);
+      c.evolutions.forEach(e => allDates.push(e.date));
+    }));
+    if (!allDates.length) return { from: thirtyAgoIso, to: todayIso };
+    allDates.sort();
+    const minDate = allDates[0];
+    const maxDate = allDates[allDates.length - 1];
+    return {
+      from: minDate < thirtyAgoIso ? minDate : thirtyAgoIso,
+      to: maxDate > todayIso ? maxDate : todayIso,
+    };
+  }, [patients]);
   const [fromDate, setFromDate] = useState<string>(defaultRange.from);
   const [toDate, setToDate] = useState<string>(defaultRange.to);
 
