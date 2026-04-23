@@ -12,7 +12,7 @@ import { toast } from '@/hooks/use-toast';
 import {
   Users, Activity, AlertTriangle, CheckCircle2, TrendingUp, Clock,
   ChevronRight, CalendarClock, ArrowUp, ArrowDown, ArrowRight,
-  Search, X,
+  Search, X, AlertCircle,
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import AppLayout from '@/components/AppLayout';
@@ -431,26 +431,116 @@ export default function Dashboard() {
               modifiersStyles[status] = STATUS_STYLE[status] || STATUS_STYLE.activo;
             });
 
+            // ---- Scheduling warnings ----
+            // Assumptions: each curación dura 30 min; entre pacientes distintos hace
+            // falta un buffer mínimo de 30 min entre el fin de una y el inicio de la siguiente;
+            // entre turnos consecutivos del MISMO paciente, lo ideal es que sean inmediatos
+            // (sin huecos > 0 min) — un hueco se reporta como "tiempo muerto" sugerido a corregir.
+            const PROCEDURE_MIN = 30;
+            const INTER_PATIENT_BUFFER_MIN = 30;
+            const parseHHMM = (t?: string): number | null => {
+              if (!t) return null;
+              const m = /^(\d{1,2}):(\d{2})/.exec(t.trim());
+              if (!m) return null;
+              const h = Number(m[1]);
+              const mm = Number(m[2]);
+              if (!isFinite(h) || !isFinite(mm)) return null;
+              return h * 60 + mm;
+            };
+            const minutesToHHMM = (mins: number) => {
+              const h = Math.floor(mins / 60);
+              const mm = mins % 60;
+              return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+            };
+
+            type SchedWarning = {
+              kind: 'gap-same-patient' | 'overlap-different-patient' | 'tight-different-patient';
+              message: string;
+              aptIds: string[]; // evolution ids involved
+            };
+            const warningsByApt = new Map<string, SchedWarning[]>();
+            const pushWarn = (id: string, w: SchedWarning) => {
+              const list = warningsByApt.get(id) ?? [];
+              list.push(w);
+              warningsByApt.set(id, list);
+            };
+
+            // Group ALL future appointments (not only the visible 6) by date
+            const allByDate = new Map<string, typeof upcomingAppointments>();
+            upcomingAppointments.forEach(ap => {
+              const arr = allByDate.get(ap.nextControl) ?? [];
+              arr.push(ap);
+              allByDate.set(ap.nextControl, arr);
+            });
+
+            allByDate.forEach((apts) => {
+              const timed = apts
+                .map(a => ({ ap: a, start: parseHHMM(a.time) }))
+                .filter((x): x is { ap: typeof apts[number]; start: number } => x.start !== null)
+                .sort((a, b) => a.start - b.start);
+
+              for (let i = 1; i < timed.length; i++) {
+                const prev = timed[i - 1];
+                const curr = timed[i];
+                const prevEnd = prev.start + PROCEDURE_MIN;
+                const gap = curr.start - prevEnd; // minutos libres entre fin del anterior e inicio del actual
+                const samePatient = prev.ap.patientId === curr.ap.patientId;
+
+                if (samePatient) {
+                  if (gap > 0) {
+                    pushWarn(curr.ap.id, {
+                      kind: 'gap-same-patient',
+                      aptIds: [prev.ap.id, curr.ap.id],
+                      message: `Hueco de ${gap} min entre curaciones del mismo paciente (${minutesToHHMM(prev.start)}–${minutesToHHMM(prevEnd)} → ${minutesToHHMM(curr.start)}). Sugerido: encadenar a las ${minutesToHHMM(prevEnd)}.`,
+                    });
+                  }
+                } else {
+                  if (gap < 0) {
+                    pushWarn(curr.ap.id, {
+                      kind: 'overlap-different-patient',
+                      aptIds: [prev.ap.id, curr.ap.id],
+                      message: `Se solapa con turno previo (${minutesToHHMM(prev.start)}–${minutesToHHMM(prevEnd)}). Mover a las ${minutesToHHMM(prevEnd + INTER_PATIENT_BUFFER_MIN)} o más tarde.`,
+                    });
+                  } else if (gap < INTER_PATIENT_BUFFER_MIN) {
+                    pushWarn(curr.ap.id, {
+                      kind: 'tight-different-patient',
+                      aptIds: [prev.ap.id, curr.ap.id],
+                      message: `Solo ${gap} min entre pacientes (mínimo recomendado: ${INTER_PATIENT_BUFFER_MIN} min). Sugerido: mover a las ${minutesToHHMM(prevEnd + INTER_PATIENT_BUFFER_MIN)}.`,
+                    });
+                  }
+                }
+              }
+            });
+
             const renderApt = (ap: typeof upcomingAppointments[number], opts: { past?: boolean } = {}) => {
               const patient = patients.find(p => p.id === ap.patientId);
               const caseData = allCases.find(c => c.id === ap.caseId);
               const dotClass = statusDot[caseData?.status || 'activo'];
+              const warns = warningsByApt.get(ap.id) ?? [];
+              const hasWarn = warns.length > 0;
               return (
                 <div
                   key={ap.id + (opts.past ? '-past' : '-apt')}
                   className={`p-4 rounded-xl border transition-all cursor-pointer hover:-translate-y-0.5 hover:shadow-md ${
                     opts.past
                       ? 'border-destructive/30 bg-destructive/[0.03]'
-                      : 'border-border/60 bg-card'
+                      : hasWarn
+                        ? 'border-warning/50 bg-warning/[0.04]'
+                        : 'border-border/60 bg-card'
                   }`}
                   onClick={() => navigate(`/patients/${ap.patientId}/cases/${ap.caseId}`)}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <CalendarClock className={`h-4 w-4 ${opts.past ? 'text-destructive' : 'text-primary'}`} />
                       <span className={`font-body text-sm font-semibold ${opts.past ? 'text-destructive' : 'text-primary'}`}>
                         {ap.nextControl}
                       </span>
+                      {ap.time && (
+                        <span className="font-body text-xs font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                          {ap.time}
+                        </span>
+                      )}
                       {opts.past && (
                         <span className="font-body text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-semibold">
                           Vencido
@@ -462,6 +552,21 @@ export default function Dashboard() {
                   <p className="font-body text-sm font-semibold text-foreground">{patient?.lastName}, {patient?.firstName}</p>
                   <p className="font-body text-xs text-muted-foreground mt-0.5">{ap.woundType}</p>
                   <p className="font-body text-xs text-muted-foreground mt-1">Prof: {ap.professional}</p>
+                  {hasWarn && (
+                    <div className="mt-2.5 space-y-1.5">
+                      {warns.map((w, i) => (
+                        <div
+                          key={i}
+                          className="flex items-start gap-1.5 rounded-md bg-warning/10 border border-warning/30 px-2 py-1.5"
+                        >
+                          <AlertCircle className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
+                          <p className="font-body text-[11px] leading-snug text-warning-foreground">
+                            {w.message}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             };
