@@ -957,7 +957,7 @@ export default function PatientDetail() {
               {/* Dolor EVA */}
               <div className="space-y-2">
                 <div className="flex items-baseline justify-between">
-                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dolor (EVA)</Label>
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dolor (EVA)<OptionalTag /></Label>
                   <span className={cn(
                     "font-body text-sm font-bold tabular-nums px-2 py-0.5 rounded-md",
                     caseForm.painLevel <= 3 && "bg-success/15 text-success",
