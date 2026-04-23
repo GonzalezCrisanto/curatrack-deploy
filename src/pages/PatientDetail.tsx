@@ -31,11 +31,17 @@ const emptyCase: { woundType: string; anatomicalLocation: string; startDate: str
 export default function PatientDetail() {
   const { patientId } = useParams();
   const navigate = useNavigate();
-  const { patients, addCase, updateCase, deleteCase } = useApp();
+  const { patients, addCase, updateCase, deleteCase, addEvolution } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const [caseDialogOpen, setCaseDialogOpen] = useState(false);
   const [editingCase, setEditingCase] = useState<WoundCase | null>(null);
   const [caseForm, setCaseForm] = useState(emptyCase);
+
+  // New appointment dialog state
+  const [apptDialogOpen, setApptDialogOpen] = useState(false);
+  const [apptCaseId, setApptCaseId] = useState<string>('');
+  const [apptDate, setApptDate] = useState<string>('');
+  const [apptTime, setApptTime] = useState<string>('09:00');
 
   if (!patient) return <AppLayout><div className="p-8 text-center font-body text-muted-foreground">Paciente no encontrado</div></AppLayout>;
 
