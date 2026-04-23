@@ -817,7 +817,7 @@ export default function PatientDetail() {
                 <Select value={caseForm.professional} onValueChange={v => setCField('professional', v)}>
                   <SelectTrigger className="font-body h-11"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                   <SelectContent>
-                    {professionals.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                    {Array.from(new Set([currentUserName, ...professionals].filter(Boolean))).map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
