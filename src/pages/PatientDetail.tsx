@@ -10,11 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Edit, Trash2, ChevronRight, User, Phone, Mail, MapPin, CalendarClock, CalendarDays, FileDown, ShieldAlert, BadgeCheck, UserCog, FileDown as FileDownIcon } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, ChevronRight, User, Phone, Mail, MapPin, CalendarClock, CalendarDays, FileDown, ShieldAlert, BadgeCheck, UserCog, FileDown as FileDownIcon, Share2, Crown, Users as UsersIcon } from 'lucide-react';
 import { exportPatientPdf } from '@/lib/exportPdf';
 import { WoundCase, woundTypes, woundStatuses, getStatusLabel, professionals } from '@/data/demoData';
+import { ROLE_LABEL_SHORT } from '@/data/demoUsers';
 import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { SharePatientDialog } from '@/components/SharePatientDialog';
 
 const statusBadgeClass: Record<string, string> = {
   activo: 'bg-info/10 text-info border-info/30',
@@ -31,11 +33,12 @@ const emptyCase: { woundType: string; anatomicalLocation: string; startDate: str
 export default function PatientDetail() {
   const { patientId } = useParams();
   const navigate = useNavigate();
-  const { patients, addCase, updateCase, deleteCase, addEvolution } = useApp();
+  const { patients, addCase, updateCase, deleteCase, addEvolution, getPatientAccess, getPatientCollaborators, allUsers } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const [caseDialogOpen, setCaseDialogOpen] = useState(false);
   const [editingCase, setEditingCase] = useState<WoundCase | null>(null);
   const [caseForm, setCaseForm] = useState(emptyCase);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   // New appointment dialog state
   const [apptDialogOpen, setApptDialogOpen] = useState(false);
@@ -59,7 +62,22 @@ export default function PatientDetail() {
       ));
   }, [patients, patientId, apptDate]);
 
-  if (!patient) return <AppLayout><div className="p-8 text-center font-body text-muted-foreground">Paciente no encontrado</div></AppLayout>;
+  if (!patient) return (
+    <AppLayout>
+      <div className="p-8 text-center font-body text-muted-foreground space-y-3">
+        <p>No tenés acceso a este paciente o no existe.</p>
+        <Button variant="outline" onClick={() => navigate('/patients')} className="font-body">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver a mis pacientes
+        </Button>
+      </div>
+    </AppLayout>
+  );
+
+  const access = getPatientAccess(patient.id);
+  const collaborators = getPatientCollaborators(patient.id);
+  const owner = collaborators.find(c => c.via === 'owner')?.user;
+  const sharedCount = collaborators.length - 1; // exclude owner
+  const isOwner = access?.effectiveRole === 'owner';
 
   const openNewCase = () => {
     setEditingCase(null);
@@ -108,21 +126,47 @@ export default function PatientDetail() {
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <Button variant="ghost" onClick={() => navigate('/patients')} className="font-body text-sm -ml-2">
             <ArrowLeft className="mr-2 h-4 w-4" /> Volver a pacientes
           </Button>
-          <Button variant="outline" size="sm" className="font-body" onClick={() => exportPatientPdf(patient)}>
-            <FileDown className="mr-2 h-4 w-4" /> Exportar Historia Clínica
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="font-body"
+              onClick={() => setShareDialogOpen(true)}
+            >
+              <Share2 className="mr-2 h-4 w-4" />
+              Compartir
+              {sharedCount > 0 && (
+                <Badge variant="secondary" className="ml-2 font-body text-[10px] py-0 px-1.5">
+                  {sharedCount}
+                </Badge>
+              )}
+            </Button>
+            <Button variant="outline" size="sm" className="font-body" onClick={() => exportPatientPdf(patient)}>
+              <FileDown className="mr-2 h-4 w-4" /> Exportar Historia Clínica
+            </Button>
+          </div>
         </div>
 
         {/* Patient info */}
         <Card className="border-border/50">
           <CardHeader className="pb-3">
-            <CardTitle className="heading-display text-xl flex items-center gap-2">
+            <CardTitle className="heading-display text-xl flex items-center gap-2 flex-wrap">
               <User className="h-5 w-5 text-primary" />
-              {patient.lastName}, {patient.firstName}
+              <span>{patient.lastName}, {patient.firstName}</span>
+              {isOwner ? (
+                <Badge className="font-body text-[10px] uppercase tracking-wide bg-primary/10 text-primary border-primary/30 ml-2">
+                  <Crown className="h-2.5 w-2.5 mr-1" /> Tu paciente
+                </Badge>
+              ) : access ? (
+                <Badge variant="outline" className="font-body text-[10px] uppercase tracking-wide ml-2">
+                  <UsersIcon className="h-2.5 w-2.5 mr-1" />
+                  Compartido por {owner ? `${owner.firstName} ${owner.lastName}` : 'otro profesional'} · {ROLE_LABEL_SHORT[access.effectiveRole === 'owner' ? 'co_owner' : access.effectiveRole]}
+                </Badge>
+              ) : null}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pb-4">
@@ -605,6 +649,13 @@ export default function PatientDetail() {
             </div>
           </DialogContent>
         </Dialog>
+
+        <SharePatientDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          patientId={patient.id}
+          patientName={`${patient.lastName}, ${patient.firstName}`}
+        />
       </div>
     </AppLayout>
   );

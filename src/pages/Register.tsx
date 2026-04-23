@@ -22,7 +22,7 @@ const ROLES = [
 
 export default function Register() {
   const navigate = useNavigate();
-  const { setIsLoggedIn } = useApp();
+  const { registerUser } = useApp();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -75,10 +75,24 @@ export default function Register() {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
+      const mappedRole: 'enfermero' | 'medico' | 'admin' =
+        role === 'medico' ? 'medico' : role === 'admin' ? 'admin' : 'enfermero';
+      const result = registerUser({
+        email: email.trim(),
+        password,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        role: mappedRole,
+        license: license.trim() || undefined,
+        institution: institution.trim() || undefined,
+      });
+      if (!result.ok) {
+        toast({ title: 'No se pudo crear la cuenta', description: result.message, variant: 'destructive' });
+        return;
+      }
       toast({ title: '¡Cuenta creada!', description: `Bienvenido/a ${firstName}. Ya podés ingresar a CuraTrack.` });
-      setIsLoggedIn(true);
       navigate('/dashboard');
-    }, 800);
+    }, 600);
   };
 
   return (

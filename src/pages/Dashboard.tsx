@@ -67,7 +67,7 @@ function avatarColor(seed: string) {
 }
 
 export default function Dashboard() {
-  const { patients, currentUser } = useApp();
+  const { patients, currentUserName } = useApp();
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -276,7 +276,7 @@ export default function Dashboard() {
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-2">
             <div>
               <h1 className="heading-display text-2xl md:text-3xl text-foreground">
-                {getGreeting()}, {currentUser}
+                {getGreeting()}, {currentUserName}
               </h1>
               <p className="font-body text-muted-foreground text-sm mt-1 capitalize">
                 {formatTodaySpanish()}
