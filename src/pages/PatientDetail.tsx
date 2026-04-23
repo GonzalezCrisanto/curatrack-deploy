@@ -214,12 +214,29 @@ export default function PatientDetail() {
     setCaseDialogOpen(true);
   };
 
+  // Helper: convert preset frequency label to days, returns null if no preset (free / "A demanda")
+  const presetFreqToDays = (freq?: string): number | null => {
+    switch ((freq || '').trim()) {
+      case 'Diaria': return 1;
+      case 'Cada 48hs': return 2;
+      case 'Cada 72hs': return 3;
+      case 'Semanal': return 7;
+      default: return null;
+    }
+  };
+
   const handleSaveCase = () => {
     // Validación de campos obligatorios
     const missing: string[] = [];
     if (!caseForm.woundType) missing.push('Tipo de herida');
     if (!caseForm.anatomicalLocation.trim()) missing.push('Ubicación anatómica');
     if (!caseForm.startDate) missing.push('Fecha de inicio');
+    // Si no hay frecuencia preestablecida, exigir días manuales
+    const presetDays = presetFreqToDays(caseForm.healingFrequency);
+    const manualDays = caseForm.healingFrequencyDays === '' ? null : Number(caseForm.healingFrequencyDays);
+    if (presetDays === null && (!manualDays || manualDays <= 0)) {
+      missing.push('Días estimados de frecuencia de curación');
+    }
     if (missing.length > 0) {
       toast({
         title: 'Faltan campos obligatorios',
@@ -253,6 +270,7 @@ export default function PatientDetail() {
       infDolorAumentado: caseForm.infDolorAumentado,
       bodyTemperature: numOrUndef(caseForm.bodyTemperature),
       healingFrequency: caseForm.healingFrequency,
+      healingFrequencyDays: caseForm.healingFrequencyDays === '' ? undefined : Number(caseForm.healingFrequencyDays),
       initialProcedure: caseForm.initialProcedure,
       initialMaterials: caseForm.initialMaterials,
       initialObservations: caseForm.initialObservations,
