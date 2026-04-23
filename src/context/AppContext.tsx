@@ -8,7 +8,7 @@ import {
 // ---------- Storage keys ----------
 // Bump DATA_VERSION whenever the seed demo data changes shape so existing
 // localStorage caches get refreshed instead of overriding the new defaults.
-const DATA_VERSION = 'v2-2026-04-clinical-fields';
+const DATA_VERSION = 'v3-2026-04-audit-complete';
 const LS_USERS = 'curatrack:users';
 const LS_TEAMS = 'curatrack:teams';
 const LS_PATIENTS = 'curatrack:patients';        // Patient[] + ownerId map embedded
