@@ -1268,8 +1268,8 @@ export default function CaseDetail() {
               )}
             </div>
 
-            {/* Sticky footer */}
-            <div className="sticky bottom-0 shrink-0 border-t border-border/50 bg-background/95 backdrop-blur px-4 sm:px-6 py-3 flex gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            {/* Footer */}
+            <div className="shrink-0 border-t border-border/50 bg-background px-4 sm:px-6 py-3 flex gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <Button variant="outline" onClick={() => setEvoDialogOpen(false)} className="font-body h-12 flex-1 sm:flex-none">Cancelar</Button>
               <Button
                 onClick={handleSaveEvo}
