@@ -1359,73 +1359,110 @@ export default function CaseDetail() {
           </DialogContent>
         </Dialog>
 
-        {/* AI Summary viewer */}
-        <Dialog open={!!summaryViewerEvo} onOpenChange={(o) => !o && setSummaryViewerEvo(null)}>
-          <DialogContent className="max-w-2xl w-full sm:max-w-2xl h-[100dvh] sm:h-auto sm:max-h-[85vh] p-0 gap-0 flex flex-col rounded-none sm:rounded-lg">
+        {/* Case-level AI Summary viewer */}
+        <Dialog open={caseSummaryOpen} onOpenChange={setCaseSummaryOpen}>
+          <DialogContent className="max-w-3xl w-full sm:max-w-3xl h-[100dvh] sm:h-auto sm:max-h-[88vh] p-0 gap-0 flex flex-col rounded-none sm:rounded-lg">
             <DialogHeader className="px-4 sm:px-6 pt-4 pb-3 border-b border-border/50 shrink-0">
               <DialogTitle className="heading-display flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" /> Resumen con IA
+                <Sparkles className="h-5 w-5 text-primary" /> Resumen con IA — {woundCase.woundType}
               </DialogTitle>
-              {summaryViewerEvo && (
-                <p className="font-body text-sm text-muted-foreground mt-1">
-                  Evolución del {summaryViewerEvo.date}
-                  {summaryViewerEvo.time ? ` · ${summaryViewerEvo.time} hs` : ''}
-                  {summaryViewerEvo.professional ? ` · ${summaryViewerEvo.professional}` : ''}
-                </p>
-              )}
+              <p className="font-body text-sm text-muted-foreground mt-1">
+                {patient.firstName} {patient.lastName}
+                {woundCase.anatomicalLocation ? ` · ${woundCase.anatomicalLocation}` : ''}
+                {' · '}{woundCase.evolutions.length} evolución{woundCase.evolutions.length === 1 ? '' : 'es'} considerada{woundCase.evolutions.length === 1 ? '' : 's'}
+                {woundCase.aiSummaryUpdatedAt ? ` · Generado ${new Date(woundCase.aiSummaryUpdatedAt).toLocaleString('es-AR')}` : ''}
+              </p>
             </DialogHeader>
 
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
-              {summaryViewerEvo?.aiSummary ? (
-                <div className="font-body text-sm leading-relaxed text-foreground/90 prose prose-sm max-w-none prose-headings:font-display prose-headings:text-foreground prose-strong:text-foreground prose-li:my-0.5 prose-p:my-2 prose-ul:my-2 prose-ol:my-2">
-                  <ReactMarkdown>{summaryViewerEvo.aiSummary}</ReactMarkdown>
+              {aiLoading && (
+                <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="font-body text-sm">Generando resumen clínico con todos los datos del caso…</p>
                 </div>
-              ) : (
-                <p className="font-body text-sm text-muted-foreground">No hay resumen disponible.</p>
+              )}
+              {!aiLoading && aiError && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+                  <p className="font-body text-sm text-destructive">{aiError}</p>
+                  <Button size="sm" variant="outline" onClick={generateAISummary} className="font-body">
+                    <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Reintentar
+                  </Button>
+                </div>
+              )}
+              {!aiLoading && !aiError && woundCase.aiSummary && (
+                <div className="font-body text-sm leading-relaxed text-foreground/90 prose prose-sm max-w-none prose-headings:font-display prose-headings:text-foreground prose-strong:text-foreground prose-li:my-0.5 prose-p:my-2 prose-ul:my-2 prose-ol:my-2">
+                  <ReactMarkdown>{woundCase.aiSummary}</ReactMarkdown>
+                </div>
+              )}
+              {!aiLoading && !aiError && !woundCase.aiSummary && (
+                <div className="text-center py-12 space-y-4">
+                  <Sparkles className="h-10 w-10 text-primary/60 mx-auto" />
+                  <div className="space-y-1">
+                    <p className="font-body text-base font-semibold">Aún no se generó un resumen para este caso.</p>
+                    <p className="font-body text-sm text-muted-foreground">
+                      Generá un resumen clínico que contemple todas las evoluciones registradas.
+                    </p>
+                  </div>
+                  <Button onClick={generateAISummary} className="font-body" disabled={woundCase.evolutions.length === 0}>
+                    <Sparkles className="mr-1.5 h-4 w-4" /> Generar resumen con IA
+                  </Button>
+                  {woundCase.evolutions.length === 0 && (
+                    <p className="font-body text-xs text-muted-foreground">Registrá al menos una evolución antes de generar el resumen.</p>
+                  )}
+                </div>
               )}
             </div>
 
-            <div className="shrink-0 border-t border-border/50 bg-background px-4 sm:px-6 py-3 flex flex-wrap gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-              <Button
-                variant="outline"
-                className="font-body h-11 flex-1 sm:flex-none"
-                onClick={async () => {
-                  if (!summaryViewerEvo?.aiSummary) return;
-                  try {
-                    await navigator.clipboard.writeText(summaryViewerEvo.aiSummary);
-                    toast.success('Resumen copiado al portapapeles');
-                  } catch {
-                    toast.error('No se pudo copiar');
-                  }
-                }}
-              >
-                <Copy className="mr-1.5 h-4 w-4" /> Copiar
-              </Button>
-              <Button
-                variant="outline"
-                className="font-body h-11 flex-1 sm:flex-none"
-                onClick={() => openSummaryPrintWindow(summaryViewerEvo)}
-              >
-                <Printer className="mr-1.5 h-4 w-4" /> Imprimir
-              </Button>
-              <Button
-                className="font-body h-11 flex-1 sm:flex-none"
-                onClick={() => {
-                  if (openSummaryPrintWindow(summaryViewerEvo)) {
-                    toast.info('Elegí "Guardar como PDF" en el diálogo de impresión.');
-                  }
-                }}
-              >
-                <Download className="mr-1.5 h-4 w-4" /> Descargar PDF
-              </Button>
-              <Button
-                variant="ghost"
-                className="font-body h-11"
-                onClick={() => setSummaryViewerEvo(null)}
-              >
-                Cerrar
-              </Button>
-            </div>
+            {!aiLoading && woundCase.aiSummary && (
+              <div className="shrink-0 border-t border-border/50 bg-background px-4 sm:px-6 py-3 flex flex-wrap gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <Button
+                  variant="outline"
+                  className="font-body h-11 flex-1 sm:flex-none"
+                  onClick={generateAISummary}
+                >
+                  <RefreshCw className="mr-1.5 h-4 w-4" /> Regenerar
+                </Button>
+                <Button
+                  variant="outline"
+                  className="font-body h-11 flex-1 sm:flex-none"
+                  onClick={async () => {
+                    if (!woundCase.aiSummary) return;
+                    try {
+                      await navigator.clipboard.writeText(woundCase.aiSummary);
+                      toast.success('Resumen copiado al portapapeles');
+                    } catch {
+                      toast.error('No se pudo copiar');
+                    }
+                  }}
+                >
+                  <Copy className="mr-1.5 h-4 w-4" /> Copiar
+                </Button>
+                <Button
+                  variant="outline"
+                  className="font-body h-11 flex-1 sm:flex-none"
+                  onClick={() => openCaseSummaryPrintWindow()}
+                >
+                  <Printer className="mr-1.5 h-4 w-4" /> Imprimir
+                </Button>
+                <Button
+                  className="font-body h-11 flex-1 sm:flex-none"
+                  onClick={() => {
+                    if (openCaseSummaryPrintWindow()) {
+                      toast.info('Elegí "Guardar como PDF" en el diálogo de impresión.');
+                    }
+                  }}
+                >
+                  <Download className="mr-1.5 h-4 w-4" /> Descargar PDF
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="font-body h-11"
+                  onClick={() => setCaseSummaryOpen(false)}
+                >
+                  Cerrar
+                </Button>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
