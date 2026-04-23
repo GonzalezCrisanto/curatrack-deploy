@@ -74,6 +74,14 @@ export default function Dashboard() {
   const [woundTypeFilter, setWoundTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('lastEvo');
   const [appointmentFilter, setAppointmentFilter] = useState<'all' | 'upcoming' | 'overdue'>('all');
+  const [selectedDay, setSelectedDay] = useState<Date | undefined>(undefined);
+
+  const toISODate = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
 
   const allCases = patients.flatMap(p => p.cases);
   const activeCases = allCases.filter(c => c.status === 'activo');
@@ -330,21 +338,26 @@ export default function Dashboard() {
             const showUpcoming = appointmentFilter === 'all' || appointmentFilter === 'upcoming';
             const showOverdue = appointmentFilter === 'all' || appointmentFilter === 'overdue';
 
-            const visibleUpcoming = showUpcoming ? upcomingAppointments : [];
-            const visiblePast = showOverdue ? pastAppointments : [];
+            const selectedISO = selectedDay ? toISODate(selectedDay) : null;
+            const visibleUpcoming = (showUpcoming ? upcomingAppointments : [])
+              .filter(ap => !selectedISO || ap.nextControl === selectedISO);
+            const visiblePast = (showOverdue ? pastAppointments : [])
+              .filter(ap => !selectedISO || ap.nextControl === selectedISO);
 
-            const upcomingDates = visibleUpcoming.map(ap => {
+            // Modifiers reflect all appointments matching the type filter (not the day filter),
+            // so the calendar always shows clickable colored dates.
+            const modifierUpcoming = (showUpcoming ? upcomingAppointments : []).map(ap => {
               const caseData = allCases.find(c => c.id === ap.caseId);
               return { date: new Date(ap.nextControl + 'T12:00:00'), status: caseData?.status || 'activo' };
             });
-            const pastDates = visiblePast.map(ap => new Date(ap.nextControl + 'T12:00:00'));
+            const modifierPast = (showOverdue ? pastAppointments : []).map(ap => new Date(ap.nextControl + 'T12:00:00'));
 
             const modifiers = {
-              critical: upcomingDates.filter(d => d.status === 'critico').map(d => d.date),
-              active: upcomingDates.filter(d => d.status === 'activo').map(d => d.date),
-              improving: upcomingDates.filter(d => d.status === 'en_mejoria').map(d => d.date),
-              resolved: upcomingDates.filter(d => d.status === 'resuelto').map(d => d.date),
-              overdue: pastDates,
+              critical: modifierUpcoming.filter(d => d.status === 'critico').map(d => d.date),
+              active: modifierUpcoming.filter(d => d.status === 'activo').map(d => d.date),
+              improving: modifierUpcoming.filter(d => d.status === 'en_mejoria').map(d => d.date),
+              resolved: modifierUpcoming.filter(d => d.status === 'resuelto').map(d => d.date),
+              overdue: modifierPast,
             };
 
             const modifiersStyles = {
@@ -420,12 +433,22 @@ export default function Dashboard() {
                   <div className="flex flex-col lg:flex-row gap-6">
                     <div className="shrink-0">
                       <Calendar
-                        mode="multiple"
-                        selected={[...upcomingDates.map(d => d.date), ...pastDates]}
+                        mode="single"
+                        selected={selectedDay}
+                        onSelect={setSelectedDay}
                         className="p-3 pointer-events-auto rounded-xl border border-border/60 bg-background"
                         modifiers={modifiers}
                         modifiersStyles={modifiersStyles}
                       />
+                      {selectedDay && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDay(undefined)}
+                          className="mt-3 inline-flex items-center gap-1 font-body text-xs text-primary hover:underline"
+                        >
+                          <X className="h-3 w-3" /> Quitar filtro de día ({toISODate(selectedDay)})
+                        </button>
+                      )}
                       <div className="flex flex-wrap gap-3 mt-3 px-1">
                         {[
                           { c: 'bg-destructive', l: 'Crítico' },
