@@ -160,6 +160,7 @@ export default function CaseDetail() {
       woundLength: rest.woundLength ?? '',
       woundWidth: rest.woundWidth ?? '',
       woundDepth: rest.woundDepth ?? '',
+      healingFrequencyDays: rest.healingFrequencyDays ?? '',
       tissueTypes: rest.tissueTypes ?? [],
       edgeTypes: rest.edgeTypes ?? [],
       exudateAmount: rest.exudateAmount,
