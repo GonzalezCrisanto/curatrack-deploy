@@ -314,11 +314,9 @@ export default function CaseDetail() {
     toast.success(isNew ? 'Evolución registrada' : 'Evolución actualizada');
     setCloseConfirmOpen(false);
 
-    // Close the dialog immediately and generate the AI summary in background.
-    // The summary persists on the evolution and will appear in the timeline card when ready.
+    // Close the dialog. The case-level AI summary stays as is until the user
+    // explicitly regenerates it from the case header button.
     setEvoDialogOpen(false);
-    toast.info('Generando resumen con IA…');
-    generateAISummary(payload);
   };
 
   const handleSaveEvo = () => {
@@ -337,8 +335,9 @@ export default function CaseDetail() {
     persistEvo(false);
   };
 
-  const openSummaryPrintWindow = (ev: Evolution | null): boolean => {
-    if (!ev?.aiSummary) {
+  const openCaseSummaryPrintWindow = (): boolean => {
+    const summary = woundCase.aiSummary;
+    if (!summary) {
       toast.error('No hay resumen disponible para imprimir.');
       return false;
     }
@@ -349,8 +348,9 @@ export default function CaseDetail() {
         return false;
       }
       const safe = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
-      const bodyHtml = marked.parse(ev.aiSummary, { async: false }) as string;
-      win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Resumen-IA-${safe(ev.date)}</title>
+      const bodyHtml = marked.parse(summary, { async: false }) as string;
+      const updated = woundCase.aiSummaryUpdatedAt ? new Date(woundCase.aiSummaryUpdatedAt).toLocaleString('es-AR') : '';
+      win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Resumen-IA-${safe(woundCase.woundType)}</title>
         <style>
           body { font-family: 'Open Sans', system-ui, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 24px; color: #111; }
           h1.title { font-family: 'Montserrat', system-ui, sans-serif; color: #00965E; font-size: 22px; margin: 0 0 4px; }
@@ -367,15 +367,15 @@ export default function CaseDetail() {
           .content code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 13px; }
           @media print { body { margin: 0; padding: 16mm; } }
         </style></head><body>
-        <h1 class="title">Resumen con IA</h1>
-        <div class="meta">Evolución del ${safe(ev.date)}${ev.time ? ` · ${safe(ev.time)} hs` : ''}${ev.professional ? ` · ${safe(ev.professional)}` : ''}</div>
+        <h1 class="title">Resumen con IA — ${safe(woundCase.woundType)}</h1>
+        <div class="meta">${safe(patient.firstName)} ${safe(patient.lastName)} · ${safe(woundCase.anatomicalLocation || '')}${updated ? ` · Generado ${safe(updated)}` : ''}</div>
         <div class="content">${bodyHtml}</div>
         <script>window.onload = () => { try { window.print(); } catch(e) {} };</script>
       </body></html>`);
       win.document.close();
       return true;
     } catch (err) {
-      console.error('openSummaryPrintWindow failed', err);
+      console.error('openCaseSummaryPrintWindow failed', err);
       toast.error('Ocurrió un error al preparar el documento. Probá copiar el resumen como alternativa.');
       return false;
     }
@@ -785,19 +785,7 @@ export default function CaseDetail() {
                           <p className="font-body text-sm">{ev.observations}</p>
                         </div>
                       )}
-                      {hasAiSummary && (
-                        <div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="font-body h-8 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
-                            onClick={() => setSummaryViewerEvo(ev)}
-                          >
-                            <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Ver resumen IA
-                          </Button>
-                        </div>
-                      )}
+                      {/* AI summary moved to case header — no per-evolution button */}
                       {ev.nextControl && (
                         <div className="flex items-center gap-1 text-xs font-body text-muted-foreground">
                           <Clock className="h-3.5 w-3.5" /> Próximo control: {ev.nextControl}
