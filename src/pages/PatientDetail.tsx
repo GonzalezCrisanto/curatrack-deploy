@@ -133,20 +133,44 @@ export default function PatientDetail() {
   const [apptTime, setApptTime] = useState<string>('09:00');
 
   // Compute conflicts for currently selected appointment date (must run before early return)
+  // Includes both the current patient's own appointments and other patients' appointments.
   const apptConflicts = useMemo(() => {
-    if (!apptDate) return [] as { patientName: string; time: string; woundType: string }[];
-    return patients
-      .filter(p => p.id !== patientId)
-      .flatMap(p => p.cases.flatMap(c =>
-        c.evolutions
-          .filter(e => e.nextControl === apptDate)
-          .map(e => ({
-            patientName: `${p.lastName}, ${p.firstName}`,
-            time: e.time || '',
-            woundType: c.woundType,
-          }))
-      ));
+    if (!apptDate) return [] as { patientName: string; time: string; woundType: string; isCurrent: boolean }[];
+    return patients.flatMap(p => p.cases.flatMap(c =>
+      c.evolutions
+        .filter(e => e.nextControl === apptDate)
+        .map(e => ({
+          patientName: p.id === patientId ? 'Este paciente' : `${p.lastName}, ${p.firstName}`,
+          time: e.time || '',
+          woundType: c.woundType,
+          isCurrent: p.id === patientId,
+        }))
+    ));
   }, [patients, patientId, apptDate]);
+
+  // Set of HH:MM times already taken on the selected day (any patient)
+  const apptTakenTimes = useMemo(() => {
+    return new Set(apptConflicts.map(c => c.time).filter(Boolean));
+  }, [apptConflicts]);
+
+  // Pick the next available 15-min slot starting from 09:00 (then walking forward, fallback to next day search not needed)
+  const pickAvailableTime = (taken: Set<string>): string => {
+    const minutes = (h: number, m: number) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    for (let h = 9; h < 20; h++) {
+      for (let m = 0; m < 60; m += 15) {
+        const t = minutes(h, m);
+        if (!taken.has(t)) return t;
+      }
+    }
+    // Fallback: try earlier morning
+    for (let h = 7; h < 9; h++) {
+      for (let m = 0; m < 60; m += 15) {
+        const t = minutes(h, m);
+        if (!taken.has(t)) return t;
+      }
+    }
+    return '09:00';
+  };
 
   if (!patient) return (
     <AppLayout>
@@ -630,10 +654,29 @@ export default function PatientDetail() {
           });
 
           const openNewAppointment = (preselectDate?: string, preselectCaseId?: string) => {
-            setApptCaseId(preselectCaseId || activeCases[0]?.id || '');
-            // Default suggested date: 7 days ahead if nothing better
-            setApptDate(preselectDate || new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-            setApptTime('09:00');
+            const caseId = preselectCaseId || activeCases[0]?.id || '';
+            setApptCaseId(caseId);
+
+            // Default date: first suggested date for the chosen case (or earliest overall),
+            // falling back to 7 days ahead if no suggestion exists.
+            let defaultDate = preselectDate;
+            if (!defaultDate) {
+              const sortedSugs = [...suggestionsByCase].sort((a, b) => a.date.getTime() - b.date.getTime());
+              const forCase = caseId ? sortedSugs.find(s => s.caseId === caseId) : undefined;
+              const chosen = forCase || sortedSugs[0];
+              defaultDate = chosen
+                ? chosen.date.toISOString().split('T')[0]
+                : new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            }
+            setApptDate(defaultDate);
+
+            // Default time: first 15-min slot from 09:00 not colliding with any appointment that day.
+            const takenThatDay = new Set<string>();
+            patients.forEach(p => p.cases.forEach(c => c.evolutions.forEach(e => {
+              if (e.nextControl === defaultDate && e.time) takenThatDay.add(e.time);
+            })));
+            setApptTime(pickAvailableTime(takenThatDay));
+
             setApptDialogOpen(true);
           };
 
@@ -878,25 +921,56 @@ export default function PatientDetail() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="font-body text-sm">Fecha</Label>
-                  <Input type="date" value={apptDate} onChange={e => setApptDate(e.target.value)} className="font-body" />
+                  <Input
+                    type="date"
+                    value={apptDate}
+                    onChange={e => {
+                      const newDate = e.target.value;
+                      setApptDate(newDate);
+                      const takenThatDay = new Set<string>();
+                      patients.forEach(p => p.cases.forEach(c => c.evolutions.forEach(ev => {
+                        if (ev.nextControl === newDate && ev.time) takenThatDay.add(ev.time);
+                      })));
+                      setApptTime(pickAvailableTime(takenThatDay));
+                    }}
+                    className="font-body"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="font-body text-sm">Hora</Label>
-                  <Input type="time" value={apptTime} onChange={e => setApptTime(e.target.value)} className="font-body" />
+                  <Input
+                    type="time"
+                    step={900}
+                    value={apptTime}
+                    onChange={e => setApptTime(e.target.value)}
+                    className={cn(
+                      "font-body",
+                      apptTakenTimes.has(apptTime) && "border-destructive focus-visible:ring-destructive"
+                    )}
+                  />
+                  {apptTakenTimes.has(apptTime) && (
+                    <p className="font-body text-[11px] text-destructive">
+                      Ese horario ya está ocupado por otro turno.
+                    </p>
+                  )}
                 </div>
               </div>
 
               {apptConflicts.length > 0 && (
-                <div className="rounded-md border border-warning/40 bg-warning/10 p-3 space-y-1.5">
-                  <p className="font-body text-xs font-semibold text-warning">
-                    ⚠ Ya hay {apptConflicts.length} turno{apptConflicts.length !== 1 ? 's' : ''} con otros pacientes ese día:
+                <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 space-y-1.5">
+                  <p className="font-body text-xs font-semibold text-destructive">
+                    ⚠ Ya hay {apptConflicts.length} turno{apptConflicts.length !== 1 ? 's' : ''} agendado{apptConflicts.length !== 1 ? 's' : ''} ese día:
                   </p>
                   <ul className="space-y-0.5">
-                    {apptConflicts.slice(0, 5).map((c, i) => (
-                      <li key={i} className="font-body text-[11px] text-foreground/80">
-                        • {c.patientName}{c.time ? ` — ${c.time}` : ''} ({c.woundType})
-                      </li>
-                    ))}
+                    {apptConflicts
+                      .slice()
+                      .sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+                      .slice(0, 8)
+                      .map((c, i) => (
+                        <li key={i} className="font-body text-[11px] text-destructive/90">
+                          • {c.patientName}{c.time ? ` — ${c.time}` : ''} ({c.woundType})
+                        </li>
+                      ))}
                   </ul>
                 </div>
               )}
