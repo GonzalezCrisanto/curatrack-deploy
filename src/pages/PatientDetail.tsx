@@ -10,11 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Edit, Trash2, ChevronRight, User, Phone, Mail, MapPin, CalendarClock, CalendarDays, FileDown, ShieldAlert, BadgeCheck, UserCog, FileDown as FileDownIcon } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, ChevronRight, User, Phone, Mail, MapPin, CalendarClock, CalendarDays, FileDown, ShieldAlert, BadgeCheck, UserCog, FileDown as FileDownIcon, Share2, Crown, Users as UsersIcon } from 'lucide-react';
 import { exportPatientPdf } from '@/lib/exportPdf';
 import { WoundCase, woundTypes, woundStatuses, getStatusLabel, professionals } from '@/data/demoData';
+import { ROLE_LABEL_SHORT } from '@/data/demoUsers';
 import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { SharePatientDialog } from '@/components/SharePatientDialog';
 
 const statusBadgeClass: Record<string, string> = {
   activo: 'bg-info/10 text-info border-info/30',
@@ -31,11 +33,12 @@ const emptyCase: { woundType: string; anatomicalLocation: string; startDate: str
 export default function PatientDetail() {
   const { patientId } = useParams();
   const navigate = useNavigate();
-  const { patients, addCase, updateCase, deleteCase, addEvolution } = useApp();
+  const { patients, addCase, updateCase, deleteCase, addEvolution, getPatientAccess, getPatientCollaborators, allUsers } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const [caseDialogOpen, setCaseDialogOpen] = useState(false);
   const [editingCase, setEditingCase] = useState<WoundCase | null>(null);
   const [caseForm, setCaseForm] = useState(emptyCase);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   // New appointment dialog state
   const [apptDialogOpen, setApptDialogOpen] = useState(false);
