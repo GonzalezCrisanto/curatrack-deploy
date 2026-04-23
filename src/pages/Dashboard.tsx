@@ -433,12 +433,22 @@ export default function Dashboard() {
                   <div className="flex flex-col lg:flex-row gap-6">
                     <div className="shrink-0">
                       <Calendar
-                        mode="multiple"
-                        selected={[...upcomingDates.map(d => d.date), ...pastDates]}
+                        mode="single"
+                        selected={selectedDay}
+                        onSelect={setSelectedDay}
                         className="p-3 pointer-events-auto rounded-xl border border-border/60 bg-background"
                         modifiers={modifiers}
                         modifiersStyles={modifiersStyles}
                       />
+                      {selectedDay && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDay(undefined)}
+                          className="mt-3 inline-flex items-center gap-1 font-body text-xs text-primary hover:underline"
+                        >
+                          <X className="h-3 w-3" /> Quitar filtro de día ({toISODate(selectedDay)})
+                        </button>
+                      )}
                       <div className="flex flex-wrap gap-3 mt-3 px-1">
                         {[
                           { c: 'bg-destructive', l: 'Crítico' },
