@@ -435,3 +435,98 @@ export default function Patients() {
     </AppLayout>
   );
 }
+
+interface ProfessionalComboboxProps {
+  value: string;
+  onChange: (v: string) => void;
+}
+
+function ProfessionalCombobox({ value, onChange }: ProfessionalComboboxProps) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+
+  const showCreate =
+    query.trim().length > 0 &&
+    !professionals.some(p => p.toLowerCase() === query.trim().toLowerCase());
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-body font-normal"
+        >
+          <span className={value ? '' : 'text-muted-foreground'}>
+            {value || 'Sin asignar'}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command>
+          <CommandInput
+            placeholder="Buscar o escribir nombre..."
+            value={query}
+            onValueChange={setQuery}
+            className="font-body"
+          />
+          <CommandList>
+            <CommandEmpty className="py-2 px-2 text-sm font-body text-muted-foreground">
+              {query.trim() ? 'Presioná "Usar" para asignar este nombre.' : 'Sin coincidencias.'}
+            </CommandEmpty>
+            {value && (
+              <CommandGroup heading="Actual">
+                <CommandItem
+                  value="__clear__"
+                  onSelect={() => {
+                    onChange('');
+                    setQuery('');
+                    setOpen(false);
+                  }}
+                  className="font-body text-muted-foreground"
+                >
+                  Quitar asignación (dejar en blanco)
+                </CommandItem>
+              </CommandGroup>
+            )}
+            <CommandGroup heading="Profesionales sugeridos">
+              {professionals.map(p => (
+                <CommandItem
+                  key={p}
+                  value={p}
+                  onSelect={() => {
+                    onChange(p);
+                    setQuery('');
+                    setOpen(false);
+                  }}
+                  className="font-body"
+                >
+                  <Check className={`mr-2 h-4 w-4 ${value === p ? 'opacity-100' : 'opacity-0'}`} />
+                  {p}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            {showCreate && (
+              <CommandGroup heading="Otro">
+                <CommandItem
+                  value={`__use__${query}`}
+                  onSelect={() => {
+                    onChange(query.trim());
+                    setQuery('');
+                    setOpen(false);
+                  }}
+                  className="font-body"
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Usar "{query.trim()}"
+                </CommandItem>
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
