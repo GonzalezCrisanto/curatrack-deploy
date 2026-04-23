@@ -1170,6 +1170,55 @@ export default function PatientDetail() {
                   placeholder="Notas adicionales, antecedentes relevantes, comentarios del paciente, etc." />
               </div>
 
+
+              {/* Fotos (opcional) */}
+              <div className="space-y-2">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                  Fotos
+                  <OptionalTag />
+                </Label>
+                <div className="flex gap-2">
+                  <input
+                    ref={caseCameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={e => { handleCaseFileUpload(e.target.files); e.target.value = ''; }}
+                  />
+                  <input
+                    ref={casePhotoInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={e => { handleCaseFileUpload(e.target.files); e.target.value = ''; }}
+                  />
+                  <Button type="button" variant="outline" size="sm" className="font-body flex-1 h-11" onClick={() => caseCameraInputRef.current?.click()}>
+                    <Camera className="mr-1.5 h-4 w-4" /> Cámara
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" className="font-body flex-1 h-11" onClick={() => casePhotoInputRef.current?.click()}>
+                    <Upload className="mr-1.5 h-4 w-4" /> Subir
+                  </Button>
+                </div>
+                {casePhotos.length > 0 && (
+                  <div className="flex gap-2 flex-wrap mt-2">
+                    {casePhotos.map(ph => (
+                      <div key={ph.id} className="relative w-20 h-16 rounded-md overflow-hidden border border-border/50 group">
+                        <img src={ph.url} alt={ph.caption} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setCasePhotos(prev => prev.filter(p => p.id !== ph.id))}
+                          className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                          aria-label="Eliminar foto"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               {/* Aviso: se genera Evolución #1 automáticamente */}
               {!editingCase && (
                 <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex items-start gap-2">
