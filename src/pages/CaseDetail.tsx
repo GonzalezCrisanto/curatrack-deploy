@@ -140,9 +140,6 @@ export default function CaseDetail() {
       professional: 'Lic. María González',
     });
     setEvoPhotos([]);
-    setAiSummary(null);
-    setAiError(null);
-    setAiLoading(false);
     setEvoDialogOpen(true);
   };
 
@@ -177,9 +174,6 @@ export default function CaseDetail() {
       medicalOrder: rest.medicalOrder ?? '',
     });
     setEvoPhotos([...photos]);
-    setAiSummary(null);
-    setAiError(null);
-    setAiLoading(false);
     setEvoDialogOpen(true);
   };
 
