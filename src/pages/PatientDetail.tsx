@@ -88,7 +88,7 @@ const emptyCase: CaseFormState = {
 export default function PatientDetail() {
   const { patientId } = useParams();
   const navigate = useNavigate();
-  const { patients, addCase, updateCase, deleteCase, addEvolution, getPatientAccess, getPatientCollaborators, allUsers } = useApp();
+  const { patients, addCase, updateCase, deleteCase, addEvolution, getPatientAccess, getPatientCollaborators, allUsers, currentUserName } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const [caseDialogOpen, setCaseDialogOpen] = useState(false);
   const [editingCase, setEditingCase] = useState<WoundCase | null>(null);
