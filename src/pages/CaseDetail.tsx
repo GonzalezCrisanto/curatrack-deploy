@@ -312,10 +312,10 @@ export default function CaseDetail() {
     toast.success(isNew ? 'Evolución registrada' : 'Evolución actualizada');
     setCloseConfirmOpen(false);
 
-    // Keep dialog open and generate AI summary for both new and edited evolutions
-    if (isNew) {
-      setEditingEvo(payload);
-    }
+    // Close the dialog immediately and generate the AI summary in background.
+    // The summary persists on the evolution and will appear in the timeline card when ready.
+    setEvoDialogOpen(false);
+    toast.info('Generando resumen con IA…');
     generateAISummary(payload.id);
   };
 
