@@ -37,7 +37,7 @@ const statusBadgeClass: Record<string, string> = {
 };
 
 const emptyEvolution = {
-  date: '', time: '', professional: '', description: '', procedure: '', materials: '', healingFrequency: '', observations: '', nextControl: '',
+  date: '', time: '', professional: '', description: '', procedure: '', materials: '', healingFrequency: '', healingFrequencyDays: '' as number | '', observations: '', nextControl: '',
   healingDate: '', painLevel: 0 as number, odor: 'sin_olor' as OdorLevel, evolutionStatus: 'tratamiento_activo' as EvolutionStatus,
   woundLength: '' as number | '', woundWidth: '' as number | '', woundDepth: '' as number | '',
   tissueTypes: [] as TissueType[], edgeTypes: [] as EdgeType[],
@@ -160,6 +160,7 @@ export default function CaseDetail() {
       woundLength: rest.woundLength ?? '',
       woundWidth: rest.woundWidth ?? '',
       woundDepth: rest.woundDepth ?? '',
+      healingFrequencyDays: rest.healingFrequencyDays ?? '',
       tissueTypes: rest.tissueTypes ?? [],
       edgeTypes: rest.edgeTypes ?? [],
       exudateAmount: rest.exudateAmount,
@@ -289,6 +290,7 @@ export default function CaseDetail() {
       woundWidth: numOrUndef(evoForm.woundWidth),
       woundDepth: numOrUndef(evoForm.woundDepth),
       bodyTemperature: numOrUndef(evoForm.bodyTemperature),
+      healingFrequencyDays: numOrUndef(evoForm.healingFrequencyDays),
     };
     const payload: Evolution = editingEvo
       ? { ...editingEvo, ...base, photos: evoPhotos } as Evolution
@@ -325,6 +327,14 @@ export default function CaseDetail() {
   };
 
   const handleSaveEvo = () => {
+    // Si no hay frecuencia preestablecida (vacía o "A demanda"), exigir días manuales
+    const presetSet = ['Diaria', 'Cada 48hs', 'Cada 72hs', 'Semanal'];
+    const hasPreset = presetSet.includes((evoForm.healingFrequency || '').trim());
+    const manualDays = evoForm.healingFrequencyDays === '' ? null : Number(evoForm.healingFrequencyDays);
+    if (!hasPreset && (!manualDays || manualDays <= 0)) {
+      toast.error('Indicá la frecuencia de curación o, en su defecto, los días estimados entre curaciones.');
+      return;
+    }
     if (evoForm.evolutionStatus === 'cicatrizada') {
       setCloseConfirmOpen(true);
       return;
@@ -900,13 +910,30 @@ export default function CaseDetail() {
 
               {/* Frecuencia de curación */}
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Frecuencia de curación</Label>
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Frecuencia de curación <span className="text-destructive">*</span></Label>
                 <Select value={evoForm.healingFrequency} onValueChange={v => setEField('healingFrequency', v)}>
                   <SelectTrigger className="font-body h-11"><SelectValue placeholder="Seleccionar frecuencia" /></SelectTrigger>
                   <SelectContent>
                     {healingFrequencies.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                {(evoForm.healingFrequency === '' || evoForm.healingFrequency === 'A demanda') && (
+                  <div className="space-y-1 pt-1">
+                    <Label className="font-body text-[11px] text-muted-foreground">
+                      Días estimados entre curaciones <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      type="number" inputMode="numeric" min="1" step="1"
+                      value={evoForm.healingFrequencyDays}
+                      onChange={e => setEField('healingFrequencyDays', e.target.value === '' ? '' : Number(e.target.value))}
+                      className="font-body h-10 w-32 tabular-nums"
+                      placeholder="Ej: 5"
+                    />
+                    <p className="font-body text-[11px] text-muted-foreground">
+                      Se usa para sugerir los próximos turnos en el calendario.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Tamaño de la herida */}

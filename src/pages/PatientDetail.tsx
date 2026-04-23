@@ -70,6 +70,7 @@ interface CaseFormState {
   infDolorAumentado: boolean;
   bodyTemperature: number | '';
   healingFrequency: string;
+  healingFrequencyDays: number | '';
   initialProcedure: string;
   initialMaterials: string;
   initialObservations: string;
@@ -87,6 +88,7 @@ const emptyCase: CaseFormState = {
   infMalOlor: false, infEritema: false, infCalor: false, infBiofilm: false, infPurulenta: false, infDolorAumentado: false,
   bodyTemperature: '',
   healingFrequency: '',
+  healingFrequencyDays: '',
   initialProcedure: '', initialMaterials: '', initialObservations: '',
   treatment: '',
 };
@@ -202,6 +204,7 @@ export default function PatientDetail() {
       infDolorAumentado: c.infDolorAumentado ?? false,
       bodyTemperature: c.bodyTemperature ?? '',
       healingFrequency: c.healingFrequency ?? '',
+      healingFrequencyDays: c.healingFrequencyDays ?? '',
       initialProcedure: c.initialProcedure ?? '',
       initialMaterials: c.initialMaterials ?? '',
       initialObservations: c.initialObservations ?? '',
@@ -211,12 +214,29 @@ export default function PatientDetail() {
     setCaseDialogOpen(true);
   };
 
+  // Helper: convert preset frequency label to days, returns null if no preset (free / "A demanda")
+  const presetFreqToDays = (freq?: string): number | null => {
+    switch ((freq || '').trim()) {
+      case 'Diaria': return 1;
+      case 'Cada 48hs': return 2;
+      case 'Cada 72hs': return 3;
+      case 'Semanal': return 7;
+      default: return null;
+    }
+  };
+
   const handleSaveCase = () => {
     // Validación de campos obligatorios
     const missing: string[] = [];
     if (!caseForm.woundType) missing.push('Tipo de herida');
     if (!caseForm.anatomicalLocation.trim()) missing.push('Ubicación anatómica');
     if (!caseForm.startDate) missing.push('Fecha de inicio');
+    // Si no hay frecuencia preestablecida, exigir días manuales
+    const presetDays = presetFreqToDays(caseForm.healingFrequency);
+    const manualDays = caseForm.healingFrequencyDays === '' ? null : Number(caseForm.healingFrequencyDays);
+    if (presetDays === null && (!manualDays || manualDays <= 0)) {
+      missing.push('Días estimados de frecuencia de curación');
+    }
     if (missing.length > 0) {
       toast({
         title: 'Faltan campos obligatorios',
@@ -250,6 +270,7 @@ export default function PatientDetail() {
       infDolorAumentado: caseForm.infDolorAumentado,
       bodyTemperature: numOrUndef(caseForm.bodyTemperature),
       healingFrequency: caseForm.healingFrequency,
+      healingFrequencyDays: caseForm.healingFrequencyDays === '' ? undefined : Number(caseForm.healingFrequencyDays),
       initialProcedure: caseForm.initialProcedure,
       initialMaterials: caseForm.initialMaterials,
       initialObservations: caseForm.initialObservations,
@@ -278,6 +299,7 @@ export default function PatientDetail() {
         procedure: caseForm.initialProcedure,
         materials: caseForm.initialMaterials,
         healingFrequency: caseForm.healingFrequency,
+        healingFrequencyDays: caseForm.healingFrequencyDays === '' ? undefined : Number(caseForm.healingFrequencyDays),
         observations: caseForm.initialObservations,
         nextControl: '',
         photos: casePhotos,
@@ -524,9 +546,6 @@ export default function PatientDetail() {
             }
           };
 
-          // Patient-level fallback interval
-          const interval = patient.controlIntervalDays || 7;
-
           // Suggested future dates PER CASE based on its healingFrequency.
           // Anchor: latest evolution date with that frequency, else next existing nextControl, else today.
           const existingDateStrings = new Set(appointmentsByCase.map(a => a.date.toISOString().split('T')[0]));
@@ -537,7 +556,10 @@ export default function PatientDetail() {
             const sortedEvos = [...c.evolutions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
             const evoFreq = sortedEvos.find(e => e.healingFrequency)?.healingFrequency;
             const freq = evoFreq || c.healingFrequency;
-            const days = frequencyToDays(freq) ?? interval;
+            // Effective days: preset frequency, else manual days from latest evolution, else case-level manual days
+            const evoManual = sortedEvos.find(e => typeof e.healingFrequencyDays === 'number' && (e.healingFrequencyDays as number) > 0)?.healingFrequencyDays;
+            const manualDays = (typeof evoManual === 'number' ? evoManual : c.healingFrequencyDays) || null;
+            const days = frequencyToDays(freq) ?? manualDays;
             if (!days) return;
 
             // Anchor date: last existing nextControl for this case, else last evolution date, else today
@@ -607,7 +629,8 @@ export default function PatientDetail() {
 
           const openNewAppointment = (preselectDate?: string, preselectCaseId?: string) => {
             setApptCaseId(preselectCaseId || activeCases[0]?.id || '');
-            setApptDate(preselectDate || new Date(today.getTime() + interval * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+            // Default suggested date: 7 days ahead if nothing better
+            setApptDate(preselectDate || new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
             setApptTime('09:00');
             setApptDialogOpen(true);
           };
@@ -618,7 +641,6 @@ export default function PatientDetail() {
                 <CardTitle className="heading-display text-lg flex items-center gap-2">
                   <CalendarClock className="h-5 w-5 text-primary" />
                   Calendario de Controles
-                  <Badge variant="outline" className="font-body text-xs ml-2">Cada {interval} día{interval !== 1 ? 's' : ''}</Badge>
                 </CardTitle>
                 <Button
                   size="sm"
@@ -965,13 +987,30 @@ export default function PatientDetail() {
 
               {/* Frecuencia de curación */}
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Frecuencia de curación<OptionalTag /></Label>
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Frecuencia de curación <span className="text-destructive">*</span></Label>
                 <Select value={caseForm.healingFrequency} onValueChange={v => setCField('healingFrequency', v)}>
                   <SelectTrigger className="font-body h-11"><SelectValue placeholder="Seleccionar frecuencia" /></SelectTrigger>
                   <SelectContent>
                     {healingFrequencies.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                {(caseForm.healingFrequency === '' || caseForm.healingFrequency === 'A demanda') && (
+                  <div className="space-y-1 pt-1">
+                    <Label className="font-body text-[11px] text-muted-foreground">
+                      Días estimados entre curaciones <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      type="number" inputMode="numeric" min="1" step="1"
+                      value={caseForm.healingFrequencyDays}
+                      onChange={e => setCField('healingFrequencyDays', e.target.value === '' ? '' : Number(e.target.value))}
+                      className="font-body h-10 w-32 tabular-nums"
+                      placeholder="Ej: 5"
+                    />
+                    <p className="font-body text-[11px] text-muted-foreground">
+                      Se usa para sugerir los próximos turnos en el calendario.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Tamaño de la herida */}
