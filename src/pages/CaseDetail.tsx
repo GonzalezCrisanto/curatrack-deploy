@@ -14,7 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   ArrowLeft, Plus, Edit, Trash2, Clock, Camera, FileText,
   Stethoscope, Ruler, Droplets, ShieldAlert, Thermometer, Pill, X, Image, Upload, ImagePlus, Package, RefreshCw, CheckCircle2, Save,
-  TrendingDown, TrendingUp, Minus, Sparkles, Archive
+  TrendingDown, TrendingUp, Minus, Sparkles, Archive, Copy, Printer, Download
 } from 'lucide-react';
 import { Evolution, Photo, professionals, getStatusLabel, woundStatuses, healingFrequencies, odorOptions, evolutionStatuses, OdorLevel, EvolutionStatus, tissueTypeOptions, edgeTypeOptions, TissueType, EdgeType, exudateAmountOptions, exudateTypeOptions, exudateColorOptions, ExudateAmount, ExudateType, ExudateColor, infectionSignFields } from '@/data/demoData';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
