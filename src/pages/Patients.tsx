@@ -101,7 +101,7 @@ export default function Patients() {
     const next: Record<string, string> = {};
     if (!form.firstName.trim()) next.firstName = 'Ingresá el nombre';
     if (!form.lastName.trim()) next.lastName = 'Ingresá el apellido';
-    if (!form.age || form.age <= 0) next.age = 'Edad inválida';
+    if (!form.age || form.age < 0 || form.age > 120) next.age = 'La edad debe estar entre 0 y 120 años';
     if (!form.gender) next.gender = 'Seleccioná el sexo';
     if (!form.dni.trim()) next.dni = 'Ingresá el documento';
     if (!form.phone.trim()) next.phone = 'Ingresá un teléfono de contacto';
@@ -367,8 +367,20 @@ export default function Patients() {
                     <Label className="font-body text-sm">Edad <span className="text-destructive">*</span></Label>
                     <Input
                       type="number"
+                      min={0}
+                      max={120}
+                      step={1}
+                      inputMode="numeric"
                       value={form.age || ''}
-                      onChange={e => setField('age', parseInt(e.target.value) || 0)}
+                      onChange={e => {
+                        const raw = e.target.value;
+                        if (raw === '') return setField('age', 0);
+                        const n = parseInt(raw, 10);
+                        if (Number.isNaN(n)) return;
+                        // Clamp 0–120
+                        setField('age', Math.max(0, Math.min(120, n)));
+                      }}
+                      placeholder="0 – 120"
                       className={`font-body ${errors.age ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                       aria-invalid={!!errors.age}
                     />
