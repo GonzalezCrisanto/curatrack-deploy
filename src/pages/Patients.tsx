@@ -532,9 +532,19 @@ export default function Patients() {
                 </div>
               </section>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <Button variant="outline" onClick={() => setDialogOpen(false)} className="font-body">Cancelar</Button>
-              <Button onClick={handleSave} className="font-body">{editing ? 'Guardar cambios' : 'Crear paciente'}</Button>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-6">
+              <p className="font-body text-[11px] text-muted-foreground">
+                <span className="text-destructive">*</span> Campos obligatorios. El resto es opcional y se puede completar luego.
+              </p>
+              <div className="flex items-center gap-3">
+                {Object.keys(errors).length > 0 && (
+                  <span className="font-body text-xs text-destructive">
+                    Revisá los campos marcados
+                  </span>
+                )}
+                <Button variant="outline" onClick={() => setDialogOpen(false)} className="font-body">Cancelar</Button>
+                <Button onClick={handleSave} className="font-body">{editing ? 'Guardar cambios' : 'Crear paciente'}</Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
