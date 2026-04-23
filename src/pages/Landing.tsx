@@ -76,7 +76,7 @@ export default function Landing() {
             <Button variant="ghost" onClick={() => navigate('/login')} className="font-body text-sm">
               Iniciar sesión
             </Button>
-            <Button onClick={() => navigate('/register')} className="font-body text-sm">
+            <Button onClick={() => navigate('/login')} className="font-body text-sm">
               Registrarse <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </div>
@@ -107,7 +107,7 @@ export default function Landing() {
               <Button size="lg" onClick={() => navigate('/login')} className="font-body text-base px-8 py-6 bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-semibold">
                 Acceder a la plataforma <ChevronRight className="ml-1 h-5 w-5" />
               </Button>
-              <Button size="lg" variant="outline" className="font-body text-base px-8 py-6 border-primary-foreground text-primary-foreground bg-primary-foreground/15 hover:bg-primary-foreground/25">
+              <Button size="lg" variant="outline" onClick={() => navigate('/login')} className="font-body text-base px-8 py-6 border-primary-foreground text-primary-foreground bg-primary-foreground/15 hover:bg-primary-foreground/25">
                 Solicitar demo
               </Button>
             </div>
