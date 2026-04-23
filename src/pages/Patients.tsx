@@ -101,7 +101,7 @@ export default function Patients() {
     const next: Record<string, string> = {};
     if (!form.firstName.trim()) next.firstName = 'Ingresá el nombre';
     if (!form.lastName.trim()) next.lastName = 'Ingresá el apellido';
-    if (!form.age || form.age <= 0) next.age = 'Edad inválida';
+    if (!form.age || form.age < 0 || form.age > 120) next.age = 'La edad debe estar entre 0 y 120 años';
     if (!form.gender) next.gender = 'Seleccioná el sexo';
     if (!form.dni.trim()) next.dni = 'Ingresá el documento';
     if (!form.phone.trim()) next.phone = 'Ingresá un teléfono de contacto';
