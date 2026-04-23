@@ -462,6 +462,61 @@ export default function PatientDetail() {
         </div>
 
         {/* Case Form Dialog */}
+        {/* New Appointment Dialog */}
+        <Dialog open={apptDialogOpen} onOpenChange={setApptDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="heading-display text-lg">Nuevo turno</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <div className="space-y-1.5">
+                <Label className="font-body text-sm">Herida</Label>
+                <Select value={apptCaseId} onValueChange={setApptCaseId}>
+                  <SelectTrigger className="font-body"><SelectValue placeholder="Seleccionar herida" /></SelectTrigger>
+                  <SelectContent>
+                    {patient.cases.filter(c => c.status !== 'resuelto').map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.woundType}{c.anatomicalLocation ? ` · ${c.anatomicalLocation}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="font-body text-sm">Fecha</Label>
+                  <Input type="date" value={apptDate} onChange={e => setApptDate(e.target.value)} className="font-body" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-body text-sm">Hora</Label>
+                  <Input type="time" value={apptTime} onChange={e => setApptTime(e.target.value)} className="font-body" />
+                </div>
+              </div>
+
+              {apptConflicts.length > 0 && (
+                <div className="rounded-md border border-warning/40 bg-warning/10 p-3 space-y-1.5">
+                  <p className="font-body text-xs font-semibold text-warning">
+                    ⚠ Ya hay {apptConflicts.length} turno{apptConflicts.length !== 1 ? 's' : ''} con otros pacientes ese día:
+                  </p>
+                  <ul className="space-y-0.5">
+                    {apptConflicts.slice(0, 5).map((c, i) => (
+                      <li key={i} className="font-body text-[11px] text-foreground/80">
+                        • {c.patientName}{c.time ? ` — ${c.time}` : ''} ({c.woundType})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="outline" onClick={() => setApptDialogOpen(false)} className="font-body">Cancelar</Button>
+              <Button onClick={handleSaveAppointment} disabled={!apptCaseId || !apptDate} className="font-body">
+                Guardar turno
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={caseDialogOpen} onOpenChange={setCaseDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
