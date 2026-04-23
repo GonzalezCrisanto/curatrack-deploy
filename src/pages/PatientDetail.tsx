@@ -125,44 +125,45 @@ export default function PatientDetail() {
               {patient.lastName}, {patient.firstName}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <InfoRow icon={<User className="h-4 w-4" />} label="Edad / Género" value={`${patient.age} años · ${patient.gender}`} />
-              <InfoRow icon={<User className="h-4 w-4" />} label="DNI" value={patient.dni} />
-              <InfoRow icon={<Phone className="h-4 w-4" />} label="Teléfono" value={patient.phone} />
-              <InfoRow icon={<Mail className="h-4 w-4" />} label="Email" value={patient.email} />
-              <InfoRow icon={<MapPin className="h-4 w-4" />} label="Dirección" value={patient.address} />
-              <InfoRow icon={<Stethoscope className="h-4 w-4" />} label="Profesional" value={patient.assignedProfessional} />
-              <InfoRow icon={<Clock className="h-4 w-4" />} label="Intervalo entre controles" value={`Cada ${patient.controlIntervalDays} día${patient.controlIntervalDays !== 1 ? 's' : ''}`} />
+          <CardContent className="space-y-3 pb-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2">
+              <InfoRow icon={<User className="h-3.5 w-3.5" />} label="Edad / Género" value={`${patient.age} años · ${patient.gender}`} />
+              <InfoRow icon={<User className="h-3.5 w-3.5" />} label="DNI" value={patient.dni} />
+              <InfoRow icon={<Phone className="h-3.5 w-3.5" />} label="Teléfono" value={patient.phone} />
+              <InfoRow icon={<Mail className="h-3.5 w-3.5" />} label="Email" value={patient.email} />
+              <InfoRow icon={<MapPin className="h-3.5 w-3.5" />} label="Dirección" value={patient.address} />
+              <InfoRow icon={<Stethoscope className="h-3.5 w-3.5" />} label="Profesional" value={patient.assignedProfessional} />
+              <InfoRow icon={<Clock className="h-3.5 w-3.5" />} label="Intervalo controles" value={`Cada ${patient.controlIntervalDays} día${patient.controlIntervalDays !== 1 ? 's' : ''}`} />
             </div>
-            <div>
-              <p className="font-body text-xs text-muted-foreground mb-1">Diagnóstico</p>
-              <p className="font-body text-sm">{patient.diagnosis}</p>
-            </div>
-            {patient.observations && (
+
+            <div className="grid sm:grid-cols-2 gap-3 pt-2 border-t border-border/50">
               <div>
-                <p className="font-body text-xs text-muted-foreground mb-1">Observaciones</p>
-                <p className="font-body text-sm">{patient.observations}</p>
+                <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground mb-0.5">Diagnóstico</p>
+                <p className="font-body text-sm leading-snug">{patient.diagnosis}</p>
               </div>
-            )}
+              {patient.observations && (
+                <div>
+                  <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground mb-0.5">Observaciones</p>
+                  <p className="font-body text-sm leading-snug">{patient.observations}</p>
+                </div>
+              )}
+            </div>
 
             {/* Resumen de Casos / Heridas integrado */}
-            <div className="pt-4 border-t border-border/50">
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="heading-display text-3xl text-primary leading-none">{patient.cases.length}</div>
-                  <p className="font-body text-sm text-muted-foreground">Casos / Heridas</p>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {woundStatuses.map(s => {
-                    const count = patient.cases.filter(c => c.status === s.value).length;
-                    return count > 0 ? (
-                      <Badge key={s.value} className={`font-body text-xs ${statusBadgeClass[s.value]}`}>
-                        {s.label} · {count}
-                      </Badge>
-                    ) : null;
-                  })}
-                </div>
+            <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-border/50">
+              <div className="flex items-baseline gap-2">
+                <span className="heading-display text-2xl text-primary leading-none">{patient.cases.length}</span>
+                <span className="font-body text-xs text-muted-foreground">Casos / Heridas</span>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {woundStatuses.map(s => {
+                  const count = patient.cases.filter(c => c.status === s.value).length;
+                  return count > 0 ? (
+                    <Badge key={s.value} className={`font-body text-[11px] py-0 px-2 ${statusBadgeClass[s.value]}`}>
+                      {s.label} · {count}
+                    </Badge>
+                  ) : null;
+                })}
               </div>
             </div>
           </CardContent>
@@ -587,11 +588,11 @@ export default function PatientDetail() {
 
 function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-start gap-2">
+    <div className="flex items-start gap-1.5 min-w-0">
       <div className="text-muted-foreground mt-0.5 shrink-0">{icon}</div>
-      <div>
-        <p className="font-body text-xs text-muted-foreground">{label}</p>
-        <p className="font-body text-sm">{value}</p>
+      <div className="min-w-0">
+        <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground leading-tight">{label}</p>
+        <p className="font-body text-sm leading-snug truncate" title={value}>{value}</p>
       </div>
     </div>
   );
