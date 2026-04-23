@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Send, Sparkles, Loader2, MessageSquare } from 'lucide-react';
-import { AppLayout } from '@/components/AppLayout';
+import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useApp } from '@/context/AppContext';
 import { toast } from 'sonner';
-import { getPatientStatus } from '@/lib/patientStatus';
+import { getPatientIndicator, indicatorMeta } from '@/lib/patientStatus';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -38,7 +38,7 @@ export default function Assistant() {
       fecha_actual: today,
       total_pacientes: patients.length,
       pacientes: patients.map(p => {
-        const status = getPatientStatus(p);
+        const status = indicatorMeta[getPatientIndicator(p)].label;
         const upcoming = p.cases.flatMap(c =>
           c.evolutions
             .filter(e => e.nextControl)
