@@ -136,28 +136,155 @@ export default function PatientDetail() {
 
   const openNewCase = () => {
     setEditingCase(null);
-    setCaseForm({ ...emptyCase, startDate: new Date().toISOString().split('T')[0] });
+    setCaseForm({
+      ...emptyCase,
+      startDate: new Date().toISOString().split('T')[0],
+      professional: patient.assignedProfessional || '',
+    });
     setCaseDialogOpen(true);
   };
 
   const openEditCase = (c: WoundCase, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingCase(c);
-    const { id, patientId, evolutions, photos, ...rest } = c;
-    setCaseForm(rest);
+    setCaseForm({
+      woundType: c.woundType,
+      anatomicalLocation: c.anatomicalLocation,
+      startDate: c.startDate,
+      status: c.status,
+      professional: patient.assignedProfessional || '',
+      woundLength: c.woundLength ?? '',
+      woundWidth: c.woundWidth ?? '',
+      woundDepth: c.woundDepth ?? '',
+      tissueTypes: c.tissueTypes ?? [],
+      edgeTypes: c.edgeTypes ?? [],
+      exudateAmount: c.exudateAmount,
+      exudateType: c.exudateType,
+      exudateColor: c.exudateColor,
+      painLevel: c.painLevel ?? 0,
+      odor: c.odor ?? 'sin_olor',
+      hasInfectionSigns: c.hasInfectionSigns ?? false,
+      infMalOlor: c.infMalOlor ?? false,
+      infEritema: c.infEritema ?? false,
+      infCalor: c.infCalor ?? false,
+      infBiofilm: c.infBiofilm ?? false,
+      infPurulenta: c.infPurulenta ?? false,
+      infDolorAumentado: c.infDolorAumentado ?? false,
+      bodyTemperature: c.bodyTemperature ?? '',
+      healingFrequency: c.healingFrequency ?? '',
+      initialProcedure: c.initialProcedure ?? '',
+      initialMaterials: c.initialMaterials ?? '',
+      initialObservations: c.initialObservations ?? '',
+      treatment: c.treatment ?? '',
+      createInitialEvolution: false,
+    });
     setCaseDialogOpen(true);
   };
 
   const handleSaveCase = () => {
+    const numOrUndef = (v: number | '') => (v === '' ? undefined : Number(v));
+    const baseCase = {
+      woundType: caseForm.woundType,
+      anatomicalLocation: caseForm.anatomicalLocation,
+      startDate: caseForm.startDate,
+      status: caseForm.status,
+      woundLength: numOrUndef(caseForm.woundLength),
+      woundWidth: numOrUndef(caseForm.woundWidth),
+      woundDepth: numOrUndef(caseForm.woundDepth),
+      tissueTypes: caseForm.tissueTypes,
+      edgeTypes: caseForm.edgeTypes,
+      exudateAmount: caseForm.exudateAmount,
+      exudateType: caseForm.exudateType,
+      exudateColor: caseForm.exudateColor,
+      painLevel: caseForm.painLevel,
+      odor: caseForm.odor,
+      hasInfectionSigns: caseForm.hasInfectionSigns,
+      infMalOlor: caseForm.infMalOlor,
+      infEritema: caseForm.infEritema,
+      infCalor: caseForm.infCalor,
+      infBiofilm: caseForm.infBiofilm,
+      infPurulenta: caseForm.infPurulenta,
+      infDolorAumentado: caseForm.infDolorAumentado,
+      bodyTemperature: numOrUndef(caseForm.bodyTemperature),
+      healingFrequency: caseForm.healingFrequency,
+      initialProcedure: caseForm.initialProcedure,
+      initialMaterials: caseForm.initialMaterials,
+      initialObservations: caseForm.initialObservations,
+      treatment: caseForm.treatment,
+    };
+
     if (editingCase) {
-      updateCase(patient.id, { ...editingCase, ...caseForm });
+      updateCase(patient.id, { ...editingCase, ...baseCase });
     } else {
-      addCase(patient.id, { ...caseForm, id: `c${Date.now()}`, patientId: patient.id, evolutions: [], photos: [] } as WoundCase);
+      const newCaseId = `c${Date.now()}`;
+      const newCase: WoundCase = {
+        ...baseCase,
+        id: newCaseId,
+        patientId: patient.id,
+        evolutions: [],
+        photos: [],
+      };
+
+      // Auto-create initial evolution mirroring the baseline data
+      if (caseForm.createInitialEvolution) {
+        newCase.evolutions = [{
+          id: `evo-${Date.now()}`,
+          date: caseForm.startDate,
+          time: '09:00',
+          professional: caseForm.professional,
+          description: 'Evaluación inicial. Datos basales de la herida registrados al ingreso del caso.',
+          procedure: caseForm.initialProcedure,
+          materials: caseForm.initialMaterials,
+          healingFrequency: caseForm.healingFrequency,
+          observations: caseForm.initialObservations,
+          nextControl: '',
+          photos: [],
+          healingDate: caseForm.startDate,
+          painLevel: caseForm.painLevel,
+          odor: caseForm.odor,
+          evolutionStatus: 'tratamiento_activo',
+          woundLength: baseCase.woundLength,
+          woundWidth: baseCase.woundWidth,
+          woundDepth: baseCase.woundDepth,
+          tissueTypes: caseForm.tissueTypes,
+          edgeTypes: caseForm.edgeTypes,
+          exudateAmount: caseForm.exudateAmount,
+          exudateType: caseForm.exudateType,
+          exudateColor: caseForm.exudateColor,
+          hasInfectionSigns: caseForm.hasInfectionSigns,
+          infMalOlor: caseForm.infMalOlor,
+          infEritema: caseForm.infEritema,
+          infCalor: caseForm.infCalor,
+          infBiofilm: caseForm.infBiofilm,
+          infPurulenta: caseForm.infPurulenta,
+          infDolorAumentado: caseForm.infDolorAumentado,
+          bodyTemperature: baseCase.bodyTemperature,
+        }];
+      }
+
+      addCase(patient.id, newCase);
     }
     setCaseDialogOpen(false);
   };
 
-  const setCField = (key: string, value: string) => setCaseForm(prev => ({ ...prev, [key]: value }));
+  const setCField = <K extends keyof CaseFormState>(key: K, value: CaseFormState[K]) =>
+    setCaseForm(prev => ({ ...prev, [key]: value }));
+
+  const toggleTissue = (t: TissueType) => setCaseForm(prev => ({
+    ...prev,
+    tissueTypes: prev.tissueTypes.includes(t) ? prev.tissueTypes.filter(x => x !== t) : [...prev.tissueTypes, t],
+  }));
+  const toggleEdge = (t: EdgeType) => setCaseForm(prev => ({
+    ...prev,
+    edgeTypes: prev.edgeTypes.includes(t) ? prev.edgeTypes.filter(x => x !== t) : [...prev.edgeTypes, t],
+  }));
+
+  const caseWoundArea = (() => {
+    const l = typeof caseForm.woundLength === 'number' ? caseForm.woundLength : parseFloat(String(caseForm.woundLength));
+    const w = typeof caseForm.woundWidth === 'number' ? caseForm.woundWidth : parseFloat(String(caseForm.woundWidth));
+    if (!isFinite(l) || !isFinite(w) || l <= 0 || w <= 0) return null;
+    return (l * w).toFixed(2);
+  })();
 
   const handleSaveAppointment = () => {
     if (!apptCaseId || !apptDate) return;
