@@ -755,10 +755,19 @@ export default function PatientDetail() {
                             style={{ backgroundColor: caseColor[c.id] }}
                           />
                           <span className="font-body text-xs text-muted-foreground">
-                            {c.woundType}{c.anatomicalLocation ? ` · ${c.anatomicalLocation}` : ''}
+                            {c.anatomicalLocation || c.woundType}
                           </span>
                         </div>
                       ))}
+                      {Array.from(apptByDate.values()).some(g => g.caseIds.size > 1) && (
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="h-3 w-3 rounded-full"
+                            style={{ background: 'conic-gradient(hsl(var(--primary)) 0 50%, hsl(var(--destructive)) 50% 100%)' }}
+                          />
+                          <span className="font-body text-xs text-muted-foreground">Varias heridas</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-1.5">
                         <span className="h-3 w-3 rounded-full border-2 border-dashed border-muted-foreground/50" />
                         <span className="font-body text-xs text-muted-foreground">Sugerido</span>
