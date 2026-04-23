@@ -138,15 +138,41 @@ export interface WoundCase {
   woundType: string;
   anatomicalLocation: string;
   startDate: string;
-  size: string;
-  depth: string;
-  exudate: string;
-  infection: string;
-  pain: string;
-  treatment: string;
   status: 'activo' | 'en_mejoria' | 'critico' | 'resuelto';
   evolutions: Evolution[];
   photos: Photo[];
+
+  // Structured baseline (same fields as Evolution)
+  woundLength?: number;
+  woundWidth?: number;
+  woundDepth?: number;
+  tissueTypes?: TissueType[];
+  edgeTypes?: EdgeType[];
+  exudateAmount?: ExudateAmount;
+  exudateType?: ExudateType;
+  exudateColor?: ExudateColor;
+  painLevel?: number;
+  odor?: OdorLevel;
+  hasInfectionSigns?: boolean;
+  infMalOlor?: boolean;
+  infEritema?: boolean;
+  infCalor?: boolean;
+  infBiofilm?: boolean;
+  infPurulenta?: boolean;
+  infDolorAumentado?: boolean;
+  bodyTemperature?: number;
+  healingFrequency?: string;
+  initialProcedure?: string;
+  initialMaterials?: string;
+  initialObservations?: string;
+  treatment?: string;
+
+  // Legacy text fields (kept optional for backward compat with old PDFs/imports)
+  size?: string;
+  depth?: string;
+  exudate?: string;
+  infection?: string;
+  pain?: string;
 }
 
 export interface Patient {
