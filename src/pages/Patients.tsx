@@ -355,7 +355,7 @@ export default function Patients() {
                 <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-muted-foreground">Datos clínicos</h3>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2 sm:col-span-2">
-                    <Label className="font-body text-sm">Antecedentes y comorbilidades</Label>
+                    <Label className="font-body text-sm">Antecedentes y comorbilidades <span className="text-muted-foreground font-normal">(opcional)</span></Label>
                     <Textarea
                       value={form.diagnosis}
                       onChange={e => setField('diagnosis', e.target.value)}
