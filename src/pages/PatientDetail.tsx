@@ -1150,22 +1150,13 @@ export default function PatientDetail() {
                   placeholder="Notas adicionales, antecedentes relevantes, comentarios del paciente, etc." />
               </div>
 
-              {/* Crear evolución inicial automática */}
+              {/* Aviso: se genera Evolución #1 automáticamente */}
               {!editingCase && (
-                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <Label htmlFor="auto-evo" className="font-body text-sm font-semibold flex items-center gap-1.5">
-                        <CheckCircle2 className="h-4 w-4 text-primary" />
-                        Crear primera evolución automáticamente
-                      </Label>
-                      <p className="font-body text-xs text-muted-foreground mt-1">
-                        Se generará la Evolución #1 con los datos basales registrados aquí.
-                      </p>
-                    </div>
-                    <Switch id="auto-evo" checked={caseForm.createInitialEvolution}
-                      onCheckedChange={(v) => setCField('createInitialEvolution', v)} />
-                  </div>
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <p className="font-body text-xs text-muted-foreground">
+                    Al crear la herida se generará automáticamente la <span className="font-semibold text-foreground">Evolución #1</span> con los datos basales registrados aquí.
+                  </p>
                 </div>
               )}
             </div>
