@@ -101,6 +101,29 @@ export default function PatientDetail() {
   const [caseForm, setCaseForm] = useState(emptyCase);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
+  // Photos for the new/edit case form (optional)
+  const [casePhotos, setCasePhotos] = useState<Photo[]>([]);
+  const casePhotoInputRef = useRef<HTMLInputElement>(null);
+  const caseCameraInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCaseFileUpload = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const url = ev.target?.result as string;
+        const photo: Photo = {
+          id: `ph-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          url,
+          caption: file.name,
+          date: new Date().toISOString().split('T')[0],
+        };
+        setCasePhotos(prev => [...prev, photo]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   // New appointment dialog state
   const [apptDialogOpen, setApptDialogOpen] = useState(false);
   const [apptCaseId, setApptCaseId] = useState<string>('');
