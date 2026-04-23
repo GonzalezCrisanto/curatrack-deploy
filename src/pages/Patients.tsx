@@ -22,6 +22,7 @@ const emptyPatient: Omit<Patient, 'id' | 'cases'> = {
   firstName: '', lastName: '', age: 0, gender: '', dni: '', phone: '',
   email: '', address: '', diagnosis: '', assignedProfessional: '', observations: '', admissionDate: '',
   controlIntervalDays: 7,
+  allergies: '', insurance: '', emergencyContactName: '', emergencyContactPhone: '',
 };
 
 const FILTER_LABELS: Record<string, string> = {
