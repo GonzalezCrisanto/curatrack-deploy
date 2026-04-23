@@ -108,14 +108,14 @@ export default function Dashboard() {
   const allAppointments = allCases
     .flatMap(c => c.evolutions.map(e => ({ ...e, caseId: c.id, patientId: c.patientId, woundType: c.woundType })))
     .filter(e => e.nextControl && e.nextControl.trim() !== '');
+  // NOTE: do NOT slice these — the calendar modifiers and the day-filter rely on the full list.
+  // The visible list is sliced later, after the day filter is applied.
   const upcomingAppointments = allAppointments
     .filter(e => e.nextControl >= today)
-    .sort((a, b) => a.nextControl.localeCompare(b.nextControl))
-    .slice(0, 6);
+    .sort((a, b) => a.nextControl.localeCompare(b.nextControl));
   const pastAppointments = allAppointments
     .filter(e => e.nextControl < today)
-    .sort((a, b) => b.nextControl.localeCompare(a.nextControl))
-    .slice(0, 6);
+    .sort((a, b) => b.nextControl.localeCompare(a.nextControl));
 
   // Stat cards config — clinical palette with semantic tokens
   type Trend = { value: string; dir: 'up' | 'down' | 'flat' };
