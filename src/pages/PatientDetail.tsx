@@ -1133,7 +1133,7 @@ export default function PatientDetail() {
 
               {/* Plan de tratamiento */}
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Plan de tratamiento</Label>
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Plan de tratamiento<OptionalTag /></Label>
                 <Textarea value={caseForm.treatment} onChange={e => setCField('treatment', e.target.value)}
                   className="font-body" rows={2}
                   placeholder="Resumen del abordaje terapéutico planificado para este caso." />
