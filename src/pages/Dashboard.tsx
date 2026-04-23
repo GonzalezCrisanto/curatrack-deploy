@@ -344,27 +344,41 @@ export default function Dashboard() {
             const visiblePast = (showOverdue ? pastAppointments : [])
               .filter(ap => !selectedISO || ap.nextControl === selectedISO);
 
-            // Modifiers reflect all appointments matching the type filter (not the day filter),
-            // so the calendar always shows clickable colored dates.
-            const modifierUpcoming = (showUpcoming ? upcomingAppointments : []).map(ap => {
-              const caseData = allCases.find(c => c.id === ap.caseId);
-              return { date: new Date(ap.nextControl + 'T12:00:00'), status: caseData?.status || 'activo' };
-            });
-            const modifierPast = (showOverdue ? pastAppointments : []).map(ap => new Date(ap.nextControl + 'T12:00:00'));
-
-            const modifiers = {
-              critical: modifierUpcoming.filter(d => d.status === 'critico').map(d => d.date),
-              active: modifierUpcoming.filter(d => d.status === 'activo').map(d => d.date),
-              improving: modifierUpcoming.filter(d => d.status === 'en_mejoria').map(d => d.date),
-              resolved: modifierUpcoming.filter(d => d.status === 'resuelto').map(d => d.date),
-              overdue: modifierPast,
+            // Bucket appointments by date so multiple wounds/patients on the same day
+            // render as a single multi-color (conic-gradient) marker instead of
+            // overwriting each other.
+            const STATUS_COLORS: Record<string, string> = {
+              critico: 'hsl(var(--destructive))',
+              activo: 'hsl(var(--warning))',
+              en_mejoria: 'hsl(var(--success))',
+              resuelto: 'hsl(var(--muted-foreground))',
             };
 
-            const modifiersStyles = {
-              critical: { backgroundColor: 'hsl(var(--destructive))', color: 'hsl(var(--destructive-foreground))', borderRadius: '9999px' },
-              active: { backgroundColor: 'hsl(var(--warning))', color: 'hsl(var(--warning-foreground))', borderRadius: '9999px' },
-              improving: { backgroundColor: 'hsl(var(--success))', color: '#fff', borderRadius: '9999px' },
-              resolved: { backgroundColor: 'hsl(var(--muted-foreground))', color: '#fff', borderRadius: '9999px' },
+            type DayBucket = { date: Date; statuses: Set<string> };
+            const upcomingByDay = new Map<string, DayBucket>();
+            (showUpcoming ? upcomingAppointments : []).forEach(ap => {
+              const caseData = allCases.find(c => c.id === ap.caseId);
+              const status = caseData?.status || 'activo';
+              const key = ap.nextControl;
+              const existing = upcomingByDay.get(key);
+              if (existing) {
+                existing.statuses.add(status);
+              } else {
+                upcomingByDay.set(key, { date: new Date(key + 'T12:00:00'), statuses: new Set([status]) });
+              }
+            });
+
+            const overdueByDay = new Map<string, Date>();
+            (showOverdue ? pastAppointments : []).forEach(ap => {
+              if (!overdueByDay.has(ap.nextControl)) {
+                overdueByDay.set(ap.nextControl, new Date(ap.nextControl + 'T12:00:00'));
+              }
+            });
+
+            const modifiers: Record<string, Date[]> = {
+              overdue: Array.from(overdueByDay.values()),
+            };
+            const modifiersStyles: Record<string, React.CSSProperties> = {
               overdue: {
                 backgroundColor: 'transparent',
                 color: 'hsl(var(--destructive))',
@@ -373,6 +387,44 @@ export default function Dashboard() {
                 opacity: 0.85,
               },
             };
+
+            // Single-status days grouped by status; multi-status days each get a
+            // unique conic-gradient modifier.
+            const singleByStatus: Record<string, Date[]> = {};
+            let multiIdx = 0;
+            upcomingByDay.forEach(bucket => {
+              const statuses = Array.from(bucket.statuses);
+              if (statuses.length === 1) {
+                const s = statuses[0];
+                (singleByStatus[s] ??= []).push(bucket.date);
+              } else {
+                const key = `multi_${multiIdx++}`;
+                modifiers[key] = [bucket.date];
+                const colors = statuses.map(s => STATUS_COLORS[s] || STATUS_COLORS.activo);
+                const slice = 100 / colors.length;
+                const stops = colors
+                  .map((col, i) => `${col} ${i * slice}% ${(i + 1) * slice}%`)
+                  .join(', ');
+                modifiersStyles[key] = {
+                  background: `conic-gradient(${stops})`,
+                  color: '#fff',
+                  borderRadius: '9999px',
+                  boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.15)',
+                  fontWeight: 600,
+                };
+              }
+            });
+
+            const STATUS_STYLE: Record<string, React.CSSProperties> = {
+              critico: { backgroundColor: 'hsl(var(--destructive))', color: 'hsl(var(--destructive-foreground))', borderRadius: '9999px' },
+              activo: { backgroundColor: 'hsl(var(--warning))', color: 'hsl(var(--warning-foreground))', borderRadius: '9999px' },
+              en_mejoria: { backgroundColor: 'hsl(var(--success))', color: '#fff', borderRadius: '9999px' },
+              resuelto: { backgroundColor: 'hsl(var(--muted-foreground))', color: '#fff', borderRadius: '9999px' },
+            };
+            Object.entries(singleByStatus).forEach(([status, dates]) => {
+              modifiers[status] = dates;
+              modifiersStyles[status] = STATUS_STYLE[status] || STATUS_STYLE.activo;
+            });
 
             const renderApt = (ap: typeof upcomingAppointments[number], opts: { past?: boolean } = {}) => {
               const patient = patients.find(p => p.id === ap.patientId);
@@ -449,7 +501,7 @@ export default function Dashboard() {
                           <X className="h-3 w-3" /> Quitar filtro de día ({toISODate(selectedDay)})
                         </button>
                       )}
-                      <div className="flex flex-wrap gap-3 mt-3 px-1">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 px-1 w-full max-w-[280px]">
                         {[
                           { c: 'bg-destructive', l: 'Crítico' },
                           { c: 'bg-warning', l: 'Activo' },
@@ -461,6 +513,13 @@ export default function Dashboard() {
                             <span className="font-body text-xs text-muted-foreground">{x.l}</span>
                           </div>
                         ))}
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ background: 'conic-gradient(hsl(var(--warning)) 0 50%, hsl(var(--destructive)) 50% 100%)' }}
+                          />
+                          <span className="font-body text-xs text-muted-foreground">Varios casos</span>
+                        </div>
                         <div className="flex items-center gap-1.5">
                           <span className="h-2.5 w-2.5 rounded-full border border-dashed border-destructive" />
                           <span className="font-body text-xs text-muted-foreground">Vencido</span>
