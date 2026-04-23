@@ -627,17 +627,6 @@ export default function PatientDetail() {
             },
           };
           activeCases.forEach(c => {
-            const dates = appointmentsByCase.filter(a => a.caseId === c.id).map(a => a.date);
-            if (dates.length > 0) {
-              const key = `case_${c.id}`;
-              modifiers[key] = dates;
-              modifiersStyles[key] = {
-                backgroundColor: caseColor[c.id],
-                color: '#fff',
-                borderRadius: '9999px',
-                fontWeight: 600,
-              };
-            }
             // Suggested per-case (dashed circle with case color)
             const sugDates = suggestionsByCase.filter(s => s.caseId === c.id).map(s => s.date);
             if (sugDates.length > 0) {
@@ -651,6 +640,58 @@ export default function PatientDetail() {
                 fontWeight: 600,
               };
             }
+          });
+
+          // Group existing appointments by date to support multiple wounds per day
+          const apptByDate = new Map<string, { date: Date; caseIds: Set<string> }>();
+          appointmentsByCase.forEach(a => {
+            const ds = a.date.toISOString().split('T')[0];
+            if (!apptByDate.has(ds)) apptByDate.set(ds, { date: a.date, caseIds: new Set() });
+            apptByDate.get(ds)!.caseIds.add(a.caseId);
+          });
+
+          // Single-case days: one modifier per case (solid color)
+          activeCases.forEach(c => {
+            const dates = Array.from(apptByDate.values())
+              .filter(g => g.caseIds.size === 1 && g.caseIds.has(c.id))
+              .map(g => g.date);
+            if (dates.length > 0) {
+              const key = `case_${c.id}`;
+              modifiers[key] = dates;
+              modifiersStyles[key] = {
+                backgroundColor: caseColor[c.id],
+                color: '#fff',
+                borderRadius: '9999px',
+                fontWeight: 600,
+              };
+            }
+          });
+
+          // Multi-case days: one modifier per unique combo, with conic-gradient colors
+          const multiGroups = Array.from(apptByDate.values()).filter(g => g.caseIds.size > 1);
+          const multiBuckets = new Map<string, { dates: Date[]; ids: string[] }>();
+          multiGroups.forEach(g => {
+            const ids = Array.from(g.caseIds).sort();
+            const key = ids.join('|');
+            if (!multiBuckets.has(key)) multiBuckets.set(key, { dates: [], ids });
+            multiBuckets.get(key)!.dates.push(g.date);
+          });
+          let mIdx = 0;
+          multiBuckets.forEach(bucket => {
+            const key = `multi_${mIdx++}`;
+            modifiers[key] = bucket.dates;
+            const colors = bucket.ids.map(id => caseColor[id]).filter(Boolean);
+            const slice = 100 / colors.length;
+            const stops = colors
+              .map((col, i) => `${col} ${i * slice}% ${(i + 1) * slice}%`)
+              .join(', ');
+            modifiersStyles[key] = {
+              background: `conic-gradient(${stops})`,
+              color: '#fff',
+              borderRadius: '9999px',
+              fontWeight: 700,
+              boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.15)',
+            };
           });
 
           const openNewAppointment = (preselectDate?: string, preselectCaseId?: string) => {
@@ -714,10 +755,19 @@ export default function PatientDetail() {
                             style={{ backgroundColor: caseColor[c.id] }}
                           />
                           <span className="font-body text-xs text-muted-foreground">
-                            {c.woundType}{c.anatomicalLocation ? ` · ${c.anatomicalLocation}` : ''}
+                            {c.anatomicalLocation || c.woundType}
                           </span>
                         </div>
                       ))}
+                      {Array.from(apptByDate.values()).some(g => g.caseIds.size > 1) && (
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="h-3 w-3 rounded-full"
+                            style={{ background: 'conic-gradient(hsl(var(--primary)) 0 50%, hsl(var(--destructive)) 50% 100%)' }}
+                          />
+                          <span className="font-body text-xs text-muted-foreground">Varias heridas</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-1.5">
                         <span className="h-3 w-3 rounded-full border-2 border-dashed border-muted-foreground/50" />
                         <span className="font-body text-xs text-muted-foreground">Sugerido</span>
