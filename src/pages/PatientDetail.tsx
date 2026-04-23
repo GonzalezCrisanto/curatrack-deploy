@@ -935,7 +935,7 @@ export default function PatientDetail() {
 
               {/* Tipo de borde */}
               <div className="space-y-2">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de borde</Label>
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de borde<OptionalTag /></Label>
                 <div className="flex flex-wrap gap-2">
                   {edgeTypeOptions.map(t => {
                     const active = caseForm.edgeTypes.includes(t.value);
