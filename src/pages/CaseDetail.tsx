@@ -1308,16 +1308,7 @@ export default function CaseDetail() {
                 )}
               </div>
 
-              {/* AI Summary Card — appears after saving a new evolution */}
-              {(aiLoading || aiSummary || aiError) && (
-                <AISummaryCard
-                  summary={aiSummary}
-                  loading={aiLoading}
-                  error={aiError}
-                  onRegenerate={generateAISummary}
-                  onEmitOrder={emitMedicalOrder}
-                />
-              )}
+              {/* AI summary moved to case header — no longer rendered inside the evolution dialog */}
             </div>
 
             {/* Footer */}
