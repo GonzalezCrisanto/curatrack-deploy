@@ -18,7 +18,13 @@ import {
 import {
   Activity, Users, CheckCircle2, Download, FileText, FileSpreadsheet,
   Stethoscope, Camera, Calendar, AlertTriangle, Thermometer, MapPin,
+  ListChecks, ClipboardCheck,
 } from 'lucide-react';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import {
   Patient, WoundCase, Evolution,
   evolutionStatuses, tissueTypeOptions, edgeTypeOptions,
@@ -423,6 +429,165 @@ export default function Statistics() {
       });
   }, [allEvolutions]);
 
+  // ---------- Audit: completeness of new clinical fields ----------
+  const audit = useMemo(() => {
+    // Field definitions per entity
+    const patientFields: { key: keyof Patient; label: string }[] = [
+      { key: 'dni', label: 'DNI' },
+      { key: 'phone', label: 'Teléfono' },
+      { key: 'email', label: 'Email' },
+      { key: 'address', label: 'Dirección' },
+      { key: 'diagnosis', label: 'Diagnóstico' },
+      { key: 'assignedProfessional', label: 'Profesional asignado' },
+      { key: 'allergies', label: 'Alergias' },
+      { key: 'insurance', label: 'Cobertura' },
+      { key: 'emergencyContactName', label: 'Contacto de emergencia' },
+      { key: 'emergencyContactPhone', label: 'Tel. emergencia' },
+      { key: 'controlIntervalDays', label: 'Intervalo de control' },
+    ];
+    const caseFields: { key: keyof WoundCase; label: string }[] = [
+      { key: 'woundLength', label: 'Largo (cm)' },
+      { key: 'woundWidth', label: 'Ancho (cm)' },
+      { key: 'woundDepth', label: 'Profundidad (cm)' },
+      { key: 'tissueTypes', label: 'Tipos de tejido' },
+      { key: 'edgeTypes', label: 'Tipos de borde' },
+      { key: 'exudateAmount', label: 'Exudado — cantidad' },
+      { key: 'exudateType', label: 'Exudado — tipo' },
+      { key: 'exudateColor', label: 'Exudado — color' },
+      { key: 'painLevel', label: 'Dolor (0–10)' },
+      { key: 'odor', label: 'Olor' },
+      { key: 'hasInfectionSigns', label: 'Signos de infección' },
+      { key: 'bodyTemperature', label: 'Temperatura corporal' },
+      { key: 'healingFrequency', label: 'Frecuencia de curación' },
+      { key: 'healingFrequencyDays', label: 'Frecuencia (días)' },
+      { key: 'treatment', label: 'Tratamiento' },
+    ];
+    const evolutionFields: { key: keyof Evolution; label: string }[] = [
+      { key: 'painLevel', label: 'Dolor (0–10)' },
+      { key: 'odor', label: 'Olor' },
+      { key: 'evolutionStatus', label: 'Estado de evolución' },
+      { key: 'woundLength', label: 'Largo (cm)' },
+      { key: 'woundWidth', label: 'Ancho (cm)' },
+      { key: 'woundDepth', label: 'Profundidad (cm)' },
+      { key: 'tissueTypes', label: 'Tipos de tejido' },
+      { key: 'edgeTypes', label: 'Tipos de borde' },
+      { key: 'exudateAmount', label: 'Exudado — cantidad' },
+      { key: 'exudateType', label: 'Exudado — tipo' },
+      { key: 'exudateColor', label: 'Exudado — color' },
+      { key: 'hasInfectionSigns', label: 'Signos de infección' },
+      { key: 'bodyTemperature', label: 'Temperatura corporal' },
+      { key: 'healingFrequency', label: 'Frecuencia de curación' },
+      { key: 'healingFrequencyDays', label: 'Frecuencia (días)' },
+      { key: 'materials', label: 'Materiales' },
+      { key: 'procedure', label: 'Procedimiento' },
+      { key: 'nextControl', label: 'Próximo control' },
+    ];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const isMissing = (v: any) => {
+      if (v === undefined || v === null) return true;
+      if (typeof v === 'string') return v.trim() === '';
+      if (Array.isArray(v)) return v.length === 0;
+      return false;
+    };
+
+    const patientMissing = new Map<string, number>();
+    const caseMissing = new Map<string, number>();
+    const evolutionMissing = new Map<string, number>();
+
+    type Gap = {
+      kind: 'Paciente' | 'Caso' | 'Evolución';
+      patient: string;
+      context: string;
+      date?: string;
+      missing: string[];
+    };
+    const gaps: Gap[] = [];
+
+    filteredPatients.forEach(p => {
+      const pMiss: string[] = [];
+      patientFields.forEach(f => {
+        if (isMissing(p[f.key])) {
+          pMiss.push(f.label);
+          patientMissing.set(f.label, (patientMissing.get(f.label) || 0) + 1);
+        }
+      });
+      if (pMiss.length > 0) {
+        gaps.push({ kind: 'Paciente', patient: `${p.firstName} ${p.lastName}`, context: '—', missing: pMiss });
+      }
+
+      p.cases.forEach(c => {
+        const cMiss: string[] = [];
+        caseFields.forEach(f => {
+          if (isMissing(c[f.key])) {
+            cMiss.push(f.label);
+            caseMissing.set(f.label, (caseMissing.get(f.label) || 0) + 1);
+          }
+        });
+        if (cMiss.length > 0) {
+          gaps.push({
+            kind: 'Caso', patient: `${p.firstName} ${p.lastName}`,
+            context: `${c.woundType} — ${c.anatomicalLocation || 'sin localización'}`,
+            date: c.startDate, missing: cMiss,
+          });
+        }
+
+        c.evolutions.forEach(e => {
+          const eMiss: string[] = [];
+          evolutionFields.forEach(f => {
+            if (isMissing(e[f.key])) {
+              eMiss.push(f.label);
+              evolutionMissing.set(f.label, (evolutionMissing.get(f.label) || 0) + 1);
+            }
+          });
+          if (eMiss.length > 0) {
+            gaps.push({
+              kind: 'Evolución', patient: `${p.firstName} ${p.lastName}`,
+              context: `${c.woundType} — ${c.anatomicalLocation || 'sin localización'}`,
+              date: e.date, missing: eMiss,
+            });
+          }
+        });
+      });
+    });
+
+    const totalPatients = filteredPatients.length;
+    const totalCases = filteredPatients.reduce((a, p) => a + p.cases.length, 0);
+    const totalEvolutions = filteredPatients.reduce(
+      (a, p) => a + p.cases.reduce((b, c) => b + c.evolutions.length, 0), 0,
+    );
+
+    const toBars = (m: Map<string, number>, total: number, fields: { label: string }[]) =>
+      fields
+        .map(f => ({
+          name: f.label,
+          missing: m.get(f.label) || 0,
+          total,
+          pct: total > 0 ? Math.round(((m.get(f.label) || 0) / total) * 100) : 0,
+        }))
+        .filter(d => d.missing > 0)
+        .sort((a, b) => b.missing - a.missing);
+
+    const patientBars = toBars(patientMissing, totalPatients, patientFields);
+    const caseBars = toBars(caseMissing, totalCases, caseFields);
+    const evolutionBars = toBars(evolutionMissing, totalEvolutions, evolutionFields);
+
+    const patientsWithGaps = new Set(gaps.filter(g => g.kind === 'Paciente').map(g => g.patient)).size;
+    const casesWithGaps = gaps.filter(g => g.kind === 'Caso').length;
+    const evolutionsWithGaps = gaps.filter(g => g.kind === 'Evolución').length;
+
+    const patientCompleteness = totalPatients > 0 ? Math.round(((totalPatients - patientsWithGaps) / totalPatients) * 100) : 100;
+    const caseCompleteness = totalCases > 0 ? Math.round(((totalCases - casesWithGaps) / totalCases) * 100) : 100;
+    const evolutionCompleteness = totalEvolutions > 0 ? Math.round(((totalEvolutions - evolutionsWithGaps) / totalEvolutions) * 100) : 100;
+
+    return {
+      totals: { totalPatients, totalCases, totalEvolutions, patientsWithGaps, casesWithGaps, evolutionsWithGaps,
+        patientCompleteness, caseCompleteness, evolutionCompleteness },
+      patientBars, caseBars, evolutionBars,
+      gaps: gaps.sort((a, b) => b.missing.length - a.missing.length),
+    };
+  }, [filteredPatients]);
+
   // ---------- Export ----------
   const handleExportCsv = () => {
     const lines: string[] = [];
@@ -657,6 +822,114 @@ export default function Statistics() {
           <SummaryCard icon={<Camera className="h-5 w-5" />} label="Fotos clínicas" value={summary.totalPhotos} />
           <SummaryCard icon={<CheckCircle2 className="h-5 w-5" />} label="Cerradas este mes" value={summary.closedThisMonth} />
         </div>
+
+        {/* ===== Auditoría de completitud ===== */}
+        <Card className="border-warning/40">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-heading text-base flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4 text-warning" />
+              Auditoría de datos clínicos
+            </CardTitle>
+            <p className="font-body text-xs text-muted-foreground">
+              Detecta pacientes, casos y evoluciones con campos clínicos nuevos sin completar. Ignora el rango de fechas: refleja el estado actual de toda la cohorte filtrada por paciente.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Completeness summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <CompletenessTile
+                label="Pacientes completos"
+                pct={audit.totals.patientCompleteness}
+                detail={`${audit.totals.totalPatients - audit.totals.patientsWithGaps} de ${audit.totals.totalPatients} sin huecos`}
+                missing={audit.totals.patientsWithGaps}
+              />
+              <CompletenessTile
+                label="Casos completos"
+                pct={audit.totals.caseCompleteness}
+                detail={`${audit.totals.totalCases - audit.totals.casesWithGaps} de ${audit.totals.totalCases} sin huecos`}
+                missing={audit.totals.casesWithGaps}
+              />
+              <CompletenessTile
+                label="Evoluciones completas"
+                pct={audit.totals.evolutionCompleteness}
+                detail={`${audit.totals.totalEvolutions - audit.totals.evolutionsWithGaps} de ${audit.totals.totalEvolutions} sin huecos`}
+                missing={audit.totals.evolutionsWithGaps}
+              />
+            </div>
+
+            {/* Per-attribute breakdowns */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <MissingFieldsList title="Pacientes" total={audit.totals.totalPatients} bars={audit.patientBars} />
+              <MissingFieldsList title="Casos (heridas)" total={audit.totals.totalCases} bars={audit.caseBars} />
+              <MissingFieldsList title="Evoluciones" total={audit.totals.totalEvolutions} bars={audit.evolutionBars} />
+            </div>
+
+            {/* Records with gaps */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <ListChecks className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-heading text-sm font-semibold">Registros con datos faltantes</h3>
+                <Badge variant="secondary" className="ml-auto">{audit.gaps.length} registros</Badge>
+              </div>
+              {audit.gaps.length === 0 ? (
+                <div className="h-24 flex items-center justify-center text-sm text-muted-foreground border border-dashed border-border rounded-lg">
+                  ¡Todos los registros están completos!
+                </div>
+              ) : (
+                <div className="border border-border rounded-lg overflow-hidden max-h-[420px] overflow-y-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-card z-10">
+                      <TableRow>
+                        <TableHead className="w-24">Tipo</TableHead>
+                        <TableHead>Paciente</TableHead>
+                        <TableHead>Contexto</TableHead>
+                        <TableHead className="w-28">Fecha</TableHead>
+                        <TableHead>Campos faltantes</TableHead>
+                        <TableHead className="w-20 text-right">Faltan</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {audit.gaps.slice(0, 200).map((g, i) => (
+                        <TableRow key={i}>
+                          <TableCell>
+                            <Badge variant={g.kind === 'Paciente' ? 'outline' : g.kind === 'Caso' ? 'secondary' : 'default'} className="font-body text-[10px]">
+                              {g.kind}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-body text-xs font-medium">{g.patient}</TableCell>
+                          <TableCell className="font-body text-xs text-muted-foreground">{g.context}</TableCell>
+                          <TableCell className="font-body text-xs text-muted-foreground">{g.date || '—'}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {g.missing.slice(0, 6).map(m => (
+                                <Badge key={m} variant="outline" className="font-body text-[10px] border-warning/50 text-warning-foreground/80">
+                                  {m}
+                                </Badge>
+                              ))}
+                              {g.missing.length > 6 && (
+                                <Badge variant="outline" className="font-body text-[10px]">
+                                  +{g.missing.length - 6}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-heading text-sm font-bold text-warning">
+                            {g.missing.length}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {audit.gaps.length > 200 && (
+                    <div className="px-4 py-2 text-xs text-muted-foreground bg-muted/40 border-t border-border">
+                      Mostrando los primeros 200 registros de {audit.gaps.length}.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Status & evolution status */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1002,6 +1275,66 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
     <div className="flex items-center justify-between border-b border-border/50 pb-2 last:border-b-0 last:pb-0">
       <span className="font-body text-xs text-muted-foreground">{label}</span>
       <span className={`font-heading text-lg font-bold ${accent || 'text-foreground'}`}>{value}</span>
+    </div>
+  );
+}
+
+function CompletenessTile({ label, pct, detail, missing }: { label: string; pct: number; detail: string; missing: number }) {
+  const tone = pct >= 90 ? 'text-success' : pct >= 70 ? 'text-warning' : 'text-destructive';
+  return (
+    <div className="border border-border rounded-lg p-4 bg-card">
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+        <span className={`font-heading text-2xl font-bold ${tone}`}>{pct}%</span>
+      </div>
+      <Progress value={pct} className="mt-3 h-2" />
+      <p className="font-body text-[11px] text-muted-foreground mt-2">{detail}</p>
+      {missing > 0 && (
+        <p className="font-body text-[11px] text-warning mt-1">
+          {missing} con campos faltantes
+        </p>
+      )}
+    </div>
+  );
+}
+
+function MissingFieldsList({ title, total, bars }: {
+  title: string;
+  total: number;
+  bars: { name: string; missing: number; total: number; pct: number }[];
+}) {
+  return (
+    <div className="border border-border rounded-lg p-4 bg-card">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="font-heading text-sm font-semibold">{title}</h4>
+        <span className="font-body text-[11px] text-muted-foreground">{total} totales</span>
+      </div>
+      {bars.length === 0 ? (
+        <p className="font-body text-xs text-muted-foreground py-6 text-center">
+          Sin campos faltantes ✓
+        </p>
+      ) : (
+        <ul className="space-y-2 max-h-72 overflow-y-auto pr-1">
+          {bars.map(b => (
+            <li key={b.name} className="space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-body text-xs text-foreground truncate" title={b.name}>{b.name}</span>
+                <span className="font-body text-[11px] text-muted-foreground shrink-0">
+                  <span className="font-semibold text-warning">{b.missing}</span>
+                  <span className="opacity-60"> / {b.total}</span>
+                  <span className="ml-1 opacity-60">({b.pct}%)</span>
+                </span>
+              </div>
+              <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-warning"
+                  style={{ width: `${b.pct}%` }}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
