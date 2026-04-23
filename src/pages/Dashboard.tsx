@@ -12,7 +12,7 @@ import { toast } from '@/hooks/use-toast';
 import {
   Users, Activity, AlertTriangle, CheckCircle2, TrendingUp, Clock,
   ChevronRight, CalendarClock, ArrowUp, ArrowDown, ArrowRight,
-  Search, X,
+  Search, X, AlertCircle,
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import AppLayout from '@/components/AppLayout';
