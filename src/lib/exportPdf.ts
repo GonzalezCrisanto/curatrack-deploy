@@ -1,4 +1,5 @@
 import { Patient, getStatusLabel } from '@/data/demoData';
+import { formatPatientAge } from '@/lib/age';
 
 export function exportPatientPdf(patient: Patient) {
   const win = window.open('', '_blank');
@@ -109,7 +110,7 @@ export function exportPatientPdf(patient: Patient) {
     <h2>${patient.lastName}, ${patient.firstName}</h2>
     <div class="patient-grid">
       <div class="item"><span class="label">DNI / Documento:</span><span>${patient.dni || '—'}</span></div>
-      <div class="item"><span class="label">Edad / Sexo:</span><span>${patient.age} años · ${patient.gender || '—'}</span></div>
+      <div class="item"><span class="label">Edad / Sexo:</span><span>${formatPatientAge(patient)} · ${patient.gender || '—'}</span></div>
       <div class="item"><span class="label">Teléfono:</span><span>${patient.phone || '—'}</span></div>
       ${patient.email ? `<div class="item"><span class="label">Email:</span><span>${patient.email}</span></div>` : ''}
       <div class="item" style="grid-column:1/-1"><span class="label">Domicilio:</span><span>${patient.address || '—'}</span></div>
