@@ -667,7 +667,13 @@ export default function Dashboard() {
                       {showUpcoming && (
                         <div>
                           <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                            Próximos turnos ({visibleUpcoming.length})
+                            {selectedISO
+                              ? `Turnos del día (${visibleUpcoming.length})`
+                              : upcomingRange === 'today'
+                                ? `Próximos turnos de hoy (${visibleUpcoming.length})`
+                                : upcomingRange === 'week'
+                                  ? `Próximos turnos de la semana (${visibleUpcoming.length})`
+                                  : `Próximos turnos del mes (${visibleUpcoming.length})`}
                           </h3>
                           {visibleUpcoming.length > 0 ? (
                             <div className="grid sm:grid-cols-2 gap-3 content-start">
