@@ -990,8 +990,8 @@ export default function PatientDetail() {
                 const others = apptConflicts.filter(c => !c.isCurrent);
                 const sorted = [...apptConflicts].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
                 return (
-                  <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3 space-y-1.5">
-                    <p className="font-body text-xs font-semibold text-amber-700 dark:text-amber-400">
+                  <div className="rounded-md border border-warning/50 bg-warning/10 p-3 space-y-1.5">
+                    <p className="font-body text-xs font-semibold text-warning">
                       ℹ Ese día ya tenés {apptConflicts.length} turno{apptConflicts.length !== 1 ? 's' : ''} agendado{apptConflicts.length !== 1 ? 's' : ''}
                       {own.length > 0 && others.length > 0
                         ? ` (${own.length} de este paciente, ${others.length} de otros)`
@@ -1001,12 +1001,12 @@ export default function PatientDetail() {
                     </p>
                     <ul className="space-y-0.5">
                       {sorted.slice(0, 8).map((c, i) => (
-                        <li key={i} className="font-body text-[11px] text-amber-700/90 dark:text-amber-400/90">
+                        <li key={i} className="font-body text-[11px] text-warning/90">
                           • {c.time || '—'} · {c.patientName} ({c.woundType})
                         </li>
                       ))}
                       {sorted.length > 8 && (
-                        <li className="font-body text-[11px] text-amber-700/70 dark:text-amber-400/70">
+                        <li className="font-body text-[11px] text-warning/70">
                           …y {sorted.length - 8} más
                         </li>
                       )}
