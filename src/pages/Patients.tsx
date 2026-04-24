@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Search, Trash2, Edit, ChevronRight, CalendarClock, Activity, ArrowLeft } from 'lucide-react';
 import { Patient, professionals } from '@/data/demoData';
+import { calculateAge, formatPatientAge } from '@/lib/age';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,7 +20,7 @@ import { getPatientIndicator, indicatorMeta, getActiveWoundCount, getLastEvoluti
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const emptyPatient: Omit<Patient, 'id' | 'cases'> = {
-  firstName: '', lastName: '', age: 0, gender: '', dni: '', phone: '',
+  firstName: '', lastName: '', birthDate: '', age: 0, gender: '', dni: '', phone: '',
   email: '', address: '', diagnosis: '', assignedProfessional: '', observations: '', admissionDate: '',
   controlIntervalDays: 7,
   allergies: '', insurance: '', emergencyContactName: '', emergencyContactPhone: '',
@@ -101,7 +102,14 @@ export default function Patients() {
     const next: Record<string, string> = {};
     if (!form.firstName.trim()) next.firstName = 'Ingresá el nombre';
     if (!form.lastName.trim()) next.lastName = 'Ingresá el apellido';
-    if (!form.age || form.age < 0 || form.age > 120) next.age = 'La edad debe estar entre 0 y 120 años';
+    if (!form.birthDate) {
+      next.birthDate = 'Indicá la fecha de nacimiento';
+    } else {
+      const age = calculateAge(form.birthDate);
+      if (age === null) next.birthDate = 'Fecha de nacimiento inválida';
+      else if (age < 0 || age > 120) next.birthDate = 'La edad calculada debe estar entre 0 y 120 años';
+      else if (new Date(form.birthDate) > new Date()) next.birthDate = 'La fecha no puede ser futura';
+    }
     if (!form.gender) next.gender = 'Seleccioná el sexo';
     if (!form.dni.trim()) next.dni = 'Ingresá el documento';
     if (!form.phone.trim()) next.phone = 'Ingresá un teléfono de contacto';
@@ -214,7 +222,7 @@ export default function Patients() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`h-2.5 w-2.5 rounded-full ${meta.dotClass} ring-2 ${meta.ringClass}`} aria-label={meta.label} />
                       <h3 className="font-body text-sm font-semibold truncate">{p.lastName}, {p.firstName}</h3>
-                      <Badge variant="outline" className="font-body text-xs">{p.age} años</Badge>
+                      <Badge variant="outline" className="font-body text-xs">{formatPatientAge(p)}</Badge>
                       <Badge variant="secondary" className="font-body text-xs">{p.gender}</Badge>
                       <Badge variant="outline" className={`font-body text-xs ${meta.textClass}`}>
                         {meta.label}
@@ -365,28 +373,31 @@ export default function Patients() {
                     />
                     {errors.lastName && <p className="font-body text-[11px] text-destructive">{errors.lastName}</p>}
                   </div>
-                  <div className="space-y-1.5" data-error={!!errors.age}>
-                    <Label className="font-body text-sm">Edad <span className="text-destructive">*</span></Label>
+                  <div className="space-y-1.5" data-error={!!errors.birthDate}>
+                    <Label className="font-body text-sm">Fecha de nacimiento <span className="text-destructive">*</span></Label>
                     <Input
-                      type="number"
-                      min={0}
-                      max={120}
-                      step={1}
-                      inputMode="numeric"
-                      value={form.age || ''}
+                      type="date"
+                      max={new Date().toISOString().split('T')[0]}
+                      value={form.birthDate || ''}
                       onChange={e => {
-                        const raw = e.target.value;
-                        if (raw === '') return setField('age', 0);
-                        const n = parseInt(raw, 10);
-                        if (Number.isNaN(n)) return;
-                        // Clamp 0–120
-                        setField('age', Math.max(0, Math.min(120, n)));
+                        const v = e.target.value;
+                        setField('birthDate', v);
+                        // Keep legacy `age` in sync so existing reads still work.
+                        const a = calculateAge(v);
+                        setField('age', a ?? 0);
                       }}
-                      placeholder="0 – 120"
-                      className={`font-body ${errors.age ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                      aria-invalid={!!errors.age}
+                      className={`font-body ${errors.birthDate ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                      aria-invalid={!!errors.birthDate}
                     />
-                    {errors.age && <p className="font-body text-[11px] text-destructive">{errors.age}</p>}
+                    <p className="font-body text-[11px] text-muted-foreground">
+                      {form.birthDate
+                        ? (() => {
+                            const a = calculateAge(form.birthDate);
+                            return a === null ? 'Fecha inválida' : `Edad calculada: ${a} año${a === 1 ? '' : 's'}`;
+                          })()
+                        : 'La edad se calcula automáticamente.'}
+                    </p>
+                    {errors.birthDate && <p className="font-body text-[11px] text-destructive">{errors.birthDate}</p>}
                   </div>
                   <div className="space-y-1.5" data-error={!!errors.gender}>
                     <Label className="font-body text-sm">Sexo <span className="text-destructive">*</span></Label>

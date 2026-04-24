@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useApp } from '@/context/AppContext';
 import { toast } from 'sonner';
 import { getPatientIndicator, indicatorMeta } from '@/lib/patientStatus';
+import { getPatientAge } from '@/lib/age';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -52,7 +53,7 @@ export default function Assistant() {
         );
         return {
           nombre: `${p.lastName}, ${p.firstName}`,
-          edad: p.age,
+          edad: getPatientAge(p),
           diagnostico: p.diagnosis,
           estado: status,
           heridas: p.cases.map(c => ({

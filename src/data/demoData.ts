@@ -183,6 +183,9 @@ export interface Patient {
   id: string;
   firstName: string;
   lastName: string;
+  /** Date of birth (YYYY-MM-DD). Source of truth for age. */
+  birthDate?: string;
+  /** @deprecated Kept for backward compatibility. Prefer `birthDate` + getPatientAge(). */
   age: number;
   gender: string;
   dni: string;
