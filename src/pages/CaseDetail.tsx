@@ -522,7 +522,7 @@ export default function CaseDetail() {
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
-        <Button variant="ghost" onClick={() => navigate(`/patients/${patient.id}`)} className="font-body text-sm -ml-2">
+        <Button variant="outline" onClick={() => navigate(`/patients/${patient.id}`)} className="font-body text-sm border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver a {patient.lastName}, {patient.firstName}
         </Button>
 
