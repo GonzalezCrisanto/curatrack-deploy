@@ -74,7 +74,11 @@ export default function Dashboard() {
   const [woundTypeFilter, setWoundTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('lastEvo');
   const [appointmentFilter, setAppointmentFilter] = useState<'all' | 'upcoming' | 'overdue'>('upcoming');
-  const [selectedDay, setSelectedDay] = useState<Date | undefined>(undefined);
+  const [selectedDay, setSelectedDay] = useState<Date | undefined>(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
+  });
 
   const toISODate = (d: Date) => {
     const y = d.getFullYear();
@@ -608,7 +612,7 @@ export default function Dashboard() {
                           onClick={() => setSelectedDay(undefined)}
                           className="mt-3 inline-flex items-center gap-1 font-body text-xs text-primary hover:underline"
                         >
-                          <X className="h-3 w-3" /> Quitar filtro de día ({toISODate(selectedDay)})
+                          <X className="h-3 w-3" /> Ver todos los turnos (quitar filtro {toISODate(selectedDay)})
                         </button>
                       )}
                       <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 px-1 w-full max-w-[280px]">
