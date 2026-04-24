@@ -17,6 +17,7 @@ import {
   TrendingDown, TrendingUp, Minus, Sparkles, Archive, Copy, Printer, Download, Loader2
 } from 'lucide-react';
 import { Evolution, Photo, professionals, getStatusLabel, woundStatuses, healingFrequencies, odorOptions, evolutionStatuses, OdorLevel, EvolutionStatus, tissueTypeOptions, edgeTypeOptions, TissueType, EdgeType, exudateAmountOptions, exudateTypeOptions, exudateColorOptions, ExudateAmount, ExudateType, ExudateColor, infectionSignFields } from '@/data/demoData';
+import { getPatientAge, formatPatientAge } from '@/lib/age';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getEvolutionArea } from '@/lib/patientStatus';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -222,7 +223,7 @@ export default function CaseDetail() {
 
     return {
       paciente: `${patient.firstName} ${patient.lastName}`,
-      edad: patient.age,
+      edad: getPatientAge(patient),
       diagnostico_base: patient.diagnosis,
       caso: {
         tipo: woundCase.woundType,
@@ -453,7 +454,7 @@ export default function CaseDetail() {
   <div class="grid">
     <div><b>Nombre:</b> ${escape(patient.firstName + ' ' + patient.lastName)}</div>
     <div><b>DNI:</b> ${escape(patient.dni || '—')}</div>
-    <div><b>Edad:</b> ${escape(String(patient.age || '—'))}</div>
+    <div><b>Edad:</b> ${escape(formatPatientAge(patient))}</div>
     <div><b>Sexo:</b> ${escape(patient.gender || '—')}</div>
     <div><b>Teléfono:</b> ${escape(patient.phone || '—')}</div>
     <div><b>Domicilio:</b> ${escape(patient.address || '—')}</div>

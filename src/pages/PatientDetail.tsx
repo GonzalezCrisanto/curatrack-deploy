@@ -30,6 +30,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { SharePatientDialog } from '@/components/SharePatientDialog';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
+import { formatPatientAge } from '@/lib/age';
 
 const RequiredMark = () => (
   <span className="text-destructive ml-0.5" aria-label="campo obligatorio">*</span>
@@ -443,7 +444,7 @@ export default function PatientDetail() {
             <div>
               <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Datos personales</p>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2">
-                <InfoRow icon={<User className="h-3.5 w-3.5" />} label="Edad / Sexo" value={`${patient.age} años · ${patient.gender}`} />
+                <InfoRow icon={<User className="h-3.5 w-3.5" />} label="Edad / Sexo" value={`${formatPatientAge(patient)} · ${patient.gender}`} />
                 <InfoRow icon={<User className="h-3.5 w-3.5" />} label="DNI / Documento" value={patient.dni} />
                 <InfoRow icon={<Phone className="h-3.5 w-3.5" />} label="Teléfono" value={patient.phone} />
                 {patient.email && <InfoRow icon={<Mail className="h-3.5 w-3.5" />} label="Email" value={patient.email} />}
