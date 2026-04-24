@@ -75,6 +75,7 @@ export default function Dashboard() {
   const [woundTypeFilter, setWoundTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('lastEvo');
   const [appointmentFilter, setAppointmentFilter] = useState<'all' | 'upcoming' | 'overdue'>('upcoming');
+  const [upcomingRange, setUpcomingRange] = useState<'today' | 'week' | 'month'>('today');
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(() => {
     const t = new Date();
     t.setHours(0, 0, 0, 0);
