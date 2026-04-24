@@ -602,6 +602,19 @@ export default function Dashboard() {
                       <CalendarClock className="h-5 w-5 text-primary" />
                       Turnos / Controles
                     </CardTitle>
+                    <Tabs
+                      value={upcomingRange}
+                      onValueChange={(v) => {
+                        setUpcomingRange(v as 'today' | 'week' | 'month');
+                        setSelectedDay(undefined);
+                      }}
+                    >
+                      <TabsList>
+                        <TabsTrigger value="today">Hoy</TabsTrigger>
+                        <TabsTrigger value="week">Esta semana</TabsTrigger>
+                        <TabsTrigger value="month">Este mes</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
                   </div>
                 </CardHeader>
                 <CardContent>
