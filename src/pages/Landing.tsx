@@ -232,7 +232,7 @@ export default function Landing() {
       {/* Footer */}
       <footer className="py-12 px-6 border-t border-border">
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <img src={logo} alt="CuraTrack" className="h-8 opacity-70" />
+          <img src={logo} alt="CuraTrack" className="h-16 opacity-70" />
           <p className="font-body text-sm text-muted-foreground">
             © 2026 CuraTrack. Todos los derechos reservados.
           </p>
