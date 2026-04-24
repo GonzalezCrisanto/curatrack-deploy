@@ -809,7 +809,8 @@ export default function PatientDetail() {
                           </div>
                           <p className="font-body text-sm mt-1">{ap.woundType}{ap.anatomicalLocation ? ` · ${ap.anatomicalLocation}` : ''}</p>
                         </div>
-                      )) : (
+                      ));
+                    })() : (
                       <p className="font-body text-sm text-muted-foreground">No hay turnos programados.</p>
                     )}
 
