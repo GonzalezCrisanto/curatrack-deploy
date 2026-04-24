@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import {
   Users, Activity, AlertTriangle, CheckCircle2, TrendingUp, Clock,
@@ -74,6 +75,7 @@ export default function Dashboard() {
   const [woundTypeFilter, setWoundTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('lastEvo');
   const [appointmentFilter, setAppointmentFilter] = useState<'all' | 'upcoming' | 'overdue'>('upcoming');
+  const [upcomingRange, setUpcomingRange] = useState<'today' | 'week' | 'month'>('today');
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(() => {
     const t = new Date();
     t.setHours(0, 0, 0, 0);
@@ -343,11 +345,28 @@ export default function Dashboard() {
             const showOverdue = appointmentFilter === 'all' || appointmentFilter === 'overdue';
 
             const selectedISO = selectedDay ? toISODate(selectedDay) : null;
+
+            // Compute range bounds (inclusive ISO strings) for today/week/month
+            const todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
+            const todayISO = toISODate(todayDate);
+            const endRange = new Date(todayDate);
+            if (upcomingRange === 'today') {
+              // endRange stays today
+            } else if (upcomingRange === 'week') {
+              endRange.setDate(endRange.getDate() + 6);
+            } else {
+              endRange.setMonth(endRange.getMonth() + 1);
+              endRange.setDate(endRange.getDate() - 1);
+            }
+            const endRangeISO = toISODate(endRange);
+            const inRange = (iso: string) => iso >= todayISO && iso <= endRangeISO;
+
             // When no day filter is active, cap the rendered list to keep the card compact.
             // When a day is selected, show ALL turns for that day.
             const VISIBLE_LIMIT = 6;
             const visibleUpcoming = (showUpcoming ? upcomingAppointments : [])
-              .filter(ap => !selectedISO || ap.nextControl === selectedISO)
+              .filter(ap => selectedISO ? ap.nextControl === selectedISO : inRange(ap.nextControl))
               .slice(0, selectedISO ? undefined : VISIBLE_LIMIT);
             const visiblePast = (showOverdue ? pastAppointments : [])
               .filter(ap => !selectedISO || ap.nextControl === selectedISO)
@@ -583,6 +602,19 @@ export default function Dashboard() {
                       <CalendarClock className="h-5 w-5 text-primary" />
                       Turnos / Controles
                     </CardTitle>
+                    <Tabs
+                      value={upcomingRange}
+                      onValueChange={(v) => {
+                        setUpcomingRange(v as 'today' | 'week' | 'month');
+                        setSelectedDay(undefined);
+                      }}
+                    >
+                      <TabsList>
+                        <TabsTrigger value="today">Hoy</TabsTrigger>
+                        <TabsTrigger value="week">Esta semana</TabsTrigger>
+                        <TabsTrigger value="month">Este mes</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -635,7 +667,13 @@ export default function Dashboard() {
                       {showUpcoming && (
                         <div>
                           <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                            Próximos turnos ({visibleUpcoming.length})
+                            {selectedISO
+                              ? `Turnos del día (${visibleUpcoming.length})`
+                              : upcomingRange === 'today'
+                                ? `Próximos turnos de hoy (${visibleUpcoming.length})`
+                                : upcomingRange === 'week'
+                                  ? `Próximos turnos de la semana (${visibleUpcoming.length})`
+                                  : `Próximos turnos del mes (${visibleUpcoming.length})`}
                           </h3>
                           {visibleUpcoming.length > 0 ? (
                             <div className="grid sm:grid-cols-2 gap-3 content-start">
