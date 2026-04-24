@@ -783,9 +783,17 @@ export default function PatientDetail() {
 
                   <div className="flex-1 space-y-3">
                     <h3 className="font-body text-sm font-semibold text-muted-foreground">Próximos turnos programados</h3>
-                    {appointmentsByCase.length > 0 ? appointmentsByCase
-                      .sort((a, b) => a.date.getTime() - b.date.getTime())
-                      .map((ap, i) => (
+                    {appointmentsByCase.length > 0 ? (() => {
+                      // Keep only the earliest upcoming appointment per case
+                      const nextByCase = new Map<string, typeof appointmentsByCase[number]>();
+                      [...appointmentsByCase]
+                        .sort((a, b) => a.date.getTime() - b.date.getTime())
+                        .forEach(ap => {
+                          if (!nextByCase.has(ap.caseId)) nextByCase.set(ap.caseId, ap);
+                        });
+                      return Array.from(nextByCase.values())
+                        .sort((a, b) => a.date.getTime() - b.date.getTime())
+                        .map((ap, i) => (
                         <div
                           key={`ap-${i}`}
                           className="p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow cursor-pointer"
