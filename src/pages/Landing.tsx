@@ -70,8 +70,8 @@ export default function Landing() {
     <div className="min-h-screen bg-background">
       {/* Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
-        <div className="container mx-auto flex items-center justify-between h-24 px-6">
-          <img src={logo} alt="CuraTrack" className="h-16 md:h-20 w-auto" />
+        <div className="container mx-auto flex items-center justify-between h-24 md:h-28 px-6">
+          <img src={logo} alt="CuraTrack" className="h-20 md:h-24 lg:h-28 w-auto object-contain" />
           <div className="flex items-center gap-3">
             <Button variant="ghost" onClick={() => navigate('/login')} className="font-body text-sm">
               Iniciar sesión
