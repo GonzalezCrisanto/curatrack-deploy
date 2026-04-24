@@ -345,11 +345,28 @@ export default function Dashboard() {
             const showOverdue = appointmentFilter === 'all' || appointmentFilter === 'overdue';
 
             const selectedISO = selectedDay ? toISODate(selectedDay) : null;
+
+            // Compute range bounds (inclusive ISO strings) for today/week/month
+            const todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
+            const todayISO = toISODate(todayDate);
+            const endRange = new Date(todayDate);
+            if (upcomingRange === 'today') {
+              // endRange stays today
+            } else if (upcomingRange === 'week') {
+              endRange.setDate(endRange.getDate() + 6);
+            } else {
+              endRange.setMonth(endRange.getMonth() + 1);
+              endRange.setDate(endRange.getDate() - 1);
+            }
+            const endRangeISO = toISODate(endRange);
+            const inRange = (iso: string) => iso >= todayISO && iso <= endRangeISO;
+
             // When no day filter is active, cap the rendered list to keep the card compact.
             // When a day is selected, show ALL turns for that day.
             const VISIBLE_LIMIT = 6;
             const visibleUpcoming = (showUpcoming ? upcomingAppointments : [])
-              .filter(ap => !selectedISO || ap.nextControl === selectedISO)
+              .filter(ap => selectedISO ? ap.nextControl === selectedISO : inRange(ap.nextControl))
               .slice(0, selectedISO ? undefined : VISIBLE_LIMIT);
             const visiblePast = (showOverdue ? pastAppointments : [])
               .filter(ap => !selectedISO || ap.nextControl === selectedISO)
