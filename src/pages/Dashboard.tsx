@@ -583,16 +583,6 @@ export default function Dashboard() {
                       <CalendarClock className="h-5 w-5 text-primary" />
                       Turnos / Controles
                     </CardTitle>
-                    <Select value={appointmentFilter} onValueChange={(v) => setAppointmentFilter(v as typeof appointmentFilter)}>
-                      <SelectTrigger className="w-full sm:w-[180px] font-body text-sm">
-                        <SelectValue placeholder="Filtrar" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos ({upcomingAppointments.length + pastAppointments.length})</SelectItem>
-                        <SelectItem value="upcoming">Próximos ({upcomingAppointments.length})</SelectItem>
-                        <SelectItem value="overdue">Vencidos ({pastAppointments.length})</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
                 </CardHeader>
                 <CardContent>
