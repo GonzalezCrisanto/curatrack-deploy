@@ -853,27 +853,6 @@ export default function PatientDetail() {
                       </>
                     )}
 
-                    {otherPatientsAppointments.length > 0 && (
-                      <>
-                        <h3 className="font-body text-sm font-semibold text-muted-foreground mt-4">Turnos con otros pacientes</h3>
-                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                          {otherPatientsAppointments
-                            .sort((a, b) => a.date.getTime() - b.date.getTime())
-                            .slice(0, 8)
-                            .map((ap, i) => (
-                              <div key={`other-${i}`} className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/40 border border-border/40">
-                                <div className="min-w-0">
-                                  <p className="font-body text-xs font-medium truncate">{ap.patientName}</p>
-                                  <p className="font-body text-[11px] text-muted-foreground truncate">{ap.woundType}</p>
-                                </div>
-                                <span className="font-body text-[11px] text-muted-foreground shrink-0">
-                                  {ap.date.toISOString().split('T')[0]}{ap.time ? ` · ${ap.time}` : ''}
-                                </span>
-                              </div>
-                            ))}
-                        </div>
-                      </>
-                    )}
                   </div>
                 </div>
               </CardContent>
