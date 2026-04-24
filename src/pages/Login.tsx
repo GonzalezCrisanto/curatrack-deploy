@@ -52,10 +52,10 @@ export default function Login() {
       {/* Right panel */}
       <div className="flex-1 flex items-center justify-center p-6 bg-background relative overflow-y-auto">
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={() => navigate('/')}
-          className="absolute top-4 left-4 font-body text-muted-foreground hover:text-foreground"
+          className="absolute top-4 left-4 font-body border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm"
         >
           <ArrowLeft className="mr-1 h-4 w-4" /> Volver al inicio
         </Button>
