@@ -176,7 +176,7 @@ export default function PatientDetail() {
     <AppLayout>
       <div className="p-8 text-center font-body text-muted-foreground space-y-3">
         <p>No tenés acceso a este paciente o no existe.</p>
-        <Button variant="outline" onClick={() => navigate('/patients')} className="font-body">
+        <Button variant="outline" onClick={() => navigate('/patients')} className="font-body border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver a mis pacientes
         </Button>
       </div>
@@ -396,7 +396,7 @@ export default function PatientDetail() {
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <Button variant="ghost" onClick={() => navigate('/patients')} className="font-body text-sm -ml-2">
+          <Button variant="outline" onClick={() => navigate('/patients')} className="font-body text-sm border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
             <ArrowLeft className="mr-2 h-4 w-4" /> Volver a pacientes
           </Button>
           <div className="flex items-center gap-2">
