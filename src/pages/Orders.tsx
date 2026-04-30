@@ -6,9 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { ShoppingBag, Send, CheckCircle2, XCircle, FileText, ArrowLeft } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { ShoppingBag, Send, CheckCircle2, XCircle, FileText, ArrowLeft, Ban, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { OrderStatus } from '@/context/CartContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface OrderRow {
   id: string;
@@ -50,7 +55,10 @@ const statusConfig: Record<string, { label: string; icon: typeof Send; className
   enviado: { label: 'Enviado', icon: Send, className: 'bg-info/15 text-info border-info/30' },
   aprobado: { label: 'Aprobado', icon: CheckCircle2, className: 'bg-success/15 text-success border-success/30' },
   rechazado: { label: 'Rechazado', icon: XCircle, className: 'bg-destructive/15 text-destructive border-destructive/30' },
+  cancelado: { label: 'Cancelado', icon: Ban, className: 'bg-muted text-muted-foreground border-border line-through-none' },
 };
+
+const CANCELLABLE_STATUSES = new Set(['borrador', 'enviado']);
 
 function formatPrice(value: number | null | undefined, currency = 'ARS') {
   if (value == null) return '—';

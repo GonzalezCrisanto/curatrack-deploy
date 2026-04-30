@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { LabProduct } from '@/types/marketplace';
 import { useToast } from '@/hooks/use-toast';
 
-export type OrderStatus = 'borrador' | 'enviado' | 'aprobado' | 'rechazado';
+export type OrderStatus = 'borrador' | 'enviado' | 'aprobado' | 'rechazado' | 'cancelado';
 
 export interface CartItemRow {
   id: string;
