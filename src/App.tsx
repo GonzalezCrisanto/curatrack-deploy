@@ -27,26 +27,29 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AppProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/patients" element={<Patients />} />
-            <Route path="/patients/:patientId" element={<PatientDetail />} />
-            <Route path="/patients/:patientId/cases/:caseId" element={<CaseDetail />} />
-            <Route path="/marketplace" element={<Marketplace />} />
+        <CartProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/patients" element={<Patients />} />
+              <Route path="/patients/:patientId" element={<PatientDetail />} />
+              <Route path="/patients/:patientId/cases/:caseId" element={<CaseDetail />} />
+              <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/orders" element={<Orders />} />
 
-            <Route path="/assistant" element={<Assistant />} />
-            <Route path="/statistics" element={<Statistics />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+              <Route path="/assistant" element={<Assistant />} />
+              <Route path="/statistics" element={<Statistics />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </CartProvider>
       </AppProvider>
     </TooltipProvider>
   </QueryClientProvider>
