@@ -6,9 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { ShoppingBag, Send, CheckCircle2, XCircle, FileText, ArrowLeft } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { ShoppingBag, Send, CheckCircle2, XCircle, FileText, ArrowLeft, Ban, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { OrderStatus } from '@/context/CartContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface OrderRow {
   id: string;
@@ -50,7 +55,10 @@ const statusConfig: Record<string, { label: string; icon: typeof Send; className
   enviado: { label: 'Enviado', icon: Send, className: 'bg-info/15 text-info border-info/30' },
   aprobado: { label: 'Aprobado', icon: CheckCircle2, className: 'bg-success/15 text-success border-success/30' },
   rechazado: { label: 'Rechazado', icon: XCircle, className: 'bg-destructive/15 text-destructive border-destructive/30' },
+  cancelado: { label: 'Cancelado', icon: Ban, className: 'bg-muted text-muted-foreground border-border line-through-none' },
 };
+
+const CANCELLABLE_STATUSES = new Set(['borrador', 'enviado']);
 
 function formatPrice(value: number | null | undefined, currency = 'ARS') {
   if (value == null) return '—';
@@ -63,9 +71,35 @@ function formatDate(iso: string | null) {
 }
 
 export default function Orders() {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [itemsByOrder, setItemsByOrder] = useState<Record<string, OrderItem[]>>({});
+  const [cancelTarget, setCancelTarget] = useState<OrderRow | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancel = async () => {
+    if (!cancelTarget) return;
+    if (!CANCELLABLE_STATUSES.has(cancelTarget.status)) {
+      toast({ title: 'No se puede cancelar', description: 'El pedido ya fue procesado.', variant: 'destructive' });
+      setCancelTarget(null);
+      return;
+    }
+    setCancelling(true);
+    const { error } = await supabase
+      .from('supply_orders')
+      .update({ status: 'cancelado', updated_at: new Date().toISOString() })
+      .eq('id', cancelTarget.id)
+      .in('status', ['borrador', 'enviado']); // server-side guard
+    setCancelling(false);
+    if (error) {
+      toast({ title: 'No se pudo cancelar', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setOrders((prev) => prev.map((o) => (o.id === cancelTarget.id ? { ...o, status: 'cancelado' } : o)));
+    toast({ title: 'Pedido cancelado', description: `Nº ${cancelTarget.order_number}` });
+    setCancelTarget(null);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -131,8 +165,9 @@ export default function Orders() {
               const cfg = statusConfig[o.status] ?? statusConfig.borrador;
               const Icon = cfg.icon;
               const items = itemsByOrder[o.id] ?? [];
+              const canCancel = CANCELLABLE_STATUSES.has(o.status);
               return (
-                <Card key={o.id}>
+                <Card key={o.id} className={o.status === 'cancelado' ? 'opacity-70' : ''}>
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div>
@@ -203,6 +238,18 @@ export default function Orders() {
                         </AccordionContent>
                       </AccordionItem>
                     </Accordion>
+                    {canCancel && (
+                      <div className="flex justify-end pt-2 border-t mt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive border-destructive/30 hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={() => setCancelTarget(o)}
+                        >
+                          <Ban className="h-3.5 w-3.5 mr-1" /> Cancelar pedido
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -210,6 +257,27 @@ export default function Orders() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!cancelTarget} onOpenChange={(o) => { if (!o && !cancelling) setCancelTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-heading">¿Cancelar este pedido?</AlertDialogTitle>
+            <AlertDialogDescription className="font-body">
+              Vas a cancelar el pedido <strong>{cancelTarget?.order_number}</strong>. El vendedor verá el cambio de estado y no procesará la entrega. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Volver</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleCancel(); }}
+              disabled={cancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {cancelling ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Cancelando…</> : 'Sí, cancelar pedido'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
