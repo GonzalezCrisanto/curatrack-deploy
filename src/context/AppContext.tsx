@@ -1,95 +1,128 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
+import type { Session, User } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { Patient, WoundCase, Evolution, demoPatients } from '@/data/demoData';
-import {
-  DemoUser, DemoTeam, PatientShare, ShareRole,
-  demoUsers, demoTeams, demoPatientOwners, demoPatientShares,
-} from '@/data/demoUsers';
 
-// ---------- Storage keys ----------
-// Bump DATA_VERSION whenever the seed demo data changes shape so existing
-// localStorage caches get refreshed instead of overriding the new defaults.
-const DATA_VERSION = 'v3-2026-04-audit-complete';
-const LS_USERS = 'curatrack:users';
-const LS_TEAMS = 'curatrack:teams';
-const LS_PATIENTS = 'curatrack:patients';        // Patient[] + ownerId map embedded
-const LS_OWNERS = 'curatrack:patientOwners';     // Record<patientId, userId>
-const LS_SHARES = 'curatrack:patientShares';     // PatientShare[]
-const LS_SESSION = 'curatrack:sessionUserId';
-const LS_VERSION = 'curatrack:dataVersion';
+// ============================================================================
+// PHASE 1 BACKEND MIGRATION
+// ============================================================================
+// Auth + the `patients` table now live in Lovable Cloud (Supabase).
+// Cases, evolutions and photos are still kept in browser memory for now —
+// they will be migrated in Phase 2. When a user logs in we hydrate the in-memory
+// `casesByPatient` map from the demoData seed so the UI keeps working.
+// ============================================================================
 
-// One-time migration: if the cached data version differs, wipe the demo caches
-// so the new seeds in demoData/demoUsers take effect. Session is preserved.
-if (typeof window !== 'undefined') {
-  try {
-    const stored = localStorage.getItem(LS_VERSION);
-    if (stored !== DATA_VERSION) {
-      localStorage.removeItem(LS_PATIENTS);
-      localStorage.removeItem(LS_OWNERS);
-      localStorage.removeItem(LS_SHARES);
-      localStorage.removeItem(LS_USERS);
-      localStorage.removeItem(LS_TEAMS);
-      localStorage.setItem(LS_VERSION, DATA_VERSION);
-    }
-  } catch { /* ignore */ }
+interface ProfileRow {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  role: string | null;
+  institution: string | null;
+  license: string | null;
 }
 
-function loadLS<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch { return fallback; }
-}
-function saveLS(key: string, value: unknown) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore */ }
+interface PatientRow {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  age: number | null;
+  gender: string | null;
+  dni: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  diagnosis: string | null;
+  assigned_professional: string | null;
+  observations: string | null;
+  admission_date: string | null;
+  control_interval_days: number | null;
 }
 
-// ---------- Access helpers ----------
-export interface PatientAccess {
-  ownerId: string;
-  // The current user's effective role on this patient
-  effectiveRole: ShareRole | 'owner';
-  canEdit: boolean;
-  canShare: boolean;
-  canDelete: boolean;
+// Mapping helpers between DB rows and the Patient shape used by the app
+function rowToPatient(row: PatientRow, cases: WoundCase[]): Patient {
+  return {
+    id: row.id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    age: row.age ?? 0,
+    gender: row.gender ?? '',
+    dni: row.dni ?? '',
+    phone: row.phone ?? '',
+    email: row.email ?? '',
+    address: row.address ?? '',
+    diagnosis: row.diagnosis ?? '',
+    assignedProfessional: row.assigned_professional ?? '',
+    observations: row.observations ?? '',
+    admissionDate: row.admission_date ?? new Date().toISOString().split('T')[0],
+    controlIntervalDays: row.control_interval_days ?? 7,
+    cases,
+  };
+}
+
+function patientToRow(p: Patient, userId: string): Omit<PatientRow, 'id'> & { id?: string } {
+  return {
+    id: p.id,
+    user_id: userId,
+    first_name: p.firstName,
+    last_name: p.lastName,
+    age: p.age || null,
+    gender: p.gender || null,
+    dni: p.dni || null,
+    phone: p.phone || null,
+    email: p.email || null,
+    address: p.address || null,
+    diagnosis: p.diagnosis || null,
+    assigned_professional: p.assignedProfessional || null,
+    observations: p.observations || null,
+    admission_date: p.admissionDate || null,
+    control_interval_days: p.controlIntervalDays ?? 7,
+  };
+}
+
+// ============================================================================
+
+export interface CurrentUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: 'enfermero' | 'medico' | 'admin';
+  license?: string;
+  institution?: string;
 }
 
 interface AppContextType {
   // Auth
   isLoggedIn: boolean;
-  currentUser: DemoUser | null;
+  authReady: boolean;
+  currentUser: CurrentUser | null;
   currentUserName: string;
-  allUsers: DemoUser[];
-  teams: DemoTeam[];
-  login: (email: string, password: string) => { ok: boolean; message?: string };
-  logout: () => void;
-  registerUser: (data: Omit<DemoUser, 'id'>) => { ok: boolean; message?: string };
+  login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
+  loginWithGoogle: () => Promise<{ ok: boolean; message?: string }>;
+  logout: () => Promise<void>;
+  registerUser: (data: {
+    email: string; password: string;
+    firstName: string; lastName: string;
+    role: 'enfermero' | 'medico' | 'admin';
+    license?: string; institution?: string;
+  }) => Promise<{ ok: boolean; message?: string; needsEmailConfirmation?: boolean }>;
 
-  // Data (already filtered by access for the current user)
+  // Patients (synced with backend)
   patients: Patient[];
-  // Underlying maps (for sharing UI)
-  patientOwners: Record<string, string>;
-  patientShares: PatientShare[];
+  patientsLoading: boolean;
+  addPatient: (patient: Patient) => Promise<void>;
+  updatePatient: (patient: Patient) => Promise<void>;
+  deletePatient: (id: string) => Promise<void>;
 
-  // Patient CRUD (auto-assigns owner = current user on create)
-  addPatient: (patient: Patient) => void;
-  updatePatient: (patient: Patient) => void;
-  deletePatient: (id: string) => void;
-
-  // Cases & Evolutions
+  // Cases & Evolutions (still local — Phase 2)
   addCase: (patientId: string, woundCase: WoundCase) => void;
   updateCase: (patientId: string, woundCase: WoundCase) => void;
   deleteCase: (patientId: string, caseId: string) => void;
   addEvolution: (patientId: string, caseId: string, evolution: Evolution) => void;
   updateEvolution: (patientId: string, caseId: string, evolution: Evolution) => void;
   deleteEvolution: (patientId: string, caseId: string, evolutionId: string) => void;
-
-  // Sharing
-  getPatientAccess: (patientId: string) => PatientAccess | null;
-  sharePatient: (patientId: string, email: string, role: ShareRole) => { ok: boolean; message?: string };
-  updateShareRole: (patientId: string, userId: string, role: ShareRole) => void;
-  revokeShare: (patientId: string, userId: string) => void;
-  getPatientCollaborators: (patientId: string) => Array<{ user: DemoUser; role: ShareRole | 'owner'; via: 'owner' | 'team' | 'share' }>;
 
   // Compatibility shim
   setIsLoggedIn: (v: boolean) => void;
@@ -98,237 +131,255 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  // ----- Persistent state (loaded once) -----
-  const [allUsers, setAllUsers] = useState<DemoUser[]>(() => loadLS(LS_USERS, demoUsers));
-  const [teams] = useState<DemoTeam[]>(() => loadLS(LS_TEAMS, demoTeams));
-  const [allPatients, setAllPatients] = useState<Patient[]>(() => loadLS(LS_PATIENTS, demoPatients));
-  const [patientOwners, setPatientOwners] = useState<Record<string, string>>(() => loadLS(LS_OWNERS, demoPatientOwners));
-  const [patientShares, setPatientShares] = useState<PatientShare[]>(() => loadLS(LS_SHARES, demoPatientShares));
+  const [session, setSession] = useState<Session | null>(null);
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
-  const [sessionUserId, setSessionUserId] = useState<string | null>(() => loadLS<string | null>(LS_SESSION, null));
+  const [patientRows, setPatientRows] = useState<PatientRow[]>([]);
+  const [patientsLoading, setPatientsLoading] = useState(false);
 
-  // Persist on changes
-  useEffect(() => { saveLS(LS_USERS, allUsers); }, [allUsers]);
-  useEffect(() => { saveLS(LS_TEAMS, teams); }, [teams]);
-  useEffect(() => { saveLS(LS_PATIENTS, allPatients); }, [allPatients]);
-  useEffect(() => { saveLS(LS_OWNERS, patientOwners); }, [patientOwners]);
-  useEffect(() => { saveLS(LS_SHARES, patientShares); }, [patientShares]);
-  useEffect(() => { saveLS(LS_SESSION, sessionUserId); }, [sessionUserId]);
+  // In-memory case/evolution store keyed by patientId. Hydrated from seed data
+  // for convenience while Phase 2 (cases backend) is pending.
+  const [casesByPatient, setCasesByPatient] = useState<Record<string, WoundCase[]>>({});
 
-  const currentUser = useMemo(
-    () => allUsers.find(u => u.id === sessionUserId) ?? null,
-    [allUsers, sessionUserId]
-  );
-  const isLoggedIn = currentUser !== null;
-  const currentUserName = currentUser
-    ? `${currentUser.role === 'medico' ? 'Dr.' : 'Lic.'} ${currentUser.firstName} ${currentUser.lastName}`
-    : '';
+  // ---- Auth bootstrap ----
+  useEffect(() => {
+    // 1) Listener FIRST
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      setAuthUser(newSession?.user ?? null);
+    });
 
-  // ----- Access helpers -----
-  const getPatientAccess = useCallback((patientId: string): PatientAccess | null => {
-    if (!currentUser) return null;
-    const ownerId = patientOwners[patientId];
-    if (!ownerId) return null;
+    // 2) Then load existing session
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setAuthUser(data.session?.user ?? null);
+      setAuthReady(true);
+    });
 
-    if (ownerId === currentUser.id) {
-      return { ownerId, effectiveRole: 'owner', canEdit: true, canShare: true, canDelete: true };
-    }
-
-    // Team access: if owner and current user share a team, treat as collaborator
-    const owner = allUsers.find(u => u.id === ownerId);
-    if (owner?.teamId && currentUser.teamId && owner.teamId === currentUser.teamId) {
-      return { ownerId, effectiveRole: 'collaborator', canEdit: true, canShare: false, canDelete: false };
-    }
-
-    // Direct share
-    const share = patientShares.find(s => s.patientId === patientId && s.userId === currentUser.id);
-    if (share) {
-      const canEdit = share.role !== 'viewer';
-      const canShare = share.role === 'co_owner';
-      const canDelete = share.role === 'co_owner';
-      return { ownerId, effectiveRole: share.role, canEdit, canShare, canDelete };
-    }
-
-    return null;
-  }, [currentUser, patientOwners, patientShares, allUsers]);
-
-  // ----- Filtered patients view (only what the current user can see) -----
-  const patients = useMemo(() => {
-    if (!currentUser) return [];
-    return allPatients.filter(p => getPatientAccess(p.id) !== null);
-  }, [allPatients, currentUser, getPatientAccess]);
-
-  // ----- Auth -----
-  const login: AppContextType['login'] = (email, password) => {
-    const u = allUsers.find(x => x.email.toLowerCase() === email.trim().toLowerCase());
-    if (!u) return { ok: false, message: 'No existe una cuenta con ese email.' };
-    if (u.password !== password) return { ok: false, message: 'Contraseña incorrecta.' };
-    setSessionUserId(u.id);
-    return { ok: true };
-  };
-
-  const logout = () => setSessionUserId(null);
-
-  const registerUser: AppContextType['registerUser'] = (data) => {
-    if (allUsers.some(u => u.email.toLowerCase() === data.email.toLowerCase())) {
-      return { ok: false, message: 'Ya existe una cuenta con ese email.' };
-    }
-    const newUser: DemoUser = { ...data, id: `u-${Date.now()}` };
-    setAllUsers(prev => [...prev, newUser]);
-    setSessionUserId(newUser.id);
-    return { ok: true };
-  };
-
-  // Compat shim for legacy callers (Login.tsx etc.) — only allows logout
-  const setIsLoggedIn = (v: boolean) => { if (!v) logout(); };
-
-  // ----- Patient CRUD -----
-  const addPatient = useCallback((patient: Patient) => {
-    if (!currentUser) return;
-    setAllPatients(prev => [...prev, patient]);
-    setPatientOwners(prev => ({ ...prev, [patient.id]: currentUser.id }));
-  }, [currentUser]);
-
-  const updatePatient = useCallback((patient: Patient) => {
-    setAllPatients(prev => prev.map(p => p.id === patient.id ? patient : p));
+    return () => { sub.subscription.unsubscribe(); };
   }, []);
 
-  const deletePatient = useCallback((id: string) => {
-    setAllPatients(prev => prev.filter(p => p.id !== id));
-    setPatientOwners(prev => {
+  // ---- Load profile + patients when auth user changes ----
+  useEffect(() => {
+    if (!authUser) {
+      setProfile(null);
+      setPatientRows([]);
+      setCasesByPatient({});
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setPatientsLoading(true);
+
+      // Profile (might not exist yet right after signup if trigger is delayed)
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', authUser.id)
+        .maybeSingle();
+      if (!cancelled) setProfile(prof as ProfileRow | null);
+
+      // Patients
+      const { data: pats, error } = await supabase
+        .from('patients')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!cancelled) {
+        if (error) {
+          console.error('Error loading patients', error);
+          setPatientRows([]);
+        } else {
+          setPatientRows((pats || []) as PatientRow[]);
+        }
+
+        // Hydrate cases from demo seed for any patient whose name matches.
+        // This gives new accounts immediate clinical content for the seeded patients.
+        setCasesByPatient(prev => {
+          const next = { ...prev };
+          for (const row of (pats || []) as PatientRow[]) {
+            if (next[row.id]) continue;
+            const seedMatch = demoPatients.find(d =>
+              d.firstName === row.first_name && d.lastName === row.last_name
+            );
+            // Re-key the seed cases to the real patient id so navigation works
+            next[row.id] = seedMatch
+              ? seedMatch.cases.map(c => ({ ...c, patientId: row.id }))
+              : [];
+          }
+          return next;
+        });
+
+        setPatientsLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [authUser]);
+
+  const currentUser: CurrentUser | null = useMemo(() => {
+    if (!authUser) return null;
+    const role = (profile?.role as CurrentUser['role']) || 'enfermero';
+    return {
+      id: authUser.id,
+      email: authUser.email || '',
+      firstName: profile?.first_name || authUser.user_metadata?.first_name || '',
+      lastName: profile?.last_name || authUser.user_metadata?.last_name || '',
+      role,
+      license: profile?.license || undefined,
+      institution: profile?.institution || undefined,
+    };
+  }, [authUser, profile]);
+
+  const isLoggedIn = !!session;
+  const currentUserName = currentUser
+    ? `${currentUser.role === 'medico' ? 'Dr.' : 'Lic.'} ${currentUser.firstName} ${currentUser.lastName}`.trim()
+    : '';
+
+  // ---- Auth actions ----
+  const login: AppContextType['login'] = async (email, password) => {
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    if (error) return { ok: false, message: error.message };
+    return { ok: true };
+  };
+
+  const loginWithGoogle: AppContextType['loginWithGoogle'] = async () => {
+    const { lovable } = await import('@/integrations/lovable');
+    const result = await lovable.auth.signInWithOAuth('google', {
+      redirect_uri: window.location.origin + '/dashboard',
+    });
+    if (result.error) return { ok: false, message: (result.error as Error).message };
+    return { ok: true };
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  const registerUser: AppContextType['registerUser'] = async (data) => {
+    const redirectUrl = `${window.location.origin}/dashboard`;
+    const { data: signUp, error } = await supabase.auth.signUp({
+      email: data.email.trim(),
+      password: data.password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: {
+          first_name: data.firstName,
+          last_name: data.lastName,
+          role: data.role,
+          institution: data.institution || null,
+          license: data.license || null,
+        },
+      },
+    });
+    if (error) return { ok: false, message: error.message };
+    const needsConfirmation = !signUp.session;
+    return { ok: true, needsEmailConfirmation: needsConfirmation };
+  };
+
+  const setIsLoggedIn = (v: boolean) => { if (!v) void logout(); };
+
+  // ---- Patient CRUD (backend) ----
+  const addPatient = useCallback(async (patient: Patient) => {
+    if (!authUser) return;
+    const row = patientToRow(patient, authUser.id);
+    // Let the DB generate the id
+    const { id: _ignore, ...insertable } = row;
+    const { data, error } = await supabase
+      .from('patients')
+      .insert(insertable)
+      .select()
+      .single();
+    if (error) {
+      console.error('addPatient error', error);
+      return;
+    }
+    setPatientRows(prev => [data as PatientRow, ...prev]);
+    setCasesByPatient(prev => ({ ...prev, [(data as PatientRow).id]: [] }));
+  }, [authUser]);
+
+  const updatePatient = useCallback(async (patient: Patient) => {
+    if (!authUser) return;
+    const row = patientToRow(patient, authUser.id);
+    const { id: _ignore, user_id: _ignore2, ...updatable } = row;
+    const { error } = await supabase
+      .from('patients')
+      .update(updatable)
+      .eq('id', patient.id);
+    if (error) { console.error('updatePatient error', error); return; }
+    setPatientRows(prev => prev.map(r => r.id === patient.id ? { ...r, ...updatable } as PatientRow : r));
+  }, [authUser]);
+
+  const deletePatient = useCallback(async (id: string) => {
+    const { error } = await supabase.from('patients').delete().eq('id', id);
+    if (error) { console.error('deletePatient error', error); return; }
+    setPatientRows(prev => prev.filter(r => r.id !== id));
+    setCasesByPatient(prev => {
       const next = { ...prev };
       delete next[id];
       return next;
     });
-    setPatientShares(prev => prev.filter(s => s.patientId !== id));
   }, []);
 
-  // ----- Cases / Evolutions -----
+  // ---- Cases / Evolutions (in-memory, Phase 2) ----
   const addCase = useCallback((patientId: string, woundCase: WoundCase) => {
-    setAllPatients(prev => prev.map(p =>
-      p.id === patientId ? { ...p, cases: [...p.cases, woundCase] } : p
-    ));
+    setCasesByPatient(prev => ({ ...prev, [patientId]: [...(prev[patientId] || []), woundCase] }));
   }, []);
-
   const updateCase = useCallback((patientId: string, woundCase: WoundCase) => {
-    setAllPatients(prev => prev.map(p =>
-      p.id === patientId ? { ...p, cases: p.cases.map(c => c.id === woundCase.id ? woundCase : c) } : p
-    ));
+    setCasesByPatient(prev => ({
+      ...prev,
+      [patientId]: (prev[patientId] || []).map(c => c.id === woundCase.id ? woundCase : c),
+    }));
   }, []);
-
   const deleteCase = useCallback((patientId: string, caseId: string) => {
-    setAllPatients(prev => prev.map(p =>
-      p.id === patientId ? { ...p, cases: p.cases.filter(c => c.id !== caseId) } : p
-    ));
+    setCasesByPatient(prev => ({
+      ...prev,
+      [patientId]: (prev[patientId] || []).filter(c => c.id !== caseId),
+    }));
   }, []);
-
   const addEvolution = useCallback((patientId: string, caseId: string, evolution: Evolution) => {
-    setAllPatients(prev => prev.map(p =>
-      p.id === patientId ? {
-        ...p,
-        cases: p.cases.map(c =>
-          c.id === caseId ? { ...c, evolutions: [evolution, ...c.evolutions] } : c
-        ),
-      } : p
-    ));
+    setCasesByPatient(prev => ({
+      ...prev,
+      [patientId]: (prev[patientId] || []).map(c =>
+        c.id === caseId ? { ...c, evolutions: [evolution, ...c.evolutions] } : c
+      ),
+    }));
   }, []);
-
   const updateEvolution = useCallback((patientId: string, caseId: string, evolution: Evolution) => {
-    setAllPatients(prev => prev.map(p =>
-      p.id === patientId ? {
-        ...p,
-        cases: p.cases.map(c =>
-          c.id === caseId ? { ...c, evolutions: c.evolutions.map(e => e.id === evolution.id ? evolution : e) } : c
-        ),
-      } : p
-    ));
+    setCasesByPatient(prev => ({
+      ...prev,
+      [patientId]: (prev[patientId] || []).map(c =>
+        c.id === caseId ? { ...c, evolutions: c.evolutions.map(e => e.id === evolution.id ? evolution : e) } : c
+      ),
+    }));
   }, []);
-
   const deleteEvolution = useCallback((patientId: string, caseId: string, evolutionId: string) => {
-    setAllPatients(prev => prev.map(p =>
-      p.id === patientId ? {
-        ...p,
-        cases: p.cases.map(c =>
-          c.id === caseId ? { ...c, evolutions: c.evolutions.filter(e => e.id !== evolutionId) } : c
-        ),
-      } : p
-    ));
+    setCasesByPatient(prev => ({
+      ...prev,
+      [patientId]: (prev[patientId] || []).map(c =>
+        c.id === caseId ? { ...c, evolutions: c.evolutions.filter(e => e.id !== evolutionId) } : c
+      ),
+    }));
   }, []);
 
-  // ----- Sharing -----
-  const sharePatient: AppContextType['sharePatient'] = (patientId, email, role) => {
-    if (!currentUser) return { ok: false, message: 'No hay sesión activa.' };
-    const target = allUsers.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
-    if (!target) return { ok: false, message: 'No existe ningún usuario registrado con ese email.' };
-    if (target.id === currentUser.id) return { ok: false, message: 'No podés compartir un paciente con vos mismo.' };
-    if (patientOwners[patientId] === target.id) return { ok: false, message: 'Ese profesional ya es el dueño del paciente.' };
-
-    setPatientShares(prev => {
-      const existing = prev.find(s => s.patientId === patientId && s.userId === target.id);
-      if (existing) {
-        return prev.map(s => s === existing ? { ...s, role } : s);
-      }
-      return [...prev, {
-        patientId,
-        userId: target.id,
-        role,
-        invitedBy: currentUser.id,
-        invitedAt: new Date().toISOString().split('T')[0],
-      }];
-    });
-    return { ok: true };
-  };
-
-  const updateShareRole = (patientId: string, userId: string, role: ShareRole) => {
-    setPatientShares(prev => prev.map(s =>
-      s.patientId === patientId && s.userId === userId ? { ...s, role } : s
-    ));
-  };
-
-  const revokeShare = (patientId: string, userId: string) => {
-    setPatientShares(prev => prev.filter(s => !(s.patientId === patientId && s.userId === userId)));
-  };
-
-  const getPatientCollaborators: AppContextType['getPatientCollaborators'] = (patientId) => {
-    const ownerId = patientOwners[patientId];
-    if (!ownerId) return [];
-    const owner = allUsers.find(u => u.id === ownerId);
-    const result: Array<{ user: DemoUser; role: ShareRole | 'owner'; via: 'owner' | 'team' | 'share' }> = [];
-    if (owner) result.push({ user: owner, role: 'owner', via: 'owner' });
-
-    // Team mates
-    if (owner?.teamId) {
-      allUsers.forEach(u => {
-        if (u.id !== ownerId && u.teamId === owner.teamId) {
-          result.push({ user: u, role: 'collaborator', via: 'team' });
-        }
-      });
-    }
-
-    // Direct shares
-    patientShares
-      .filter(s => s.patientId === patientId)
-      .forEach(s => {
-        if (result.some(r => r.user.id === s.userId)) return; // dedup over team
-        const u = allUsers.find(x => x.id === s.userId);
-        if (u) result.push({ user: u, role: s.role, via: 'share' });
-      });
-
-    return result;
-  };
+  // ---- Compose patients (rows + in-memory cases) ----
+  const patients: Patient[] = useMemo(
+    () => patientRows.map(row => rowToPatient(row, casesByPatient[row.id] || [])),
+    [patientRows, casesByPatient]
+  );
 
   return (
     <AppContext.Provider value={{
-      isLoggedIn, currentUser, currentUserName, allUsers, teams,
-      login, logout, registerUser, setIsLoggedIn,
+      isLoggedIn, authReady, currentUser, currentUserName,
+      login, loginWithGoogle, logout, registerUser, setIsLoggedIn,
 
-      patients, patientOwners, patientShares,
-
+      patients, patientsLoading,
       addPatient, updatePatient, deletePatient,
+
       addCase, updateCase, deleteCase,
       addEvolution, updateEvolution, deleteEvolution,
-
-      getPatientAccess, sharePatient, updateShareRole, revokeShare, getPatientCollaborators,
     }}>
       {children}
     </AppContext.Provider>
