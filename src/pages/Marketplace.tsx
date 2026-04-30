@@ -11,11 +11,13 @@ import { Card } from '@/components/ui/card';
 import { Search, Filter, X, ShoppingBag, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { useCart } from '@/context/CartContext';
 
 type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';
 
 export default function Marketplace() {
   const { toast } = useToast();
+  const { addProduct } = useCart();
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<LabProduct[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
@@ -219,12 +221,7 @@ export default function Marketplace() {
                 key={p.id}
                 product={p}
                 categoryName={p.category_id ? categoriesById.get(p.category_id)?.name : undefined}
-                onAddToCart={() =>
-                  toast({
-                    title: 'Carrito próximamente',
-                    description: 'En el siguiente paso habilitamos el carrito y el envío del pedido.',
-                  })
-                }
+                onAddToCart={(prod) => addProduct(prod, 1)}
                 onView={() =>
                   toast({
                     title: p.name,

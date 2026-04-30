@@ -7,6 +7,7 @@ import { LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import logo from '@/assets/curatrack-logo.png';
+import { CartButton, CartDrawer } from '@/components/marketplace/CartDrawer';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { currentUser, currentUserName, logout } = useApp();
@@ -36,7 +37,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               <SidebarTrigger />
               <img src={logo} alt="CuraTrack" className="h-14 md:h-16 w-auto hidden md:block" />
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <CartButton />
               <div className="hidden sm:block text-right">
                 <p className="font-body text-sm font-medium">{currentUserName || 'Sin sesión'}</p>
                 <p className="font-body text-xs text-muted-foreground">{roleLabel}{currentUser?.institution ? ` · ${currentUser.institution}` : ''}</p>
@@ -52,6 +54,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <main className="flex-1 p-4 md:p-6 flex flex-col">
             {children}
           </main>
+          <CartDrawer />
         </div>
       </div>
     </SidebarProvider>
