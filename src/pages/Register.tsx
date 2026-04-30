@@ -48,7 +48,7 @@ export default function Register() {
   const strengthLabel = ['Muy débil', 'Débil', 'Aceptable', 'Buena', 'Excelente'][strength];
   const strengthColor = ['bg-destructive', 'bg-destructive', 'bg-warning', 'bg-warning', 'bg-success'][strength];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!firstName.trim() || !lastName.trim()) {
@@ -73,26 +73,32 @@ export default function Register() {
     }
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      const mappedRole: 'enfermero' | 'medico' | 'admin' =
-        role === 'medico' ? 'medico' : role === 'admin' ? 'admin' : 'enfermero';
-      const result = registerUser({
-        email: email.trim(),
-        password,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        role: mappedRole,
-        license: license.trim() || undefined,
-        institution: institution.trim() || undefined,
+    const mappedRole: 'enfermero' | 'medico' | 'admin' =
+      role === 'medico' ? 'medico' : role === 'admin' ? 'admin' : 'enfermero';
+    const result = await registerUser({
+      email: email.trim(),
+      password,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      role: mappedRole,
+      license: license.trim() || undefined,
+      institution: institution.trim() || undefined,
+    });
+    setLoading(false);
+    if (!result.ok) {
+      toast({ title: 'No se pudo crear la cuenta', description: result.message, variant: 'destructive' });
+      return;
+    }
+    if (result.needsEmailConfirmation) {
+      toast({
+        title: '¡Cuenta creada!',
+        description: `Te enviamos un correo a ${email.trim()} para verificar tu cuenta antes de ingresar.`,
       });
-      if (!result.ok) {
-        toast({ title: 'No se pudo crear la cuenta', description: result.message, variant: 'destructive' });
-        return;
-      }
-      toast({ title: '¡Cuenta creada!', description: `Bienvenido/a ${firstName}. Ya podés ingresar a CuraTrack.` });
-      navigate('/dashboard');
-    }, 600);
+      navigate('/login');
+      return;
+    }
+    toast({ title: '¡Cuenta creada!', description: `Bienvenido/a ${firstName}. Ya podés ingresar a CuraTrack.` });
+    navigate('/dashboard');
   };
 
   return (
