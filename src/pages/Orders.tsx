@@ -165,8 +165,9 @@ export default function Orders() {
               const cfg = statusConfig[o.status] ?? statusConfig.borrador;
               const Icon = cfg.icon;
               const items = itemsByOrder[o.id] ?? [];
+              const canCancel = CANCELLABLE_STATUSES.has(o.status);
               return (
-                <Card key={o.id}>
+                <Card key={o.id} className={o.status === 'cancelado' ? 'opacity-70' : ''}>
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div>
@@ -237,6 +238,18 @@ export default function Orders() {
                         </AccordionContent>
                       </AccordionItem>
                     </Accordion>
+                    {canCancel && (
+                      <div className="flex justify-end pt-2 border-t mt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive border-destructive/30 hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={() => setCancelTarget(o)}
+                        >
+                          <Ban className="h-3.5 w-3.5 mr-1" /> Cancelar pedido
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -244,6 +257,27 @@ export default function Orders() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!cancelTarget} onOpenChange={(o) => { if (!o && !cancelling) setCancelTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-heading">¿Cancelar este pedido?</AlertDialogTitle>
+            <AlertDialogDescription className="font-body">
+              Vas a cancelar el pedido <strong>{cancelTarget?.order_number}</strong>. El vendedor verá el cambio de estado y no procesará la entrega. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Volver</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleCancel(); }}
+              disabled={cancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {cancelling ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Cancelando…</> : 'Sí, cancelar pedido'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
