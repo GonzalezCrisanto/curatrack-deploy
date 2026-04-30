@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart3, Settings, Sparkles, ShoppingBag } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart3, Settings, Sparkles, ShoppingBag, Package } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import {
