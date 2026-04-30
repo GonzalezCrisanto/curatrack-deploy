@@ -43,6 +43,12 @@ export interface ConfirmOrderInput {
   general_wound_type?: string;
   clinical_recommendation?: string;
   commercial_notes?: string;
+  contact_phone?: string;
+  contact_email?: string;
+  delivery_address?: string;
+  delivery_city?: string;
+  delivery_postal_code?: string;
+  delivery_notes?: string;
   channel?: 'whatsapp' | 'email' | 'manual';
 }
 
@@ -222,6 +228,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           general_wound_type: input.general_wound_type ?? null,
           clinical_recommendation: input.clinical_recommendation ?? null,
           commercial_notes: input.commercial_notes ?? null,
+          contact_phone: input.contact_phone ?? null,
+          contact_email: input.contact_email ?? null,
+          delivery_address: input.delivery_address ?? null,
+          delivery_city: input.delivery_city ?? null,
+          delivery_postal_code: input.delivery_postal_code ?? null,
+          delivery_notes: input.delivery_notes ?? null,
           estimated_total: estimatedTotal,
           currency: 'ARS',
           channel: input.channel ?? 'manual',

@@ -19,6 +19,12 @@ interface OrderRow {
   general_wound_type: string | null;
   clinical_recommendation: string | null;
   commercial_notes: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  delivery_address: string | null;
+  delivery_city: string | null;
+  delivery_postal_code: string | null;
+  delivery_notes: string | null;
   estimated_total: number | null;
   currency: string;
   channel: string | null;
@@ -167,8 +173,24 @@ export default function Orders() {
                                 </div>
                               </div>
                             ))}
-                            {(o.clinical_recommendation || o.commercial_notes) && (
-                              <div className="mt-3 pt-3 border-t space-y-2 text-xs">
+                            {(o.delivery_address || o.contact_phone || o.contact_email || o.clinical_recommendation || o.commercial_notes) && (
+                              <div className="mt-3 pt-3 border-t space-y-1.5 text-xs">
+                                {o.delivery_address && (
+                                  <p>
+                                    <span className="font-semibold">Entrega:</span> {o.delivery_address}
+                                    {o.delivery_city ? `, ${o.delivery_city}` : ''}
+                                    {o.delivery_postal_code ? ` (CP ${o.delivery_postal_code})` : ''}
+                                  </p>
+                                )}
+                                {o.delivery_notes && (
+                                  <p><span className="font-semibold">Indicaciones:</span> {o.delivery_notes}</p>
+                                )}
+                                {(o.contact_phone || o.contact_email) && (
+                                  <p>
+                                    <span className="font-semibold">Contacto:</span>{' '}
+                                    {[o.contact_phone, o.contact_email].filter(Boolean).join(' · ')}
+                                  </p>
+                                )}
                                 {o.clinical_recommendation && (
                                   <p><span className="font-semibold">Recomendación clínica:</span> {o.clinical_recommendation}</p>
                                 )}

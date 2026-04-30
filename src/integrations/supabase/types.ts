@@ -708,8 +708,14 @@ export type Database = {
           channel: string | null
           clinical_recommendation: string | null
           commercial_notes: string | null
+          contact_email: string | null
+          contact_phone: string | null
           created_at: string
           currency: string
+          delivery_address: string | null
+          delivery_city: string | null
+          delivery_notes: string | null
+          delivery_postal_code: string | null
           estimated_total: number | null
           general_wound_type: string | null
           id: string
@@ -727,8 +733,14 @@ export type Database = {
           channel?: string | null
           clinical_recommendation?: string | null
           commercial_notes?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           currency?: string
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_notes?: string | null
+          delivery_postal_code?: string | null
           estimated_total?: number | null
           general_wound_type?: string | null
           id?: string
@@ -746,8 +758,14 @@ export type Database = {
           channel?: string | null
           clinical_recommendation?: string | null
           commercial_notes?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           currency?: string
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_notes?: string | null
+          delivery_postal_code?: string | null
           estimated_total?: number | null
           general_wound_type?: string | null
           id?: string
