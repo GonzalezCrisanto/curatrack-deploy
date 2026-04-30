@@ -133,6 +133,20 @@ export default function Login() {
               </form>
             ) : (
               <form onSubmit={handleLogin} className="space-y-5">
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={handleDemoLogin}
+                  disabled={loading}
+                  className="w-full font-body gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-95 shadow-md"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Probar con cuenta demo
+                </Button>
+                <p className="text-[11px] text-center text-muted-foreground font-body -mt-3">
+                  Acceso instantáneo · datos de prueba precargados
+                </p>
+
                 <Button type="button" variant="outline" size="lg" onClick={handleGoogle} disabled={loading}
                   className="w-full font-body gap-2 border-border">
                   <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
