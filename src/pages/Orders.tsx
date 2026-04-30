@@ -71,9 +71,35 @@ function formatDate(iso: string | null) {
 }
 
 export default function Orders() {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [itemsByOrder, setItemsByOrder] = useState<Record<string, OrderItem[]>>({});
+  const [cancelTarget, setCancelTarget] = useState<OrderRow | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancel = async () => {
+    if (!cancelTarget) return;
+    if (!CANCELLABLE_STATUSES.has(cancelTarget.status)) {
+      toast({ title: 'No se puede cancelar', description: 'El pedido ya fue procesado.', variant: 'destructive' });
+      setCancelTarget(null);
+      return;
+    }
+    setCancelling(true);
+    const { error } = await supabase
+      .from('supply_orders')
+      .update({ status: 'cancelado', updated_at: new Date().toISOString() })
+      .eq('id', cancelTarget.id)
+      .in('status', ['borrador', 'enviado']); // server-side guard
+    setCancelling(false);
+    if (error) {
+      toast({ title: 'No se pudo cancelar', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setOrders((prev) => prev.map((o) => (o.id === cancelTarget.id ? { ...o, status: 'cancelado' } : o)));
+    toast({ title: 'Pedido cancelado', description: `Nº ${cancelTarget.order_number}` });
+    setCancelTarget(null);
+  };
 
   useEffect(() => {
     let cancelled = false;
