@@ -17,6 +17,7 @@ const items = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Pacientes', url: '/patients', icon: Users },
   { title: 'Marketplace', url: '/marketplace', icon: ShoppingBag },
+  { title: 'Mis pedidos', url: '/orders', icon: Package },
   { title: 'Asistente IA', url: '/assistant', icon: Sparkles },
   { title: 'Estadísticas', url: '/statistics', icon: BarChart3 },
   { title: 'Configuración', url: '/settings', icon: Settings },
