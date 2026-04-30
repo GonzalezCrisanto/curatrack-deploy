@@ -184,11 +184,9 @@ export default function PatientDetail() {
     </AppLayout>
   );
 
-  const access = getPatientAccess(patient.id);
-  const collaborators = getPatientCollaborators(patient.id);
-  const owner = collaborators.find(c => c.via === 'owner')?.user;
-  const sharedCount = collaborators.length - 1; // exclude owner
-  const isOwner = access?.effectiveRole === 'owner';
+  // Phase 1: every patient belongs to the current user (no sharing yet)
+  const isOwner = true;
+  const sharedCount = 0;
 
   const openNewCase = () => {
     setEditingCase(null);
@@ -427,16 +425,11 @@ export default function PatientDetail() {
             <CardTitle className="heading-display text-xl flex items-center gap-2 flex-wrap">
               <User className="h-5 w-5 text-primary" />
               <span>{patient.lastName}, {patient.firstName}</span>
-              {isOwner ? (
+              {isOwner && (
                 <Badge className="font-body text-[10px] uppercase tracking-wide bg-primary/10 text-primary border-primary/30 ml-2">
                   <Crown className="h-2.5 w-2.5 mr-1" /> Tu paciente
                 </Badge>
-              ) : access ? (
-                <Badge variant="outline" className="font-body text-[10px] uppercase tracking-wide ml-2">
-                  <UsersIcon className="h-2.5 w-2.5 mr-1" />
-                  Compartido por {owner ? `${owner.firstName} ${owner.lastName}` : 'otro profesional'} · {ROLE_LABEL_SHORT[access.effectiveRole === 'owner' ? 'co_owner' : access.effectiveRole]}
-                </Badge>
-              ) : null}
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pb-4">
