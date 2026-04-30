@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Patients from "./pages/Patients";
 import PatientDetail from "./pages/PatientDetail";
 import CaseDetail from "./pages/CaseDetail";
+import Marketplace from "./pages/Marketplace";
 
 import Statistics from "./pages/Statistics";
 import Assistant from "./pages/Assistant";
@@ -36,7 +37,8 @@ const App = () => (
             <Route path="/patients" element={<Patients />} />
             <Route path="/patients/:patientId" element={<PatientDetail />} />
             <Route path="/patients/:patientId/cases/:caseId" element={<CaseDetail />} />
-            
+            <Route path="/marketplace" element={<Marketplace />} />
+
             <Route path="/assistant" element={<Assistant />} />
             <Route path="/statistics" element={<Statistics />} />
             <Route path="/settings" element={<Settings />} />
