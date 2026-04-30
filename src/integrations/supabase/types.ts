@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      cart_items: {
+        Row: {
+          created_at: string
+          curation_date: string | null
+          id: string
+          notes: string | null
+          priority: string
+          product_id: string
+          quantity: number
+          related_case_id: string | null
+          related_evolution_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          curation_date?: string | null
+          id?: string
+          notes?: string | null
+          priority?: string
+          product_id: string
+          quantity?: number
+          related_case_id?: string | null
+          related_evolution_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          curation_date?: string | null
+          id?: string
+          notes?: string | null
+          priority?: string
+          product_id?: string
+          quantity?: number
+          related_case_id?: string | null
+          related_evolution_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "lab_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evolutions: {
         Row: {
           case_id: string
@@ -72,6 +122,203 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lab_products: {
+        Row: {
+          category_id: string | null
+          clinical_tags: string[]
+          created_at: string
+          currency: string
+          datasheet_url: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_featured: boolean
+          lab_id: string
+          min_stock: number | null
+          name: string
+          presentation: string | null
+          price: number | null
+          price_updated_at: string
+          price_valid_until: string | null
+          short_description: string | null
+          size: string | null
+          sku: string | null
+          stock: number | null
+          stock_updated_at: string
+          units_per_box: number | null
+          updated_at: string
+          usage_instructions: string | null
+          wound_types: string[]
+        }
+        Insert: {
+          category_id?: string | null
+          clinical_tags?: string[]
+          created_at?: string
+          currency?: string
+          datasheet_url?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_featured?: boolean
+          lab_id: string
+          min_stock?: number | null
+          name: string
+          presentation?: string | null
+          price?: number | null
+          price_updated_at?: string
+          price_valid_until?: string | null
+          short_description?: string | null
+          size?: string | null
+          sku?: string | null
+          stock?: number | null
+          stock_updated_at?: string
+          units_per_box?: number | null
+          updated_at?: string
+          usage_instructions?: string | null
+          wound_types?: string[]
+        }
+        Update: {
+          category_id?: string | null
+          clinical_tags?: string[]
+          created_at?: string
+          currency?: string
+          datasheet_url?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_featured?: boolean
+          lab_id?: string
+          min_stock?: number | null
+          name?: string
+          presentation?: string | null
+          price?: number | null
+          price_updated_at?: string
+          price_valid_until?: string | null
+          short_description?: string | null
+          size?: string | null
+          sku?: string | null
+          stock?: number | null
+          stock_updated_at?: string
+          units_per_box?: number | null
+          updated_at?: string
+          usage_instructions?: string | null
+          wound_types?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_products_lab_id_fkey"
+            columns: ["lab_id"]
+            isOneToOne: false
+            referencedRelation: "labs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_sellers: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          is_active: boolean
+          lab_id: string
+          phone: string | null
+          updated_at: string
+          user_id: string | null
+          whatsapp: string | null
+          zone: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          is_active?: boolean
+          lab_id: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string | null
+          whatsapp?: string | null
+          zone?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          lab_id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string | null
+          whatsapp?: string | null
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_sellers_lab_id_fkey"
+            columns: ["lab_id"]
+            isOneToOne: false
+            referencedRelation: "labs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      labs: {
+        Row: {
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          slug: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name: string
+          slug: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name?: string
+          slug?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
       }
       patients: {
         Row: {
@@ -181,6 +428,137 @@ export type Database = {
           },
         ]
       }
+      product_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      product_clinical_tags: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      product_interactions: {
+        Row: {
+          context: string | null
+          created_at: string
+          id: string
+          interaction_type: string
+          product_id: string
+          user_id: string
+        }
+        Insert: {
+          context?: string | null
+          created_at?: string
+          id?: string
+          interaction_type: string
+          product_id: string
+          user_id: string
+        }
+        Update: {
+          context?: string | null
+          created_at?: string
+          id?: string
+          interaction_type?: string
+          product_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_interactions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "lab_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_recommendation_rules: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          match_clinical_tag: string | null
+          match_exudate: string | null
+          match_infection: boolean | null
+          match_wound_type: string | null
+          priority: number
+          recommended_category_slug: string | null
+          recommended_clinical_tag: string | null
+          rule_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          match_clinical_tag?: string | null
+          match_exudate?: string | null
+          match_infection?: boolean | null
+          match_wound_type?: string | null
+          priority?: number
+          recommended_category_slug?: string | null
+          recommended_clinical_tag?: string | null
+          rule_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          match_clinical_tag?: string | null
+          match_exudate?: string | null
+          match_infection?: boolean | null
+          match_wound_type?: string | null
+          priority?: number
+          recommended_category_slug?: string | null
+          recommended_clinical_tag?: string | null
+          rule_name?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -216,6 +594,224 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      seller_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          institution: string | null
+          is_active: boolean
+          lab_id: string
+          seller_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          institution?: string | null
+          is_active?: boolean
+          lab_id: string
+          seller_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          institution?: string | null
+          is_active?: boolean
+          lab_id?: string
+          seller_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_assignments_lab_id_fkey"
+            columns: ["lab_id"]
+            isOneToOne: false
+            referencedRelation: "labs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_assignments_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "lab_sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supply_order_items: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+          notes: string | null
+          order_id: string
+          presentation: string | null
+          priority: string | null
+          product_id: string | null
+          product_name: string
+          product_sku: string | null
+          quantity: number
+          subtotal: number | null
+          unit_price: number | null
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          presentation?: string | null
+          priority?: string | null
+          product_id?: string | null
+          product_name: string
+          product_sku?: string | null
+          quantity: number
+          subtotal?: number | null
+          unit_price?: number | null
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          presentation?: string | null
+          priority?: string | null
+          product_id?: string | null
+          product_name?: string
+          product_sku?: string | null
+          quantity?: number
+          subtotal?: number | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "supply_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "lab_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supply_orders: {
+        Row: {
+          channel: string | null
+          clinical_recommendation: string | null
+          commercial_notes: string | null
+          created_at: string
+          currency: string
+          estimated_total: number | null
+          general_wound_type: string | null
+          id: string
+          institution: string | null
+          lab_id: string | null
+          order_number: string
+          professional_name: string | null
+          seller_id: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel?: string | null
+          clinical_recommendation?: string | null
+          commercial_notes?: string | null
+          created_at?: string
+          currency?: string
+          estimated_total?: number | null
+          general_wound_type?: string | null
+          id?: string
+          institution?: string | null
+          lab_id?: string | null
+          order_number: string
+          professional_name?: string | null
+          seller_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel?: string | null
+          clinical_recommendation?: string | null
+          commercial_notes?: string | null
+          created_at?: string
+          currency?: string
+          estimated_total?: number | null
+          general_wound_type?: string | null
+          id?: string
+          institution?: string | null
+          lab_id?: string | null
+          order_number?: string
+          professional_name?: string | null
+          seller_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_orders_lab_id_fkey"
+            columns: ["lab_id"]
+            isOneToOne: false
+            referencedRelation: "labs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_orders_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "lab_sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_lab_sponsors: {
+        Row: {
+          assigned_at: string
+          created_at: string
+          id: string
+          is_active: boolean
+          lab_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          lab_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          lab_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_lab_sponsors_lab_id_fkey"
+            columns: ["lab_id"]
+            isOneToOne: false
+            referencedRelation: "labs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -305,6 +901,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_order_number: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
