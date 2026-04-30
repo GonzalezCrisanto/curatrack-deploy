@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, Mail } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, Mail, Sparkles } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import logo from '@/assets/curatrack-logo.png';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,6 +37,26 @@ export default function Login() {
     setLoading(false);
     if (!result.ok) {
       toast({ title: 'No se pudo iniciar sesión con Google', description: result.message, variant: 'destructive' });
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('demo-login');
+      if (error || !data?.ok) {
+        throw new Error(error?.message || data?.message || 'No se pudo preparar la cuenta demo');
+      }
+      const result = await login(data.email, data.password);
+      if (!result.ok) {
+        throw new Error(result.message || 'No se pudo iniciar sesión con la cuenta demo');
+      }
+      toast({ title: 'Sesión demo iniciada', description: 'Estás usando la cuenta de prueba de CuraTrack.' });
+      navigate('/dashboard');
+    } catch (err) {
+      toast({ title: 'No se pudo entrar a la demo', description: (err as Error).message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
     }
   };
 
