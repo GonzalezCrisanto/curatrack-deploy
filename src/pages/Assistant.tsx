@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useApp } from '@/context/AppContext';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getPatientIndicator, indicatorMeta } from '@/lib/patientStatus';
 import { getPatientAge } from '@/lib/age';
@@ -98,12 +99,19 @@ export default function Assistant() {
     };
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Sesión expirada. Iniciá sesión nuevamente.');
+        setIsLoading(false);
+        return;
+      }
       const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nurse-assistant`;
       const resp = await fetch(CHAT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
         body: JSON.stringify({
           messages: [...messages, userMsg],
@@ -204,12 +212,19 @@ Cualquier paciente con signos de alarma (infección, deterioro, biofilm, requier
 Sé breve, claro y accionable. Usá listas con bullets o numeradas. No uses bloques de código.`;
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Sesión expirada. Iniciá sesión nuevamente.');
+        setAgendaLoading(false);
+        return;
+      }
       const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nurse-assistant`;
       const resp = await fetch(CHAT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
         body: JSON.stringify({
           messages: [{ role: 'user', content: prompt }],

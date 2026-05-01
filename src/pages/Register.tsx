@@ -16,7 +16,6 @@ const ROLES = [
   { value: 'medico', label: 'Médico/a' },
   { value: 'kinesiologo', label: 'Kinesiólogo/a' },
   { value: 'podologo', label: 'Podólogo/a' },
-  { value: 'admin', label: 'Administrativo/a' },
   { value: 'otro', label: 'Otro' },
 ];
 
@@ -73,8 +72,9 @@ export default function Register() {
     }
 
     setLoading(true);
-    const mappedRole: 'enfermero' | 'medico' | 'admin' =
-      role === 'medico' ? 'medico' : role === 'admin' ? 'admin' : 'enfermero';
+    // Self-registration never grants admin; server-side trigger also enforces this.
+    const mappedRole: 'enfermero' | 'medico' =
+      role === 'medico' ? 'medico' : 'enfermero';
     const result = await registerUser({
       email: email.trim(),
       password,
