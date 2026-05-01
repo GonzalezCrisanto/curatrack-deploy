@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.seed_demo_clinical_for_user(uuid) TO service_role;
