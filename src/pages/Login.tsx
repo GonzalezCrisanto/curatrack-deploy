@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, Mail, Sparkles } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, Mail, Sparkles, ShieldCheck } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import logo from '@/assets/curatrack-logo.png';
 import { supabase } from '@/integrations/supabase/client';
@@ -55,6 +55,26 @@ export default function Login() {
       navigate('/dashboard');
     } catch (err) {
       toast({ title: 'No se pudo entrar a la demo', description: (err as Error).message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdminDemoLogin = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('demo-admin-login');
+      if (error || !data?.ok) {
+        throw new Error(error?.message || data?.message || 'No se pudo preparar la cuenta admin demo');
+      }
+      const result = await login(data.email, data.password);
+      if (!result.ok) {
+        throw new Error(result.message || 'No se pudo iniciar sesión con la cuenta admin');
+      }
+      toast({ title: 'Sesión admin demo iniciada', description: 'Estás usando la cuenta de administrador/vendedor.' });
+      navigate('/admin/orders');
+    } catch (err) {
+      toast({ title: 'No se pudo entrar como admin', description: (err as Error).message, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -133,16 +153,29 @@ export default function Login() {
               </form>
             ) : (
               <form onSubmit={handleLogin} className="space-y-5">
-                <Button
-                  type="button"
-                  size="lg"
-                  onClick={handleDemoLogin}
-                  disabled={loading}
-                  className="w-full font-body gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-95 shadow-md"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Probar con cuenta demo
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    size="lg"
+                    onClick={handleDemoLogin}
+                    disabled={loading}
+                    className="w-full font-body gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-95 shadow-md text-xs"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Demo profesional
+                  </Button>
+                  <Button
+                    type="button"
+                    size="lg"
+                    onClick={handleAdminDemoLogin}
+                    disabled={loading}
+                    variant="outline"
+                    className="w-full font-body gap-2 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground text-xs"
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    Demo vendedor
+                  </Button>
+                </div>
                 <p className="text-[11px] text-center text-muted-foreground font-body -mt-3">
                   Acceso instantáneo · datos de prueba precargados
                 </p>

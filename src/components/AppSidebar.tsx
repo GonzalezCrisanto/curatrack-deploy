@@ -1,6 +1,7 @@
-import { LayoutDashboard, Users, BarChart3, Settings, Sparkles, ShoppingBag, Package } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart3, Settings, Sparkles, ShoppingBag, Package, ClipboardList, UserCog } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
+import { useApp } from '@/context/AppContext';
 import {
   Sidebar,
   SidebarContent,
@@ -13,7 +14,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 
-const items = [
+const mainItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Pacientes', url: '/patients', icon: Users },
   { title: 'Marketplace', url: '/marketplace', icon: ShoppingBag },
@@ -23,12 +24,19 @@ const items = [
   { title: 'Configuración', url: '/settings', icon: Settings },
 ];
 
+const adminItems = [
+  { title: 'Productos', url: '/admin/products', icon: Package },
+  { title: 'Pedidos', url: '/admin/orders', icon: ClipboardList },
+  { title: 'Cuentas', url: '/admin/accounts', icon: UserCog },
+];
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
+  const { currentUser } = useApp();
 
-  const isActive = (path: string) => location.pathname.startsWith(path);
+  const isAdmin = currentUser?.role === 'admin';
 
   return (
     <Sidebar collapsible="icon">
@@ -37,7 +45,7 @@ export function AppSidebar() {
           <SidebarGroupLabel className="font-body text-xs uppercase tracking-wider">Menú principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
@@ -55,6 +63,30 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="font-body text-xs uppercase tracking-wider">Administración</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {adminItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        className="hover:bg-sidebar-accent/50"
+                        activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                      >
+                        <item.icon className="mr-2 h-4 w-4" />
+                        {!collapsed && <span className="font-body text-sm">{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   );
