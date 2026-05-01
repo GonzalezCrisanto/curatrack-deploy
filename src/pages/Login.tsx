@@ -60,6 +60,26 @@ export default function Login() {
     }
   };
 
+  const handleAdminDemoLogin = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('demo-admin-login');
+      if (error || !data?.ok) {
+        throw new Error(error?.message || data?.message || 'No se pudo preparar la cuenta admin demo');
+      }
+      const result = await login(data.email, data.password);
+      if (!result.ok) {
+        throw new Error(result.message || 'No se pudo iniciar sesión con la cuenta admin');
+      }
+      toast({ title: 'Sesión admin demo iniciada', description: 'Estás usando la cuenta de administrador/vendedor.' });
+      navigate('/admin/orders');
+    } catch (err) {
+      toast({ title: 'No se pudo entrar como admin', description: (err as Error).message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
