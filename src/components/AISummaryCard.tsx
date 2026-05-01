@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Copy, FileText, Loader2, RefreshCw, Check } from 'lucide-react';
@@ -25,63 +26,6 @@ export default function AISummaryCard({ summary, loading, error, onRegenerate, o
     } catch {
       toast.error('No se pudo copiar el resumen');
     }
-  };
-
-  // Lightweight markdown rendering for headings, bold and bullets
-  const renderMarkdown = (text: string) => {
-    const lines = text.split('\n');
-    const elements: JSX.Element[] = [];
-    let listBuffer: string[] = [];
-
-    const flushList = (key: string) => {
-      if (listBuffer.length === 0) return;
-      elements.push(
-        <ul key={`ul-${key}`} className="list-disc pl-5 space-y-1 my-1.5 font-body text-sm">
-          {listBuffer.map((item, i) => (
-            <li key={i} dangerouslySetInnerHTML={{ __html: formatInline(item) }} />
-          ))}
-        </ul>
-      );
-      listBuffer = [];
-    };
-
-    const formatInline = (s: string) =>
-      s
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-        .replace(/`(.+?)`/g, '<code class="px-1 py-0.5 rounded bg-muted text-foreground/90 text-xs">$1</code>');
-
-    lines.forEach((raw, idx) => {
-      const line = raw.trim();
-      if (!line) {
-        flushList(String(idx));
-        return;
-      }
-      if (line.startsWith('### ')) {
-        flushList(String(idx));
-        elements.push(
-          <h4 key={idx} className="font-display text-sm font-bold text-primary mt-3 first:mt-0">
-            {line.replace(/^###\s+/, '')}
-          </h4>
-        );
-      } else if (line.startsWith('## ')) {
-        flushList(String(idx));
-        elements.push(
-          <h3 key={idx} className="font-display text-base font-bold text-primary mt-3 first:mt-0">
-            {line.replace(/^##\s+/, '')}
-          </h3>
-        );
-      } else if (/^[-*]\s+/.test(line)) {
-        listBuffer.push(line.replace(/^[-*]\s+/, ''));
-      } else {
-        flushList(String(idx));
-        elements.push(
-          <p key={idx} className="font-body text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: formatInline(line) }} />
-        );
-      }
-    });
-    flushList('end');
-    return elements;
   };
 
   return (
@@ -115,7 +59,14 @@ export default function AISummaryCard({ summary, loading, error, onRegenerate, o
         {summary && !loading && (
           <>
             <div className="rounded-md bg-background/70 border border-border/40 p-3 space-y-1">
-              {renderMarkdown(summary)}
+              <div className="prose prose-sm max-w-none font-body text-sm prose-headings:font-display prose-headings:text-primary prose-h3:text-sm prose-h3:font-bold prose-h2:text-base prose-h2:font-bold prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-muted prose-code:text-foreground/90 prose-code:text-xs">
+                <ReactMarkdown
+                  // disallow raw HTML; only safe markdown nodes are rendered
+                  skipHtml
+                >
+                  {summary}
+                </ReactMarkdown>
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
               <Button
