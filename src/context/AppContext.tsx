@@ -195,16 +195,71 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setPatientRows((pats || []) as PatientRow[]);
         }
 
-        // Hydrate cases from demo seed for any patient whose name matches.
-        // This gives new accounts immediate clinical content for the seeded patients.
+        // Load wound_cases + evolutions for these patients from the backend.
+        const patientIds = (pats || []).map((p: any) => p.id);
+        const casesById: Record<string, WoundCase[]> = {};
+        if (patientIds.length > 0) {
+          const { data: caseRows } = await supabase
+            .from('wound_cases')
+            .select('*')
+            .in('patient_id', patientIds);
+          const caseIds = (caseRows || []).map((c: any) => c.id);
+          const evosByCase: Record<string, Evolution[]> = {};
+          if (caseIds.length > 0) {
+            const { data: evoRows } = await supabase
+              .from('evolutions')
+              .select('*')
+              .in('case_id', caseIds)
+              .order('evolution_date', { ascending: false });
+            for (const e of (evoRows || []) as any[]) {
+              const ev: Evolution = {
+                id: e.id,
+                date: e.evolution_date,
+                time: e.evolution_time || '',
+                professional: e.professional || '',
+                description: e.description || '',
+                procedure: e.procedure || '',
+                materials: e.materials || '',
+                healingFrequency: e.healing_frequency || '',
+                observations: e.observations || '',
+                nextControl: e.next_control || '',
+                photos: [],
+              };
+              (evosByCase[e.case_id] ||= []).push(ev);
+            }
+          }
+          for (const c of (caseRows || []) as any[]) {
+            const wc: WoundCase = {
+              id: c.id,
+              patientId: c.patient_id,
+              woundType: c.wound_type,
+              anatomicalLocation: c.anatomical_location || '',
+              startDate: c.start_date || new Date().toISOString().slice(0, 10),
+              status: (c.status || 'activo') as WoundCase['status'],
+              evolutions: evosByCase[c.id] || [],
+              photos: [],
+              size: c.size || undefined,
+              depth: c.depth || undefined,
+              exudate: c.exudate || undefined,
+              infection: c.infection || undefined,
+              pain: c.pain || undefined,
+              treatment: c.treatment || undefined,
+            };
+            (casesById[c.patient_id] ||= []).push(wc);
+          }
+        }
+
         setCasesByPatient(prev => {
           const next = { ...prev };
           for (const row of (pats || []) as PatientRow[]) {
             if (next[row.id]) continue;
+            if (casesById[row.id] && casesById[row.id].length > 0) {
+              next[row.id] = casesById[row.id];
+              continue;
+            }
             const seedMatch = demoPatients.find(d =>
               d.firstName === row.first_name && d.lastName === row.last_name
             );
-            // Re-key the seed cases to the real patient id so navigation works
             next[row.id] = seedMatch
               ? seedMatch.cases.map(c => ({ ...c, patientId: row.id }))
               : [];

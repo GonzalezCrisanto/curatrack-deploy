@@ -981,6 +981,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      seed_demo_clinical_for_user: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "professional"
