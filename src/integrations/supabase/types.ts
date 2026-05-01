@@ -638,6 +638,13 @@ export type Database = {
             referencedRelation: "lab_sellers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "seller_assignments_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "lab_sellers_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       supply_order_items: {
@@ -794,6 +801,13 @@ export type Database = {
             referencedRelation: "lab_sellers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "supply_orders_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "lab_sellers_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_lab_sponsors: {
@@ -916,7 +930,47 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      lab_sellers_public: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string | null
+          is_active: boolean | null
+          lab_id: string | null
+          updated_at: string | null
+          zone: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          lab_id?: string | null
+          updated_at?: string | null
+          zone?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          lab_id?: string | null
+          updated_at?: string | null
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_sellers_lab_id_fkey"
+            columns: ["lab_id"]
+            isOneToOne: false
+            referencedRelation: "labs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       generate_order_number: { Args: never; Returns: string }
