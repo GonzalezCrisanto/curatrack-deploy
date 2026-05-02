@@ -84,7 +84,7 @@ export default function CaseDetail() {
   // Check if patient has general consent
   useEffect(() => {
     if (!patient) return;
-    sb.from('patient_consents').select('id').eq('patient_id', patient.id).eq('status', 'accepted').limit(1)
+    supabase.from('patient_consents').select('id').eq('patient_id', patient.id).eq('status', 'accepted').limit(1)
       .then(({ data }) => setHasGeneralConsent((data ?? []).length > 0));
   }, [patient?.id]);
 
@@ -306,7 +306,7 @@ export default function CaseDetail() {
       if (!userId) return null;
       const blob = await (await fetch(dataUrl)).blob();
       const path = `${userId}/${prefix}-${Date.now()}.png`;
-      const { error } = await sb.storage.from('signatures').upload(path, blob, { contentType: 'image/png' });
+      const { error } = await supabase.storage.from('signatures').upload(path, blob, { contentType: 'image/png' });
       if (error) { console.error('Signature upload error', error); return null; }
       return path;
     } catch (e) { console.error('Signature upload failed', e); return null; }
@@ -351,7 +351,7 @@ export default function CaseDetail() {
         }
       }
       const now = new Date().toISOString();
-      sb.from('evolution_signatures').insert({
+      supabase.from('evolution_signatures').insert({
         evolution_id: payload.id,
         patient_id: patient.id,
         case_id: woundCase.id,
