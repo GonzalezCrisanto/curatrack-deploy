@@ -416,6 +416,8 @@ export default function CaseDetail() {
       return;
     }
     persistEvo(false);
+
+    // NOTE: close-case confirmation also validates via handleConfirmCloseCase
   };
 
   const openCaseSummaryPrintWindow = (): boolean => {
