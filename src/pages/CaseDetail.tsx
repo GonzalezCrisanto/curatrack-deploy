@@ -1405,6 +1405,23 @@ export default function CaseDetail() {
                 )}
               </div>
 
+              {/* Consent & Signature section (only for new evolutions) */}
+              {!editingEvo && (
+                <EvolutionConsentSection
+                  professionalName={currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : evoForm.professional}
+                  professionalLicense={currentUser?.license}
+                  professionalInstitution={currentUser?.institution}
+                  patientName={patient ? `${patient.firstName} ${patient.lastName}` : ''}
+                  patientDni={patient?.dni}
+                  hasGeneralConsent={hasGeneralConsent}
+                  professionalData={profSignature}
+                  patientConsentData={patientConsent}
+                  onProfessionalChange={setProfSignature}
+                  onPatientConsentChange={setPatientConsent}
+                  errors={consentErrors}
+                />
+              )}
+
               {/* AI summary moved to case header — no longer rendered inside the evolution dialog */}
             </div>
 
