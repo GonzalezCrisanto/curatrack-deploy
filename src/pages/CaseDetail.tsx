@@ -70,6 +70,23 @@ export default function CaseDetail() {
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [consentErrors, setConsentErrors] = useState<string[]>([]);
+
+  const emptyProfSignature: ProfessionalSignatureData = { confirmed: false, signatureDataUrl: null };
+  const emptyPatientConsent: PatientConsentData = {
+    consentStatus: 'accepts_all', signerFullName: '', signerDni: '', signerRelationship: 'paciente',
+    signerRelationshipOther: '', signatureDataUrl: null, observation: '',
+  };
+  const [profSignature, setProfSignature] = useState<ProfessionalSignatureData>(emptyProfSignature);
+  const [patientConsent, setPatientConsent] = useState<PatientConsentData>(emptyPatientConsent);
+  const [hasGeneralConsent, setHasGeneralConsent] = useState(false);
+
+  // Check if patient has general consent
+  useEffect(() => {
+    if (!patient) return;
+    sb.from('patient_consents').select('id').eq('patient_id', patient.id).eq('status', 'accepted').limit(1)
+      .then(({ data }) => setHasGeneralConsent((data ?? []).length > 0));
+  }, [patient?.id]);
 
   // Case-level AI summary viewer
   const [caseSummaryOpen, setCaseSummaryOpen] = useState(false);
