@@ -1,7 +1,21 @@
 import { Patient, getStatusLabel } from '@/data/demoData';
 import { formatPatientAge } from '@/lib/age';
 
-export function exportPatientPdf(patient: Patient) {
+export interface EvolutionSignatureInfo {
+  evolutionId: string;
+  professionalName?: string;
+  professionalLicense?: string;
+  professionalSignedAt?: string;
+  professionalSignatureUrl?: string;
+  patientConsentStatus?: string;
+  patientSignerName?: string;
+  patientSignerDni?: string;
+  patientSignerRelationship?: string;
+  patientSignedAt?: string;
+  patientSignatureUrl?: string;
+}
+
+export function exportPatientPdf(patient: Patient, signatureMap?: Record<string, EvolutionSignatureInfo>) {
   const win = window.open('', '_blank');
   if (!win) return;
 
@@ -10,6 +24,13 @@ export function exportPatientPdf(patient: Patient) {
     en_mejoria: 'En mejoría',
     critico: 'Crítico',
     resuelto: 'Resuelto',
+  };
+
+  const consentLabel = (s?: string) => {
+    if (s === 'accepted') return 'Aceptado';
+    if (s === 'partial') return 'Parcial (sin fotos)';
+    if (s === 'rejected') return 'Rechazado';
+    return s || '—';
   };
 
   const casesHtml = patient.cases.map(c => `
@@ -28,7 +49,9 @@ export function exportPatientPdf(patient: Patient) {
 
       ${c.evolutions.length > 0 ? `
         <h3>Evoluciones Clínicas</h3>
-        ${c.evolutions.map((ev, i) => `
+        ${c.evolutions.map((ev, i) => {
+          const sig = signatureMap?.[ev.id];
+          return `
           <div class="evolution">
             <div class="evo-header">
               <strong>Evolución ${i + 1}</strong> — ${ev.date} ${ev.time} hs · ${ev.professional}
@@ -46,8 +69,24 @@ export function exportPatientPdf(patient: Patient) {
                 ${ev.photos.map(ph => `<img src="${ph.url}" alt="${ph.caption}" />`).join('')}
               </div>
             ` : ''}
+            ${sig ? `
+              <div class="signature-block">
+                <h4>Firma y consentimiento</h4>
+                <table class="info-table">
+                  ${sig.professionalName ? `<tr><td class="label">Profesional</td><td>${sig.professionalName}${sig.professionalLicense ? ` · Mat. ${sig.professionalLicense}` : ''}</td></tr>` : ''}
+                  ${sig.professionalSignedAt ? `<tr><td class="label">Firma profesional</td><td>${new Date(sig.professionalSignedAt).toLocaleString('es-AR')}</td></tr>` : ''}
+                  <tr><td class="label">Consentimiento paciente</td><td>${consentLabel(sig.patientConsentStatus)}</td></tr>
+                  ${sig.patientSignerName ? `<tr><td class="label">Firmante</td><td>${sig.patientSignerName}${sig.patientSignerDni ? ` — DNI ${sig.patientSignerDni}` : ''}${sig.patientSignerRelationship ? ` (${sig.patientSignerRelationship})` : ''}</td></tr>` : ''}
+                  ${sig.patientSignedAt ? `<tr><td class="label">Firma paciente</td><td>${new Date(sig.patientSignedAt).toLocaleString('es-AR')}</td></tr>` : ''}
+                </table>
+                <div class="sig-images">
+                  ${sig.professionalSignatureUrl ? `<div class="sig-img"><span>Firma profesional</span><img src="${sig.professionalSignatureUrl}" /></div>` : ''}
+                  ${sig.patientSignatureUrl ? `<div class="sig-img"><span>Firma paciente/responsable</span><img src="${sig.patientSignatureUrl}" /></div>` : ''}
+                </div>
+              </div>
+            ` : ''}
           </div>
-        `).join('')}
+        `}).join('')}
       ` : '<p class="empty">Sin evoluciones registradas</p>'}
 
       ${c.photos.length > 0 ? `
@@ -95,6 +134,12 @@ export function exportPatientPdf(patient: Patient) {
     .photos img { width: 120px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #dbe7f7; }
     .empty { color: #999; font-style: italic; font-size: 12px; }
     .footer { margin-top: 32px; border-top: 1px solid #dbe7f7; padding-top: 12px; font-size: 11px; color: #999; text-align: center; }
+    .signature-block { margin-top: 12px; padding: 10px; border: 1px dashed #c3d5e8; border-radius: 6px; background: #fafcff; }
+    .signature-block h4 { font-size: 12px; color: #1763D2; margin-bottom: 6px; }
+    .sig-images { display: flex; gap: 16px; margin-top: 8px; }
+    .sig-img { text-align: center; }
+    .sig-img span { display: block; font-size: 10px; color: #888; margin-bottom: 4px; }
+    .sig-img img { height: 50px; max-width: 160px; object-fit: contain; }
   </style>
 </head>
 <body>
