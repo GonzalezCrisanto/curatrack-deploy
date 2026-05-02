@@ -1471,7 +1471,7 @@ export default function CaseDetail() {
             <AlertDialogFooter>
               <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => persistEvo(true)}
+                onClick={() => handleConfirmCloseCase()}
                 className="font-body bg-success text-success-foreground hover:bg-success/90"
               >
                 Sí, cerrar evolución
