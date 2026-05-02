@@ -351,6 +351,18 @@ export default function CaseDetail() {
       toast.error('Indicá la frecuencia de curación o, en su defecto, los días estimados entre curaciones.');
       return;
     }
+
+    // Validate consent & signature (only for new evolutions)
+    if (!editingEvo) {
+      const cErrors = validateEvolutionConsent(profSignature, patientConsent);
+      if (cErrors.length > 0) {
+        setConsentErrors(cErrors);
+        toast.error('Para finalizar la curación, necesitás confirmar y firmar como profesional.');
+        return;
+      }
+      setConsentErrors([]);
+    }
+
     if (evoForm.evolutionStatus === 'cicatrizada') {
       setCloseConfirmOpen(true);
       return;
