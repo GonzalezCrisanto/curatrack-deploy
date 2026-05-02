@@ -416,8 +416,20 @@ export default function CaseDetail() {
       return;
     }
     persistEvo(false);
+  };
 
-    // NOTE: close-case confirmation also validates via handleConfirmCloseCase
+  const handleConfirmCloseCase = () => {
+    if (!editingEvo) {
+      const cErrors = validateEvolutionConsent(profSignature, patientConsent);
+      if (cErrors.length > 0) {
+        setConsentErrors(cErrors);
+        toast.error(cErrors[0]);
+        setCloseConfirmOpen(false);
+        return;
+      }
+      setConsentErrors([]);
+    }
+    persistEvo(true);
   };
 
   const openCaseSummaryPrintWindow = (): boolean => {
