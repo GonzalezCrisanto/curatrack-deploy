@@ -12,6 +12,45 @@ interface SignaturePadProps {
   label?: string;
 }
 
+/** Crop the signature to its bounding box with padding, returning a trimmed data URL. */
+function cropSignatureDataUrl(canvas: HTMLCanvasElement, padding = 16): string {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return canvas.toDataURL('image/png');
+
+  const { width, height } = canvas;
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const { data } = imageData;
+
+  let minX = width, minY = height, maxX = 0, maxY = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const alpha = data[(y * width + x) * 4 + 3];
+      if (alpha > 0) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  // No strokes found — return full canvas
+  if (maxX < minX) return canvas.toDataURL('image/png');
+
+  const cropX = Math.max(0, minX - padding);
+  const cropY = Math.max(0, minY - padding);
+  const cropW = Math.min(width, maxX + padding + 1) - cropX;
+  const cropH = Math.min(height, maxY + padding + 1) - cropY;
+
+  const offscreen = document.createElement('canvas');
+  offscreen.width = cropW;
+  offscreen.height = cropH;
+  const offCtx = offscreen.getContext('2d')!;
+  offCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+  return offscreen.toDataURL('image/png');
+}
+
 export function SignaturePad({
   onConfirm,
   onClear,
@@ -24,6 +63,7 @@ export function SignaturePad({
   const [drawing, setDrawing] = useState(false);
   const [hasStrokes, setHasStrokes] = useState(false);
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
+  const canvasReady = useRef(false);
 
   const getPos = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current!;
@@ -78,16 +118,49 @@ export function SignaturePad({
 
   const handleConfirm = useCallback(() => {
     if (!canvasRef.current || !hasStrokes) return;
-    onConfirm(canvasRef.current.toDataURL('image/png'));
+    const croppedDataUrl = cropSignatureDataUrl(canvasRef.current);
+    onConfirm(croppedDataUrl);
   }, [hasStrokes, onConfirm]);
 
-  // Resize canvas on mount
+  // Initialize canvas dimensions
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     canvas.width = 600;
     canvas.height = 200;
+    canvasReady.current = true;
   }, []);
+
+  // Restore signature from confirmedDataUrl when canvas is shown (e.g. after page refresh
+  // or when the parent re-mounts the component with a previously saved data URL but
+  // confirmed=false — "Volver a dibujar" scenario).
+  useEffect(() => {
+    if (confirmed || !confirmedDataUrl || !canvasReady.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const img = new Image();
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Center the restored signature on the canvas
+      const scale = Math.min(
+        (canvas.width - 32) / img.width,
+        (canvas.height - 16) / img.height,
+        1,
+      );
+      const w = img.width * scale;
+      const h = img.height * scale;
+      const x = (canvas.width - w) / 2;
+      const y = (canvas.height - h) / 2;
+      ctx.drawImage(img, x, y, w, h);
+      setHasStrokes(true);
+    };
+    img.src = confirmedDataUrl;
+    // Only run on mount / when confirmedDataUrl changes while not confirmed
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirmed, confirmedDataUrl]);
 
   return (
     <div className={cn('space-y-2', className)}>
