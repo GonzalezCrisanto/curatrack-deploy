@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
+import { EvolutionConsentSection, validateEvolutionConsent, type ProfessionalSignatureData, type PatientConsentData } from '@/components/EvolutionConsentSection';
+
 import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -56,7 +58,7 @@ export default function CaseDetail() {
   const { patientId, caseId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { patients, updateCase, addEvolution, updateEvolution, deleteEvolution } = useApp();
+  const { patients, updateCase, addEvolution, updateEvolution, deleteEvolution, currentUser } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const woundCase = patient?.cases.find(c => c.id === caseId);
 
@@ -68,6 +70,23 @@ export default function CaseDetail() {
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [consentErrors, setConsentErrors] = useState<string[]>([]);
+
+  const emptyProfSignature: ProfessionalSignatureData = { confirmed: false, signatureDataUrl: null };
+  const emptyPatientConsent: PatientConsentData = {
+    consentStatus: 'accepts_all', signerFullName: '', signerDni: '', signerRelationship: 'paciente',
+    signerRelationshipOther: '', signatureDataUrl: null, observation: '',
+  };
+  const [profSignature, setProfSignature] = useState<ProfessionalSignatureData>(emptyProfSignature);
+  const [patientConsent, setPatientConsent] = useState<PatientConsentData>(emptyPatientConsent);
+  const [hasGeneralConsent, setHasGeneralConsent] = useState(false);
+
+  // Check if patient has general consent
+  useEffect(() => {
+    if (!patient) return;
+    supabase.from('patient_consents').select('id').eq('patient_id', patient.id).eq('status', 'accepted').limit(1)
+      .then(({ data }) => setHasGeneralConsent((data ?? []).length > 0));
+  }, [patient?.id]);
 
   // Case-level AI summary viewer
   const [caseSummaryOpen, setCaseSummaryOpen] = useState(false);
@@ -141,6 +160,9 @@ export default function CaseDetail() {
       professional: 'Lic. María González',
     });
     setEvoPhotos([]);
+    setProfSignature(emptyProfSignature);
+    setPatientConsent({ ...emptyPatientConsent, signerFullName: `${patient.firstName} ${patient.lastName}`, signerDni: patient.dni || '' });
+    setConsentErrors([]);
     setEvoDialogOpen(true);
   };
 
@@ -278,7 +300,19 @@ export default function CaseDetail() {
     }
   };
 
-  const persistEvo = (closeCase: boolean) => {
+  const uploadSignature = async (dataUrl: string, prefix: string): Promise<string | null> => {
+    try {
+      const userId = currentUser?.id;
+      if (!userId) return null;
+      const blob = await (await fetch(dataUrl)).blob();
+      const path = `${userId}/${prefix}-${Date.now()}.png`;
+      const { error } = await supabase.storage.from('signatures').upload(path, blob, { contentType: 'image/png' });
+      if (error) { console.error('Signature upload error', error); return null; }
+      return path;
+    } catch (e) { console.error('Signature upload failed', e); return null; }
+  };
+
+  const persistEvo = async (closeCase: boolean) => {
     const numOrUndef = (v: number | '') => (v === '' ? undefined : Number(v));
     const base = {
       ...evoForm,
@@ -300,23 +334,59 @@ export default function CaseDetail() {
       addEvolution(patient.id, woundCase.id, payload);
     }
 
+    // Save signatures & consent for new evolutions
+    if (isNew && currentUser) {
+      let profSigUrl: string | null = null;
+      let patSigUrl: string | null = null;
+      if (profSignature.signatureDataUrl) {
+        profSigUrl = await uploadSignature(profSignature.signatureDataUrl, 'prof');
+        if (!profSigUrl) {
+          toast.error('No se pudo guardar la firma profesional. Revisá la conexión e intentá nuevamente.');
+        }
+      }
+      if (patientConsent.signatureDataUrl) {
+        patSigUrl = await uploadSignature(patientConsent.signatureDataUrl, 'patient');
+        if (!patSigUrl) {
+          toast.error('No se pudo guardar la firma del paciente. Revisá la conexión e intentá nuevamente.');
+        }
+      }
+      const now = new Date().toISOString();
+      supabase.from('evolution_signatures').insert({
+        evolution_id: payload.id,
+        patient_id: patient.id,
+        case_id: woundCase.id,
+        user_id: currentUser.id,
+        professional_confirmation: profSignature.confirmed,
+        professional_signature_url: profSigUrl,
+        professional_signed_at: profSignature.confirmed ? now : null,
+        patient_consent_status: patientConsent.consentStatus === 'accepts_all' ? 'accepted'
+          : patientConsent.consentStatus === 'accepts_no_photos' ? 'partial' : 'rejected',
+        patient_accepts_photos: patientConsent.consentStatus !== 'accepts_no_photos' && patientConsent.consentStatus !== 'rejects',
+        patient_signer_full_name: patientConsent.signerFullName || null,
+        patient_signer_dni: patientConsent.signerDni || null,
+        patient_signer_relationship: patientConsent.signerRelationship || null,
+        patient_signer_relationship_other: patientConsent.signerRelationship === 'otro' ? patientConsent.signerRelationshipOther : null,
+        patient_signature_url: patSigUrl,
+        patient_signed_at: patientConsent.signatureDataUrl ? now : null,
+        patient_consent_observation: patientConsent.observation || null,
+      } as any).then(({ error }) => {
+        if (error) console.error('evolution_signatures insert error', error);
+      });
+    }
+
     if (closeCase) {
       const closedAt = new Date().toISOString().split('T')[0];
-      // Stamp closedAt on the evolution that closes the case
       const closedPayload: Evolution = { ...payload, closedAt };
       updateEvolution(patient.id, woundCase.id, closedPayload);
       updateCase(patient.id, { ...woundCase, status: 'resuelto' });
-      toast.success('Evolución cerrada. Caso marcado como cicatrizado.');
+      toast.success('Curación registrada correctamente con firma y consentimiento. Caso cerrado.');
       setEvoDialogOpen(false);
       setCloseConfirmOpen(false);
       return;
     }
 
-    toast.success(isNew ? 'Evolución registrada' : 'Evolución actualizada');
+    toast.success(isNew ? 'Curación registrada correctamente con firma y consentimiento.' : 'Evolución actualizada');
     setCloseConfirmOpen(false);
-
-    // Close the dialog. The case-level AI summary stays as is until the user
-    // explicitly regenerates it from the case header button.
     setEvoDialogOpen(false);
   };
 
@@ -329,6 +399,18 @@ export default function CaseDetail() {
       toast.error('Indicá la frecuencia de curación o, en su defecto, los días estimados entre curaciones.');
       return;
     }
+
+    // Validate consent & signature (only for new evolutions)
+    if (!editingEvo) {
+      const cErrors = validateEvolutionConsent(profSignature, patientConsent);
+      if (cErrors.length > 0) {
+        setConsentErrors(cErrors);
+        toast.error('Para finalizar la curación, necesitás confirmar y firmar como profesional.');
+        return;
+      }
+      setConsentErrors([]);
+    }
+
     if (evoForm.evolutionStatus === 'cicatrizada') {
       setCloseConfirmOpen(true);
       return;
@@ -1322,6 +1404,23 @@ export default function CaseDetail() {
                   </div>
                 )}
               </div>
+
+              {/* Consent & Signature section (only for new evolutions) */}
+              {!editingEvo && (
+                <EvolutionConsentSection
+                  professionalName={currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : evoForm.professional}
+                  professionalLicense={currentUser?.license}
+                  professionalInstitution={currentUser?.institution}
+                  patientName={patient ? `${patient.firstName} ${patient.lastName}` : ''}
+                  patientDni={patient?.dni}
+                  hasGeneralConsent={hasGeneralConsent}
+                  professionalData={profSignature}
+                  patientConsentData={patientConsent}
+                  onProfessionalChange={setProfSignature}
+                  onPatientConsentChange={setPatientConsent}
+                  errors={consentErrors}
+                />
+              )}
 
               {/* AI summary moved to case header — no longer rendered inside the evolution dialog */}
             </div>
