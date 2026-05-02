@@ -405,7 +405,7 @@ export default function CaseDetail() {
       const cErrors = validateEvolutionConsent(profSignature, patientConsent);
       if (cErrors.length > 0) {
         setConsentErrors(cErrors);
-        toast.error('Para finalizar la curación, necesitás confirmar y firmar como profesional.');
+        toast.error(cErrors[0]);
         return;
       }
       setConsentErrors([]);
@@ -416,6 +416,20 @@ export default function CaseDetail() {
       return;
     }
     persistEvo(false);
+  };
+
+  const handleConfirmCloseCase = () => {
+    if (!editingEvo) {
+      const cErrors = validateEvolutionConsent(profSignature, patientConsent);
+      if (cErrors.length > 0) {
+        setConsentErrors(cErrors);
+        toast.error(cErrors[0]);
+        setCloseConfirmOpen(false);
+        return;
+      }
+      setConsentErrors([]);
+    }
+    persistEvo(true);
   };
 
   const openCaseSummaryPrintWindow = (): boolean => {
@@ -1457,7 +1471,7 @@ export default function CaseDetail() {
             <AlertDialogFooter>
               <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => persistEvo(true)}
+                onClick={() => handleConfirmCloseCase()}
                 className="font-body bg-success text-success-foreground hover:bg-success/90"
               >
                 Sí, cerrar evolución
