@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import { EvolutionConsentSection, validateEvolutionConsent, type ProfessionalSignatureData, type PatientConsentData } from '@/components/EvolutionConsentSection';
