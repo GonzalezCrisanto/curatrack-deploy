@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import { EvolutionConsentSection, validateEvolutionConsent, type ProfessionalSignatureData, type PatientConsentData } from '@/components/EvolutionConsentSection';
-import { supabase as sb } from '@/integrations/supabase/client';
+
 import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
