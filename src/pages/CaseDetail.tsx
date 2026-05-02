@@ -160,6 +160,9 @@ export default function CaseDetail() {
       professional: 'Lic. María González',
     });
     setEvoPhotos([]);
+    setProfSignature(emptyProfSignature);
+    setPatientConsent({ ...emptyPatientConsent, signerFullName: `${patient.firstName} ${patient.lastName}`, signerDni: patient.dni || '' });
+    setConsentErrors([]);
     setEvoDialogOpen(true);
   };
 
