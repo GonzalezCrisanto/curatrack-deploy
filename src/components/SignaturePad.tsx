@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Eraser, Check } from 'lucide-react';
+import { Eraser, Check, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SignaturePadProps {
