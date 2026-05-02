@@ -500,6 +500,9 @@ export default function PatientDetail() {
           </CardContent>
         </Card>
 
+        {/* Consentimiento informado */}
+        <PatientConsentCard patientId={patient.id} patientName={`${patient.firstName} ${patient.lastName}`} patientDni={patient.dni} />
+
         {/* Calendario de Turnos del Paciente — un color por herida */}
         {(() => {
           const today = new Date();
