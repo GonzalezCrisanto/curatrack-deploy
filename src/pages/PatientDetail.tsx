@@ -28,6 +28,7 @@ import { ROLE_LABEL_SHORT } from '@/data/demoUsers';
 import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { SharePatientDialog } from '@/components/SharePatientDialog';
+import { PatientConsentCard } from '@/components/PatientConsentCard';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { formatPatientAge } from '@/lib/age';
