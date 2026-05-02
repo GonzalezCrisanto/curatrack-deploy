@@ -93,9 +93,20 @@ export function SignaturePad({
     <div className={cn('space-y-2', className)}>
       <p className="text-xs text-muted-foreground">{label}</p>
       {confirmed && confirmedDataUrl ? (
-        <div className="border border-success/40 rounded-md bg-success/5 p-2 flex items-center gap-3">
-          <img src={confirmedDataUrl} alt="Firma" className="h-16 max-w-[200px] object-contain" />
-          <span className="text-xs text-success font-medium flex items-center gap-1"><Check className="h-3 w-3" /> Firma confirmada</span>
+        <div className="border border-success/40 rounded-md bg-success/5 p-3 space-y-2">
+          <div className="flex items-center gap-3">
+            <img src={confirmedDataUrl} alt="Firma" className="h-16 max-w-[200px] object-contain" />
+            <span className="text-xs text-success font-medium flex items-center gap-1"><Check className="h-3 w-3" /> Firma confirmada</span>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={clearCanvas}
+            className="text-xs"
+          >
+            <RotateCcw className="h-3.5 w-3.5 mr-1" /> Volver a dibujar
+          </Button>
         </div>
       ) : (
         <>
