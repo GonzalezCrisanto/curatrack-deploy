@@ -64,6 +64,69 @@ export type Database = {
           },
         ]
       }
+      evolution_signatures: {
+        Row: {
+          case_id: string
+          created_at: string
+          evolution_id: string
+          id: string
+          patient_accepts_photos: boolean | null
+          patient_consent_observation: string | null
+          patient_consent_status: string
+          patient_id: string
+          patient_signature_url: string | null
+          patient_signed_at: string | null
+          patient_signer_dni: string | null
+          patient_signer_full_name: string | null
+          patient_signer_relationship: string | null
+          patient_signer_relationship_other: string | null
+          professional_confirmation: boolean
+          professional_signature_url: string | null
+          professional_signed_at: string | null
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          evolution_id: string
+          id?: string
+          patient_accepts_photos?: boolean | null
+          patient_consent_observation?: string | null
+          patient_consent_status?: string
+          patient_id: string
+          patient_signature_url?: string | null
+          patient_signed_at?: string | null
+          patient_signer_dni?: string | null
+          patient_signer_full_name?: string | null
+          patient_signer_relationship?: string | null
+          patient_signer_relationship_other?: string | null
+          professional_confirmation?: boolean
+          professional_signature_url?: string | null
+          professional_signed_at?: string | null
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          evolution_id?: string
+          id?: string
+          patient_accepts_photos?: boolean | null
+          patient_consent_observation?: string | null
+          patient_consent_status?: string
+          patient_id?: string
+          patient_signature_url?: string | null
+          patient_signed_at?: string | null
+          patient_signer_dni?: string | null
+          patient_signer_full_name?: string | null
+          patient_signer_relationship?: string | null
+          patient_signer_relationship_other?: string | null
+          professional_confirmation?: boolean
+          professional_signature_url?: string | null
+          professional_signed_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       evolutions: {
         Row: {
           case_id: string
@@ -317,6 +380,66 @@ export type Database = {
           slug?: string
           updated_at?: string
           website?: string | null
+        }
+        Relationships: []
+      }
+      patient_consents: {
+        Row: {
+          accepts_clinical_photos: boolean
+          accepts_digital_record: boolean
+          accepts_digital_reports: boolean
+          accepts_wound_tracking: boolean
+          consent_version: string
+          created_at: string
+          id: string
+          patient_id: string
+          signature_url: string | null
+          signed_at: string | null
+          signer_dni: string | null
+          signer_full_name: string | null
+          signer_relationship: string | null
+          signer_relationship_other: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepts_clinical_photos?: boolean
+          accepts_digital_record?: boolean
+          accepts_digital_reports?: boolean
+          accepts_wound_tracking?: boolean
+          consent_version?: string
+          created_at?: string
+          id?: string
+          patient_id: string
+          signature_url?: string | null
+          signed_at?: string | null
+          signer_dni?: string | null
+          signer_full_name?: string | null
+          signer_relationship?: string | null
+          signer_relationship_other?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepts_clinical_photos?: boolean
+          accepts_digital_record?: boolean
+          accepts_digital_reports?: boolean
+          accepts_wound_tracking?: boolean
+          consent_version?: string
+          created_at?: string
+          id?: string
+          patient_id?: string
+          signature_url?: string | null
+          signed_at?: string | null
+          signer_dni?: string | null
+          signer_full_name?: string | null
+          signer_relationship?: string | null
+          signer_relationship_other?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
