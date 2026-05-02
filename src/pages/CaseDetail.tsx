@@ -405,7 +405,7 @@ export default function CaseDetail() {
       const cErrors = validateEvolutionConsent(profSignature, patientConsent);
       if (cErrors.length > 0) {
         setConsentErrors(cErrors);
-        toast.error('Para finalizar la curación, necesitás confirmar y firmar como profesional.');
+        toast.error(cErrors[0]);
         return;
       }
       setConsentErrors([]);
