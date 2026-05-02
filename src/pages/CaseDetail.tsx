@@ -58,7 +58,7 @@ export default function CaseDetail() {
   const { patientId, caseId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { patients, updateCase, addEvolution, updateEvolution, deleteEvolution } = useApp();
+  const { patients, updateCase, addEvolution, updateEvolution, deleteEvolution, currentUser } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const woundCase = patient?.cases.find(c => c.id === caseId);
 
