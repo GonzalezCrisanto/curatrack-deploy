@@ -214,19 +214,61 @@ export default function Login() {
               </form>
             ) : (
               <form onSubmit={handleLogin} className="space-y-5">
-                <div className="grid grid-cols-2 gap-2">
-                  <Button type="button" size="lg" onClick={handleDemoLogin} disabled={loading}
-                    className="w-full font-body gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-95 shadow-md text-xs">
-                    <Sparkles className="h-4 w-4" /> Demo profesional
-                  </Button>
-                  <Button type="button" size="lg" onClick={handleAdminDemoLogin} disabled={loading} variant="outline"
-                    className="w-full font-body gap-2 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground text-xs">
-                    <ShieldCheck className="h-4 w-4" /> Demo laboratorio sponsor
-                  </Button>
-                </div>
-                <p className="text-[11px] text-center text-muted-foreground font-body -mt-3">
-                  Acceso instantáneo con datos de prueba según el perfil seleccionado.
-                </p>
+                {/* Demo cards by sponsor */}
+                {demoSponsors.length > 0 && (
+                  <div className="space-y-2.5">
+                    {demoSponsors.map((sp) => {
+                      const proKey = `${sp.slug}:pro`;
+                      const spKey = `${sp.slug}:sponsor`;
+                      return (
+                        <div
+                          key={sp.id}
+                          className="rounded-lg border border-border/60 p-3 bg-card hover:border-primary/40 transition-colors"
+                          style={{
+                            background: `linear-gradient(135deg, ${sp.primary_color}0d 0%, ${sp.accent_color}0d 100%)`,
+                          }}
+                        >
+                          <div className="flex items-center gap-2.5 mb-2.5">
+                            {sp.logo_url ? (
+                              <img src={sp.logo_url} alt={sp.sponsor_name} className="h-7 w-auto object-contain" />
+                            ) : (
+                              <div className="h-7 w-7 rounded-md flex items-center justify-center shadow-sm shrink-0"
+                                style={{ background: `linear-gradient(135deg, ${sp.primary_color}, ${sp.accent_color})` }}>
+                                <Activity className="h-4 w-4 text-white" strokeWidth={2.5} />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="font-display font-bold text-sm leading-tight truncate">{sp.sponsor_name}</div>
+                              <div className="font-body text-[10px] uppercase tracking-wider text-muted-foreground truncate">{sp.app_name}</div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button type="button" size="sm" disabled={loading}
+                              onClick={() => handleDemoLogin(sp, 'pro')}
+                              className="w-full font-body gap-1.5 text-xs"
+                              style={{ background: sp.primary_color, color: 'white' }}>
+                              <Stethoscope className="h-3.5 w-3.5" />
+                              {loadingKey === proKey ? '...' : 'Profesional'}
+                            </Button>
+                            <Button type="button" size="sm" variant="outline" disabled={loading}
+                              onClick={() => handleDemoLogin(sp, 'sponsor')}
+                              className="w-full font-body gap-1.5 text-xs border-2"
+                              style={{ borderColor: sp.primary_color, color: sp.primary_color }}>
+                              <Briefcase className="h-3.5 w-3.5" />
+                              {loadingKey === spKey ? '...' : 'Laboratorio'}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <p className="text-[11px] text-center text-muted-foreground font-body pt-1">
+                      {isSponsorLocked
+                        ? 'Acceso instantáneo a la demo personalizada de este laboratorio.'
+                        : 'Cada tarjeta abre la app con la identidad y catálogo del laboratorio.'}
+                    </p>
+                  </div>
+                )}
+
 
                 <Button type="button" variant="outline" size="lg" onClick={handleGoogle} disabled={loading}
                   className="w-full font-body gap-2 border-border">
