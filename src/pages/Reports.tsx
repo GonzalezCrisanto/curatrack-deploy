@@ -221,16 +221,18 @@ export default function Reports() {
 
           {/* Sponsor banner */}
           <Card className="border-border/60 overflow-hidden">
-            <div className="p-5 flex items-center gap-4 bg-gradient-to-r from-[hsl(var(--sponsor-primary)/0.08)] to-[hsl(var(--sponsor-secondary)/0.08)]">
-              <div className="h-14 w-14 rounded-lg bg-background border border-border/60 flex items-center justify-center shrink-0">
+            <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-gradient-to-r from-[hsl(var(--sponsor-primary)/0.08)] to-[hsl(var(--sponsor-secondary)/0.08)]">
+              <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg bg-background border border-border/60 flex items-center justify-center shrink-0">
                 <SponsorLogo className="max-h-10 max-w-12" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-body text-[10px] uppercase tracking-wider text-muted-foreground">Plataforma</div>
-                <div className="heading-display text-lg truncate">{sponsor?.app_name}</div>
-                <div className="font-body text-xs text-muted-foreground">Período seleccionado: {PERIOD_LABEL[period]} · Generado el {new Date().toLocaleDateString('es-AR')}</div>
+                <div className="heading-display text-base sm:text-lg truncate">{sponsor?.app_name}</div>
+                <div className="font-body text-xs text-muted-foreground break-words">
+                  Período seleccionado: {PERIOD_LABEL[period]} · Generado el {new Date().toLocaleDateString('es-AR')}
+                </div>
               </div>
-              <div className="hidden md:flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-center">
                 <ShieldCheck className="h-4 w-4 text-primary" />
                 <span className="font-body text-[11px] text-muted-foreground">Datos agregados · sin PII</span>
               </div>
