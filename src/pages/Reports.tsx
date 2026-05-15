@@ -223,7 +223,7 @@ export default function Reports() {
           <Card className="border-border/60 overflow-hidden">
             <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-gradient-to-r from-[hsl(var(--sponsor-primary)/0.08)] to-[hsl(var(--sponsor-secondary)/0.08)]">
               <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg bg-background border border-border/60 flex items-center justify-center shrink-0">
-                <SponsorLogo className="max-h-10 max-w-12" />
+                <SponsorLogo showName={false} className="max-h-10 max-w-10" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-body text-[10px] uppercase tracking-wider text-muted-foreground">Plataforma</div>
