@@ -194,7 +194,7 @@ export default function Login() {
                   </Button>
                   <Button type="button" size="lg" onClick={handleAdminDemoLogin} disabled={loading} variant="outline"
                     className="w-full font-body gap-2 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground text-xs">
-                    <ShieldCheck className="h-4 w-4" /> Demo vendedor
+                    <ShieldCheck className="h-4 w-4" /> Demo laboratorio sponsor
                   </Button>
                 </div>
                 <p className="text-[11px] text-center text-muted-foreground font-body -mt-3">
