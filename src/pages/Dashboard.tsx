@@ -91,13 +91,11 @@ export default function Dashboard() {
   const activeCases = allCases.filter(c => c.status === 'activo' || c.status === 'critico' || c.status === 'en_mejoria');
   const criticalCases = allCases.filter(c => c.status === 'critico');
 
-  const todayAppointments = allEvos
-    .filter(e => e.nextControl === today)
-    .map(e => {
-      const c = allCases.find(c => c.id === e.caseId || c.evolutions.includes(e));
-      const wc = allCases.find(c => c.evolutions.some(ev => ev.id === e.id));
-      return { evo: e, woundType: wc?.woundType ?? '', status: wc?.status ?? 'activo' };
-    });
+  const todayAppointments = allCases.flatMap(c =>
+    c.evolutions
+      .filter(e => e.nextControl === today)
+      .map(e => ({ evo: e, woundType: c.woundType, status: c.status }))
+  );
 
   const upcomingControls = allEvos.filter(e => e.nextControl && e.nextControl >= today).length;
   const overdueControls = allEvos.filter(e => e.nextControl && e.nextControl < today).length;
@@ -124,7 +122,7 @@ export default function Dashboard() {
     if (noEvoLately > 0) {
       list.push({ type: 'no-evo', label: `${noEvoLately} paciente(s) sin evolución en 14+ días`, severity: 'warning', icon: AlertCircle });
     }
-    const painCases = allCases.filter(c => (c.pain ?? 0) >= 7).length;
+    const painCases = allCases.filter(c => Number(c.pain ?? 0) >= 7).length;
     if (painCases > 0) {
       list.push({ type: 'pain', label: `${painCases} caso(s) con dolor elevado (≥7)`, severity: 'warning', icon: Activity });
     }
