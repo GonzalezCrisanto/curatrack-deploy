@@ -1,16 +1,17 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
-import { useSponsor } from '@/context/SponsorContext';
+import { useSponsor, type Sponsor } from '@/context/SponsorContext';
 import { SponsorLogo } from '@/components/SponsorLogo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, Mail, Sparkles, ShieldCheck, Check } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, Mail, Sparkles, ShieldCheck, Check, Activity, Briefcase, Stethoscope } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+
 
 async function redirectByRole(navigate: (p: string) => void, fallback = '/dashboard') {
   const { data: sess } = await supabase.auth.getSession();
@@ -25,17 +26,39 @@ async function redirectByRole(navigate: (p: string) => void, fallback = '/dashbo
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, loginWithGoogle } = useApp();
-  const { sponsor } = useSponsor();
+  const { sponsor, sponsors, setSponsorBySlug } = useSponsor();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [forgotMode, setForgotMode] = useState(false);
+
+  const sponsorParam = searchParams.get('sponsor');
+  const isSponsorLocked = !!sponsorParam;
 
   const sponsorName = sponsor?.sponsor_name ?? 'Programa clínico';
   const appName = sponsor?.app_name ?? 'Plataforma';
   const footer = sponsor?.legal_footer ?? sponsor?.powered_by_label ?? '';
+
+  // Demo cards: in locked mode show only the matching sponsor; otherwise show all available.
+  const demoSponsors = useMemo<Sponsor[]>(() => {
+    if (!sponsors?.length) return [];
+    if (sponsorParam) {
+      const found = sponsors.find(s => s.slug.toLowerCase() === sponsorParam.toLowerCase());
+      return found ? [found] : [];
+    }
+    // Internal mode: order Convatec, B. Braun, Demo first if present
+    const priority = ['convatec', 'bbraun', 'demo'];
+    return [...sponsors].sort((a, b) => {
+      const ai = priority.indexOf(a.slug);
+      const bi = priority.indexOf(b.slug);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
+  }, [sponsors, sponsorParam]);
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,33 +81,34 @@ export default function Login() {
     }
   };
 
-  const handleDemoLogin = async () => {
+  const handleDemoLogin = async (target?: Sponsor, kind: 'pro' | 'sponsor' = 'pro') => {
+    const key = `${target?.slug ?? 'default'}:${kind}`;
     setLoading(true);
+    setLoadingKey(key);
     try {
-      const { data, error } = await supabase.functions.invoke('demo-login');
+      // Switch sponsor context first so the post-login UI is correctly themed.
+      if (target) await setSponsorBySlug(target.slug, false);
+
+      const fnName = kind === 'sponsor' ? 'demo-admin-login' : 'demo-login';
+      const { data, error } = await supabase.functions.invoke(fnName);
       if (error || !data?.ok) throw new Error(error?.message || data?.message || 'No se pudo preparar la cuenta demo');
       const result = await login(data.email, data.password);
       if (!result.ok) throw new Error(result.message || 'No se pudo iniciar sesión con la cuenta demo');
-      toast({ title: 'Sesión demo iniciada', description: 'Estás usando la cuenta de prueba.' });
-      await redirectByRole(navigate);
+
+      // Persist sponsor link to user_sponsor after login (so it survives refresh).
+      if (target) await setSponsorBySlug(target.slug, true);
+
+      toast({
+        title: kind === 'sponsor' ? 'Sesión laboratorio iniciada' : 'Sesión profesional iniciada',
+        description: target ? `Demo de ${target.sponsor_name}` : 'Cuenta de prueba activada.',
+      });
+      if (kind === 'sponsor') navigate('/admin/orders');
+      else await redirectByRole(navigate);
     } catch (err) {
-      toast({ title: 'No se pudo entrar a la demo', description: (err as Error).message, variant: 'destructive' });
-    } finally { setLoading(false); }
+      toast({ title: 'No se pudo iniciar la demo', description: (err as Error).message, variant: 'destructive' });
+    } finally { setLoading(false); setLoadingKey(null); }
   };
 
-  const handleAdminDemoLogin = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('demo-admin-login');
-      if (error || !data?.ok) throw new Error(error?.message || data?.message || 'No se pudo preparar la cuenta admin demo');
-      const result = await login(data.email, data.password);
-      if (!result.ok) throw new Error(result.message || 'No se pudo iniciar sesión con la cuenta admin');
-      toast({ title: 'Sesión admin demo iniciada', description: 'Estás usando la cuenta de administrador/vendedor.' });
-      navigate('/admin/orders');
-    } catch (err) {
-      toast({ title: 'No se pudo entrar como admin', description: (err as Error).message, variant: 'destructive' });
-    } finally { setLoading(false); }
-  };
 
   const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,13 +178,13 @@ export default function Login() {
           <ArrowLeft className="mr-1 h-4 w-4" /> Volver al inicio
         </Button>
 
-        <Card className="w-full max-w-md border-border/50 shadow-lg my-8">
+        <Card className="w-full max-w-lg border-border/50 shadow-lg my-8">
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-3 lg:hidden">
               <SponsorLogo />
             </div>
             <Badge variant="outline" className="mx-auto font-body text-[10px] uppercase tracking-wider border-primary/30 text-primary bg-primary/5 mb-2">
-              Programa sponsor: {sponsorName}
+              {isSponsorLocked ? `Programa sponsor: ${sponsorName}` : 'Demo interna · multi-sponsor'}
             </Badge>
             <h1 className="heading-display text-2xl">
               {forgotMode ? 'Restablecer contraseña' : 'Iniciar sesión'}
@@ -168,9 +192,12 @@ export default function Login() {
             <p className="font-body text-sm text-muted-foreground mt-1">
               {forgotMode
                 ? 'Te enviaremos un enlace a tu correo'
-                : `Accedé como profesional de salud o como laboratorio sponsor.`}
+                : isSponsorLocked
+                  ? `Accedé a ${appName} como profesional o como laboratorio sponsor.`
+                  : `Elegí un laboratorio para ver la experiencia white-label.`}
             </p>
           </CardHeader>
+
           <CardContent>
             {forgotMode ? (
               <form onSubmit={handleForgot} className="space-y-5">
@@ -187,19 +214,61 @@ export default function Login() {
               </form>
             ) : (
               <form onSubmit={handleLogin} className="space-y-5">
-                <div className="grid grid-cols-2 gap-2">
-                  <Button type="button" size="lg" onClick={handleDemoLogin} disabled={loading}
-                    className="w-full font-body gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-95 shadow-md text-xs">
-                    <Sparkles className="h-4 w-4" /> Demo profesional
-                  </Button>
-                  <Button type="button" size="lg" onClick={handleAdminDemoLogin} disabled={loading} variant="outline"
-                    className="w-full font-body gap-2 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground text-xs">
-                    <ShieldCheck className="h-4 w-4" /> Demo laboratorio sponsor
-                  </Button>
-                </div>
-                <p className="text-[11px] text-center text-muted-foreground font-body -mt-3">
-                  Acceso instantáneo con datos de prueba según el perfil seleccionado.
-                </p>
+                {/* Demo cards by sponsor */}
+                {demoSponsors.length > 0 && (
+                  <div className="space-y-2.5">
+                    {demoSponsors.map((sp) => {
+                      const proKey = `${sp.slug}:pro`;
+                      const spKey = `${sp.slug}:sponsor`;
+                      return (
+                        <div
+                          key={sp.id}
+                          className="rounded-lg border border-border/60 p-3 bg-card hover:border-primary/40 transition-colors"
+                          style={{
+                            background: `linear-gradient(135deg, ${sp.primary_color}0d 0%, ${sp.accent_color}0d 100%)`,
+                          }}
+                        >
+                          <div className="flex items-center gap-2.5 mb-2.5">
+                            {sp.logo_url ? (
+                              <img src={sp.logo_url} alt={sp.sponsor_name} className="h-7 w-auto object-contain" />
+                            ) : (
+                              <div className="h-7 w-7 rounded-md flex items-center justify-center shadow-sm shrink-0"
+                                style={{ background: `linear-gradient(135deg, ${sp.primary_color}, ${sp.accent_color})` }}>
+                                <Activity className="h-4 w-4 text-white" strokeWidth={2.5} />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="font-display font-bold text-sm leading-tight truncate">{sp.sponsor_name}</div>
+                              <div className="font-body text-[10px] uppercase tracking-wider text-muted-foreground truncate">{sp.app_name}</div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button type="button" size="sm" disabled={loading}
+                              onClick={() => handleDemoLogin(sp, 'pro')}
+                              className="w-full font-body gap-1.5 text-xs"
+                              style={{ background: sp.primary_color, color: 'white' }}>
+                              <Stethoscope className="h-3.5 w-3.5" />
+                              {loadingKey === proKey ? '...' : 'Profesional'}
+                            </Button>
+                            <Button type="button" size="sm" variant="outline" disabled={loading}
+                              onClick={() => handleDemoLogin(sp, 'sponsor')}
+                              className="w-full font-body gap-1.5 text-xs border-2"
+                              style={{ borderColor: sp.primary_color, color: sp.primary_color }}>
+                              <Briefcase className="h-3.5 w-3.5" />
+                              {loadingKey === spKey ? '...' : 'Laboratorio'}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <p className="text-[11px] text-center text-muted-foreground font-body pt-1">
+                      {isSponsorLocked
+                        ? 'Acceso instantáneo a la demo personalizada de este laboratorio.'
+                        : 'Cada tarjeta abre la app con la identidad y catálogo del laboratorio.'}
+                    </p>
+                  </div>
+                )}
+
 
                 <Button type="button" variant="outline" size="lg" onClick={handleGoogle} disabled={loading}
                   className="w-full font-body gap-2 border-border">
