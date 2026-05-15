@@ -1,23 +1,30 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
+import { useSponsor } from '@/context/SponsorContext';
+import { SponsorLogo } from '@/components/SponsorLogo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, Mail, Sparkles, ShieldCheck } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, Mail, Sparkles, ShieldCheck, Check } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import logo from '@/assets/curatrack-logo.png';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function Login() {
   const navigate = useNavigate();
   const { login, loginWithGoogle } = useApp();
+  const { sponsor } = useSponsor();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [forgotMode, setForgotMode] = useState(false);
+
+  const sponsorName = sponsor?.sponsor_name ?? 'Programa clínico';
+  const appName = sponsor?.app_name ?? 'Plataforma';
+  const footer = sponsor?.legal_footer ?? sponsor?.powered_by_label ?? '';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,73 +51,84 @@ export default function Login() {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('demo-login');
-      if (error || !data?.ok) {
-        throw new Error(error?.message || data?.message || 'No se pudo preparar la cuenta demo');
-      }
+      if (error || !data?.ok) throw new Error(error?.message || data?.message || 'No se pudo preparar la cuenta demo');
       const result = await login(data.email, data.password);
-      if (!result.ok) {
-        throw new Error(result.message || 'No se pudo iniciar sesión con la cuenta demo');
-      }
+      if (!result.ok) throw new Error(result.message || 'No se pudo iniciar sesión con la cuenta demo');
       toast({ title: 'Sesión demo iniciada', description: 'Estás usando la cuenta de prueba.' });
       navigate('/dashboard');
     } catch (err) {
       toast({ title: 'No se pudo entrar a la demo', description: (err as Error).message, variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const handleAdminDemoLogin = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('demo-admin-login');
-      if (error || !data?.ok) {
-        throw new Error(error?.message || data?.message || 'No se pudo preparar la cuenta admin demo');
-      }
+      if (error || !data?.ok) throw new Error(error?.message || data?.message || 'No se pudo preparar la cuenta admin demo');
       const result = await login(data.email, data.password);
-      if (!result.ok) {
-        throw new Error(result.message || 'No se pudo iniciar sesión con la cuenta admin');
-      }
+      if (!result.ok) throw new Error(result.message || 'No se pudo iniciar sesión con la cuenta admin');
       toast({ title: 'Sesión admin demo iniciada', description: 'Estás usando la cuenta de administrador/vendedor.' });
       navigate('/admin/orders');
     } catch (err) {
       toast({ title: 'No se pudo entrar como admin', description: (err as Error).message, variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) {
-      toast({ title: 'Ingresá tu email', variant: 'destructive' });
-      return;
-    }
+    if (!email.trim()) { toast({ title: 'Ingresá tu email', variant: 'destructive' }); return; }
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     setLoading(false);
-    if (error) {
-      toast({ title: 'No se pudo enviar el email', description: error.message, variant: 'destructive' });
-      return;
-    }
+    if (error) { toast({ title: 'No se pudo enviar el email', description: error.message, variant: 'destructive' }); return; }
     toast({ title: 'Revisá tu correo', description: 'Te enviamos un enlace para restablecer tu contraseña.' });
     setForgotMode(false);
   };
 
   return (
     <div className="min-h-screen flex">
-      {/* Left panel */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-hero items-center justify-center p-12">
-        <div className="max-w-md text-center">
-          <img src={logo} alt="CuraTrack" className="h-20 mx-auto mb-8 brightness-0 invert" />
-          <h2 className="heading-display text-3xl text-primary-foreground mb-4">
-            Plataforma de seguimiento de heridas complejas
+      {/* Left panel — sponsor branded */}
+      <div
+        className="hidden lg:flex lg:w-1/2 items-center justify-center p-12 relative overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, hsl(var(--sponsor-primary)) 0%, hsl(var(--sponsor-secondary)) 100%)`,
+        }}
+      >
+        <div className="absolute inset-0 opacity-10" style={{
+          backgroundImage: 'radial-gradient(circle at 20% 20%, white 0%, transparent 50%), radial-gradient(circle at 80% 80%, white 0%, transparent 50%)',
+        }} />
+        <div className="max-w-md text-center relative z-10">
+          <div className="flex justify-center mb-8">
+            <div className="bg-white/95 backdrop-blur-sm rounded-2xl px-5 py-3 shadow-xl">
+              <SponsorLogo />
+            </div>
+          </div>
+          <h2 className="heading-display text-3xl text-primary-foreground mb-4 leading-tight">
+            Accedé al programa clínico
           </h2>
-          <p className="font-body text-primary-foreground/70 leading-relaxed">
-            Registrá evoluciones, cargá fotografías y hacé seguimiento clínico profesional de cada paciente.
+          <p className="font-body text-primary-foreground/85 leading-relaxed mb-8">
+            Gestioná pacientes, heridas, evoluciones y solicitudes de reposición desde una plataforma segura.
           </p>
+          <ul className="space-y-2.5 text-left font-body text-sm text-primary-foreground/90 max-w-xs mx-auto">
+            {[
+              'Historia clínica digital y línea de tiempo fotográfica',
+              'Catálogo de insumos y solicitudes de reposición',
+              'Reportes y métricas clínico-comerciales',
+            ].map(item => (
+              <li key={item} className="flex items-start gap-2.5">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-foreground/20">
+                  <Check className="h-3 w-3 text-primary-foreground" />
+                </span>
+                {item}
+              </li>
+            ))}
+          </ul>
+          {footer && (
+            <p className="font-body text-[11px] text-primary-foreground/60 mt-10">{footer}</p>
+          )}
         </div>
       </div>
 
@@ -127,14 +145,19 @@ export default function Login() {
 
         <Card className="w-full max-w-md border-border/50 shadow-lg my-8">
           <CardHeader className="text-center pb-2">
-            <img src={logo} alt="CuraTrack" className="h-14 mx-auto mb-4 lg:hidden" />
+            <div className="flex justify-center mb-3 lg:hidden">
+              <SponsorLogo />
+            </div>
+            <Badge variant="outline" className="mx-auto font-body text-[10px] uppercase tracking-wider border-primary/30 text-primary bg-primary/5 mb-2">
+              Programa sponsor: {sponsorName}
+            </Badge>
             <h1 className="heading-display text-2xl">
               {forgotMode ? 'Restablecer contraseña' : 'Iniciar sesión'}
             </h1>
             <p className="font-body text-sm text-muted-foreground mt-1">
               {forgotMode
                 ? 'Te enviaremos un enlace a tu correo'
-                : 'Ingresá tus credenciales para acceder'}
+                : `Accedé a ${appName} con tus credenciales`}
             </p>
           </CardHeader>
           <CardContent>
@@ -154,26 +177,13 @@ export default function Login() {
             ) : (
               <form onSubmit={handleLogin} className="space-y-5">
                 <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    size="lg"
-                    onClick={handleDemoLogin}
-                    disabled={loading}
-                    className="w-full font-body gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-95 shadow-md text-xs"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    Demo profesional
+                  <Button type="button" size="lg" onClick={handleDemoLogin} disabled={loading}
+                    className="w-full font-body gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-95 shadow-md text-xs">
+                    <Sparkles className="h-4 w-4" /> Demo profesional
                   </Button>
-                  <Button
-                    type="button"
-                    size="lg"
-                    onClick={handleAdminDemoLogin}
-                    disabled={loading}
-                    variant="outline"
-                    className="w-full font-body gap-2 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground text-xs"
-                  >
-                    <ShieldCheck className="h-4 w-4" />
-                    Demo vendedor
+                  <Button type="button" size="lg" onClick={handleAdminDemoLogin} disabled={loading} variant="outline"
+                    className="w-full font-body gap-2 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground text-xs">
+                    <ShieldCheck className="h-4 w-4" /> Demo vendedor
                   </Button>
                 </div>
                 <p className="text-[11px] text-center text-muted-foreground font-body -mt-3">
@@ -231,6 +241,9 @@ export default function Login() {
                   <UserPlus className="mr-2 h-4 w-4" /> Crear cuenta
                 </Button>
               </form>
+            )}
+            {footer && (
+              <p className="text-[10px] text-center text-muted-foreground font-body mt-6 leading-relaxed">{footer}</p>
             )}
           </CardContent>
         </Card>

@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Eye, EyeOff, UserPlus, LogIn, Check } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import logo from '@/assets/curatrack-logo.png';
+import { useSponsor } from '@/context/SponsorContext';
+import { SponsorLogo } from '@/components/SponsorLogo';
+import { Badge } from '@/components/ui/badge';
 
 const ROLES = [
   { value: 'enfermeria', label: 'Enfermería' },
@@ -22,6 +24,10 @@ const ROLES = [
 export default function Register() {
   const navigate = useNavigate();
   const { registerUser } = useApp();
+  const { sponsor } = useSponsor();
+  const sponsorName = sponsor?.sponsor_name ?? 'Programa clínico';
+  const appName = sponsor?.app_name ?? 'Plataforma';
+  const footer = sponsor?.legal_footer ?? sponsor?.powered_by_label ?? '';
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -104,21 +110,30 @@ export default function Register() {
   return (
     <div className="min-h-screen flex">
       {/* Left panel */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-hero items-center justify-center p-12">
-        <div className="max-w-md text-center">
-          <img src={logo} alt="CuraTrack" className="h-20 mx-auto mb-8 brightness-0 invert" />
+      <div
+        className="hidden lg:flex lg:w-1/2 items-center justify-center p-12 relative overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, hsl(var(--sponsor-primary)) 0%, hsl(var(--sponsor-secondary)) 100%)`,
+        }}
+      >
+        <div className="max-w-md text-center relative z-10">
+          <div className="flex justify-center mb-8">
+            <div className="bg-white/95 backdrop-blur-sm rounded-2xl px-5 py-3 shadow-xl">
+              <SponsorLogo />
+            </div>
+          </div>
           <h2 className="heading-display text-3xl text-primary-foreground mb-4">
-            Sumate a CuraTrack
+            Sumate al programa clínico
           </h2>
-          <p className="font-body text-primary-foreground/70 leading-relaxed mb-8">
-            Creá tu cuenta profesional y empezá a registrar evoluciones, fotografías y reportes clínicos en minutos.
+          <p className="font-body text-primary-foreground/80 leading-relaxed mb-8">
+            Creá tu cuenta profesional y empezá a registrar evoluciones, fotografías y solicitudes de reposición en minutos.
           </p>
           <ul className="space-y-3 text-left font-body text-primary-foreground/90">
             {[
               'Historia clínica digital de cada paciente',
               'Fotografía clínica con línea de tiempo',
-              'Exportación de reportes en PDF',
-              'Agenda y próximos controles',
+              'Catálogo y solicitudes de reposición',
+              'Reportes y agenda de controles',
             ].map(item => (
               <li key={item} className="flex items-start gap-3">
                 <span className="mt-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary-foreground/20">
@@ -128,6 +143,9 @@ export default function Register() {
               </li>
             ))}
           </ul>
+          {footer && (
+            <p className="font-body text-[11px] text-primary-foreground/60 mt-10">{footer}</p>
+          )}
         </div>
       </div>
 
@@ -144,10 +162,13 @@ export default function Register() {
 
         <Card className="w-full max-w-lg border-border/50 shadow-lg my-8">
           <CardHeader className="text-center pb-2">
-            <img src={logo} alt="CuraTrack" className="h-14 mx-auto mb-4 lg:hidden" />
+            <div className="flex justify-center mb-3 lg:hidden"><SponsorLogo /></div>
+            <Badge variant="outline" className="mx-auto font-body text-[10px] uppercase tracking-wider border-primary/30 text-primary bg-primary/5 mb-2">
+              Programa sponsor: {sponsorName}
+            </Badge>
             <h1 className="heading-display text-2xl">Crear cuenta</h1>
             <p className="font-body text-sm text-muted-foreground mt-1">
-              Completá tus datos para registrarte en la plataforma
+              Completá tus datos para acceder a {appName}
             </p>
           </CardHeader>
           <CardContent>
@@ -298,7 +319,7 @@ export default function Register() {
                 />
                 <label htmlFor="terms" className="text-xs text-muted-foreground font-body leading-relaxed cursor-pointer">
                   Acepto los <a className="text-primary hover:underline" href="#">Términos y Condiciones</a> y la{' '}
-                  <a className="text-primary hover:underline" href="#">Política de Privacidad</a> de CuraTrack, incluyendo el tratamiento de datos clínicos según normativa vigente.
+                  <a className="text-primary hover:underline" href="#">Política de Privacidad</a> de {appName}, incluyendo el tratamiento de datos clínicos según normativa vigente.
                 </label>
               </div>
 
@@ -325,6 +346,9 @@ export default function Register() {
                 <LogIn className="mr-2 h-4 w-4" /> Iniciar sesión
               </Button>
             </form>
+            {footer && (
+              <p className="text-[10px] text-center text-muted-foreground font-body mt-6 leading-relaxed">{footer}</p>
+            )}
           </CardContent>
         </Card>
       </div>
