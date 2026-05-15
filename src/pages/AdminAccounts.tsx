@@ -5,7 +5,10 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { Users, Search, ShieldCheck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Users, Search, ShieldCheck, Briefcase, UserCog } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 interface ProfileRow {
   id: string;
@@ -24,71 +27,108 @@ interface AccountStats {
   order_count: number;
 }
 
+interface LabRow { id: string; name: string; slug: string }
+interface RoleRow { user_id: string; role: string }
+interface UserLab { user_id: string; lab_id: string }
+
 export default function AdminAccounts() {
   const [loading, setLoading] = useState(true);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [stats, setStats] = useState<Record<string, AccountStats>>({});
+  const [labs, setLabs] = useState<LabRow[]>([]);
+  const [rolesByUser, setRolesByUser] = useState<Record<string, string[]>>({});
+  const [labByUser, setLabByUser] = useState<Record<string, string>>({});
   const [search, setSearch] = useState('');
+  const [savingId, setSavingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      // Admin can read all profiles via RLS admin policy
-      const { data: profs } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-      const all = (profs ?? []) as ProfileRow[];
-      setProfiles(all);
+  const load = async () => {
+    setLoading(true);
+    const [{ data: profs }, { data: labRows }, { data: roleRows }, { data: ulRows }, { data: pats }, { data: ords }] = await Promise.all([
+      supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+      supabase.from('labs').select('id,name,slug').eq('is_active', true).order('name'),
+      supabase.from('user_roles').select('user_id,role'),
+      supabase.from('user_lab_sponsors').select('user_id,lab_id').eq('is_active', true),
+      supabase.from('patients').select('user_id'),
+      supabase.from('supply_orders').select('user_id'),
+    ]);
 
-      // Gather per-user counts
-      const statsMap: Record<string, AccountStats> = {};
-      for (const p of all) {
-        statsMap[p.user_id] = { user_id: p.user_id, patient_count: 0, order_count: 0 };
-      }
+    const all = (profs ?? []) as ProfileRow[];
+    setProfiles(all);
+    setLabs((labRows ?? []) as LabRow[]);
 
-      // Patient counts
-      const { data: pats } = await supabase.from('patients').select('user_id');
-      for (const pt of (pats ?? []) as { user_id: string }[]) {
-        if (statsMap[pt.user_id]) statsMap[pt.user_id].patient_count++;
-      }
+    const rmap: Record<string, string[]> = {};
+    for (const r of (roleRows ?? []) as RoleRow[]) (rmap[r.user_id] ||= []).push(r.role);
+    setRolesByUser(rmap);
 
-      // Order counts
-      const { data: ords } = await supabase.from('supply_orders').select('user_id');
-      for (const o of (ords ?? []) as { user_id: string }[]) {
-        if (statsMap[o.user_id]) statsMap[o.user_id].order_count++;
-      }
+    const lmap: Record<string, string> = {};
+    for (const u of (ulRows ?? []) as UserLab[]) lmap[u.user_id] = u.lab_id;
+    setLabByUser(lmap);
 
-      setStats(statsMap);
-      setLoading(false);
-    })();
-  }, []);
+    const statsMap: Record<string, AccountStats> = {};
+    for (const p of all) statsMap[p.user_id] = { user_id: p.user_id, patient_count: 0, order_count: 0 };
+    for (const pt of (pats ?? []) as { user_id: string }[]) if (statsMap[pt.user_id]) statsMap[pt.user_id].patient_count++;
+    for (const o of (ords ?? []) as { user_id: string }[]) if (statsMap[o.user_id]) statsMap[o.user_id].order_count++;
+    setStats(statsMap);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
 
   const filtered = profiles.filter(p => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return `${p.first_name} ${p.last_name} ${p.institution ?? ''} ${p.role ?? ''}`.toLowerCase().includes(q);
+    return `${p.first_name} ${p.last_name} ${p.institution ?? ''}`.toLowerCase().includes(q);
   });
 
-  const roleLabel = (r: string | null) => {
-    switch (r) {
-      case 'admin': return 'Administrador';
-      case 'medico': return 'Médico/a';
-      case 'enfermero': return 'Enfermero/a';
-      default: return r ?? 'Profesional';
-    }
+  const appRoleOf = (uid: string): 'admin' | 'sponsor' | 'professional' => {
+    const rs = rolesByUser[uid] || [];
+    if (rs.includes('admin')) return 'admin';
+    if (rs.includes('sponsor')) return 'sponsor';
+    return 'professional';
+  };
+
+  const setRole = async (uid: string, newRole: 'admin' | 'sponsor' | 'professional') => {
+    setSavingId(uid);
+    try {
+      // Replace user's roles with the canonical one for this app
+      await supabase.from('user_roles').delete().eq('user_id', uid);
+      const dbRole = newRole === 'professional' ? 'professional' : newRole;
+      await supabase.from('user_roles').insert({ user_id: uid, role: dbRole as any });
+      toast({ title: 'Rol actualizado', description: `Nuevo rol: ${newRole}` });
+      await load();
+    } catch (e) {
+      toast({ title: 'Error al actualizar rol', description: (e as Error).message, variant: 'destructive' });
+    } finally { setSavingId(null); }
+  };
+
+  const setLab = async (uid: string, labId: string) => {
+    setSavingId(uid);
+    try {
+      await supabase.from('user_lab_sponsors').delete().eq('user_id', uid);
+      await supabase.from('user_lab_sponsors').insert({ user_id: uid, lab_id: labId, is_active: true });
+      // Also map to the matching sponsor row (for white-label theming)
+      const { data: sp } = await supabase.from('sponsors').select('id').eq('lab_id', labId).maybeSingle();
+      if (sp?.id) {
+        await supabase.from('user_sponsor').delete().eq('user_id', uid);
+        await supabase.from('user_sponsor').insert({ user_id: uid, sponsor_id: sp.id });
+      }
+      toast({ title: 'Laboratorio asignado' });
+      await load();
+    } catch (e) {
+      toast({ title: 'Error al asignar laboratorio', description: (e as Error).message, variant: 'destructive' });
+    } finally { setSavingId(null); }
   };
 
   return (
     <AppLayout>
-      <div className="flex flex-col gap-6 max-w-4xl">
+      <div className="flex flex-col gap-6 max-w-5xl">
         <div>
           <h1 className="font-heading text-2xl md:text-3xl font-bold flex items-center gap-2">
             <Users className="h-7 w-7 text-primary" />
-            Cuentas asociadas
+            Cuentas y permisos
           </h1>
           <p className="text-sm text-muted-foreground font-body mt-1">
-            Profesionales registrados en la plataforma. Visualización de pacientes y pedidos por cuenta.
+            Asigná rol (profesional, sponsor, admin) y laboratorio sponsor a cada cuenta.
           </p>
         </div>
 
@@ -98,38 +138,52 @@ export default function AdminAccounts() {
         </div>
 
         {loading ? (
-          <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20" />)}</div>
+          <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
         ) : filtered.length === 0 ? (
-          <Card className="p-10 text-center">
-            <p className="font-heading font-semibold">No se encontraron cuentas</p>
-          </Card>
+          <Card className="p-10 text-center"><p className="font-heading font-semibold">No se encontraron cuentas</p></Card>
         ) : (
           <div className="space-y-2">
             {filtered.map(p => {
               const s = stats[p.user_id];
+              const ar = appRoleOf(p.user_id);
+              const labId = labByUser[p.user_id] || '';
+              const Icon = ar === 'admin' ? ShieldCheck : ar === 'sponsor' ? Briefcase : UserCog;
               return (
-                <Card key={p.id} className="p-4 flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    {p.role === 'admin' ? (
-                      <ShieldCheck className="h-5 w-5 text-primary" />
-                    ) : (
-                      <span className="font-heading font-bold text-primary text-sm">
-                        {(p.first_name?.[0] ?? '') + (p.last_name?.[0] ?? '')}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-heading font-semibold text-sm">
-                        {p.first_name} {p.last_name}
-                      </p>
-                      <Badge variant="outline" className="text-[10px]">{roleLabel(p.role)}</Badge>
+                <Card key={p.id} className="p-4 flex flex-col md:flex-row md:items-center gap-4">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <Icon className="h-5 w-5 text-primary" />
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {p.institution ?? '—'} · Mat. {p.license ?? '—'}
-                    </p>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-heading font-semibold text-sm">{p.first_name} {p.last_name}</p>
+                        <Badge variant="outline" className="text-[10px] uppercase">{ar}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{p.institution ?? '—'} · Mat. {p.license ?? '—'}</p>
+                    </div>
                   </div>
-                  <div className="text-right shrink-0 text-xs text-muted-foreground space-y-0.5">
+
+                  <div className="flex flex-col sm:flex-row gap-2 md:items-center">
+                    <Select value={ar} onValueChange={(v) => setRole(p.user_id, v as any)} disabled={savingId === p.user_id}>
+                      <SelectTrigger className="w-[160px] h-9 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="professional">Profesional</SelectItem>
+                        <SelectItem value="sponsor">Sponsor</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={labId} onValueChange={(v) => setLab(p.user_id, v)} disabled={savingId === p.user_id || labs.length === 0}>
+                      <SelectTrigger className="w-[200px] h-9 text-xs">
+                        <SelectValue placeholder="Sin laboratorio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {labs.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="text-right shrink-0 text-xs text-muted-foreground space-y-0.5 md:w-28">
                     <p>{s?.patient_count ?? 0} pacientes</p>
                     <p>{s?.order_count ?? 0} pedidos</p>
                   </div>
@@ -142,3 +196,4 @@ export default function AdminAccounts() {
     </AppLayout>
   );
 }
+

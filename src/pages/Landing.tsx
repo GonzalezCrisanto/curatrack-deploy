@@ -9,11 +9,15 @@ import {
 } from 'lucide-react';
 import { useSponsor } from '@/context/SponsorContext';
 import { SponsorLogo } from '@/components/SponsorLogo';
+import { useApp } from '@/context/AppContext';
+import { useAppRole } from '@/hooks/useAppRole';
 
 export default function Landing() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { sponsor, setSponsorBySlug, sponsors } = useSponsor();
+  const { isLoggedIn, authReady } = useApp();
+  const { role, ready: roleReady } = useAppRole();
 
   useEffect(() => {
     const slug = searchParams.get('sponsor');
@@ -21,6 +25,12 @@ export default function Landing() {
       setSponsorBySlug(slug, false);
     }
   }, [searchParams, sponsors, setSponsorBySlug]);
+
+  // If a logged-in user lands on "/", send them to their role home.
+  useEffect(() => {
+    if (!authReady || !isLoggedIn || !roleReady) return;
+    navigate(role === 'sponsor' ? '/sponsor' : '/dashboard', { replace: true });
+  }, [authReady, isLoggedIn, roleReady, role, navigate]);
 
   const appName = sponsor?.app_name ?? 'Care Platform';
   const sponsorName = sponsor?.sponsor_name ?? 'Laboratorio sponsor';

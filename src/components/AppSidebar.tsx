@@ -5,6 +5,7 @@ import {
 import { NavLink } from '@/components/NavLink';
 import { useApp } from '@/context/AppContext';
 import { useSponsor } from '@/context/SponsorContext';
+import { useAppRole } from '@/hooks/useAppRole';
 import { useNavigate } from 'react-router-dom';
 import { SponsorLogo } from '@/components/SponsorLogo';
 import {
@@ -52,8 +53,11 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const { currentUser } = useApp();
   const { sponsor } = useSponsor();
+  const { role } = useAppRole();
   const navigate = useNavigate();
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin = role === 'admin';
+  const isSponsor = role === 'sponsor';
+  const isProfessional = role === 'professional' || (!role && !!currentUser);
 
   const renderGroup = (label: string, items: typeof clinicalItems) => (
     <SidebarGroup>
@@ -84,11 +88,35 @@ export function AppSidebar() {
     </SidebarGroup>
   );
 
+  // Items per role
+  const profClinical = clinicalItems;
+  const profSupplies = [
+    { title: 'Catálogo clínico', url: '/marketplace', icon: ShoppingBag },
+    { title: 'Solicitudes de reposición', url: '/orders', icon: Truck },
+  ];
+  const profPlatform = [
+    { title: 'Asistente clínico', url: '/assistant', icon: Sparkles },
+    { title: 'Configuración', url: '/settings', icon: Settings },
+  ];
+
+  const sponsorMain = [
+    { title: 'Panel sponsor', url: '/sponsor', icon: Briefcase },
+    { title: 'Estadísticas', url: '/statistics', icon: BarChart3 },
+    { title: 'Solicitudes de reposición', url: '/orders', icon: Truck },
+    { title: 'Reportes', url: '/reports', icon: FileText },
+    { title: 'Catálogo clínico', url: '/marketplace', icon: ShoppingBag },
+  ];
+  const sponsorAccount = [
+    { title: 'Configuración', url: '/settings', icon: Settings },
+  ];
+
+  const homePath = isSponsor ? '/sponsor' : '/dashboard';
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border/60">
         <button
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate(homePath)}
           className="flex items-center gap-2 px-2 py-3 hover:opacity-80 transition-opacity w-full text-left"
           title={sponsor?.app_name}
         >
@@ -96,11 +124,22 @@ export function AppSidebar() {
         </button>
       </SidebarHeader>
       <SidebarContent className="pt-2 overflow-visible">
-        {renderGroup('Clínico', clinicalItems)}
-        {renderGroup('Comercial sponsor', commercialItems)}
-        {renderGroup('Plataforma', insightsItems)}
+        {isSponsor && (
+          <>
+            {renderGroup('Sponsor', sponsorMain)}
+            {renderGroup('Cuenta', sponsorAccount)}
+          </>
+        )}
+        {(isProfessional || isAdmin) && (
+          <>
+            {renderGroup('Clínico', profClinical)}
+            {renderGroup(isAdmin ? 'Comercial sponsor' : 'Insumos', isAdmin ? commercialItems : profSupplies)}
+            {renderGroup('Plataforma', isAdmin ? insightsItems : profPlatform)}
+          </>
+        )}
         {isAdmin && renderGroup('Administración', adminItems)}
       </SidebarContent>
     </Sidebar>
   );
 }
+

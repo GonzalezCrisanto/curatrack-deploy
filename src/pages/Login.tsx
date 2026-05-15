@@ -12,6 +12,17 @@ import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, Mail, Sparkles, ShieldCheck, C
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+async function redirectByRole(navigate: (p: string) => void, fallback = '/dashboard') {
+  const { data: sess } = await supabase.auth.getSession();
+  const uid = sess.session?.user?.id;
+  if (!uid) { navigate(fallback); return; }
+  const { data } = await supabase.from('user_roles').select('role').eq('user_id', uid);
+  const roles = (data ?? []).map((r: any) => r.role as string);
+  if (roles.includes('admin')) navigate('/dashboard');
+  else if (roles.includes('sponsor')) navigate('/sponsor');
+  else navigate('/dashboard');
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const { login, loginWithGoogle } = useApp();
@@ -35,7 +46,7 @@ export default function Login() {
       toast({ title: 'No se pudo iniciar sesión', description: result.message, variant: 'destructive' });
       return;
     }
-    navigate('/dashboard');
+    await redirectByRole(navigate);
   };
 
   const handleGoogle = async () => {
@@ -55,7 +66,7 @@ export default function Login() {
       const result = await login(data.email, data.password);
       if (!result.ok) throw new Error(result.message || 'No se pudo iniciar sesión con la cuenta demo');
       toast({ title: 'Sesión demo iniciada', description: 'Estás usando la cuenta de prueba.' });
-      navigate('/dashboard');
+      await redirectByRole(navigate);
     } catch (err) {
       toast({ title: 'No se pudo entrar a la demo', description: (err as Error).message, variant: 'destructive' });
     } finally { setLoading(false); }
