@@ -752,8 +752,8 @@ export default function Statistics() {
 
         <h2>Evolución del área de heridas (cm²)</h2>
         ${areaSeries.series.length === 0 ? '<p>Sin mediciones de área en el rango.</p>' : `
-          <table><thead><tr><th>Fecha</th>${areaSeries.series.map(s => `<th>${s.label}</th>`).join('')}</tr></thead>
-          <tbody>${areaSeries.data.map(r => `<tr><td>${r.date}</td>${areaSeries.series.map(s => `<td>${(r[s.key] as number | undefined) ?? ''}</td>`).join('')}</tr>`).join('')}</tbody></table>
+          <table><thead><tr><th>Fecha</th>${areaSeries.series.map(s => `<th>${esc(s.label)}</th>`).join('')}</tr></thead>
+          <tbody>${areaSeries.data.map(r => `<tr><td>${esc(r.date)}</td>${areaSeries.series.map(s => `<td>${esc((r[s.key] as number | undefined) ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>
         `}
 
         <script>window.onload=()=>setTimeout(()=>window.print(),300);</script>
