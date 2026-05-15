@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/context/AppContext";
 import { CartProvider } from "@/context/CartContext";
 import { SponsorProvider } from "@/context/SponsorContext";
+import { RoleGuard } from "@/components/RoleGuard";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -31,6 +32,11 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Allowed role groups
+const CLINICAL = ['professional', 'admin'] as const;
+const SPONSOR_OR_ADMIN = ['sponsor', 'admin'] as const;
+const ALL = ['professional', 'sponsor', 'admin'] as const;
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -45,23 +51,32 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/patients" element={<Patients />} />
-                <Route path="/patients/:patientId" element={<PatientDetail />} />
-                <Route path="/patients/:patientId/cases/:caseId" element={<CaseDetail />} />
-                <Route path="/cases" element={<Cases />} />
-                <Route path="/curation/new" element={<NewCuration />} />
-                <Route path="/agenda" element={<Agenda />} />
-                <Route path="/marketplace" element={<Marketplace />} />
-                <Route path="/orders" element={<Orders />} />
-                <Route path="/sponsor" element={<SponsorPanel />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/admin/products" element={<AdminProducts />} />
-                <Route path="/admin/orders" element={<AdminOrders />} />
-                <Route path="/admin/accounts" element={<AdminAccounts />} />
-                <Route path="/assistant" element={<Assistant />} />
-                <Route path="/statistics" element={<Statistics />} />
-                <Route path="/settings" element={<Settings />} />
+
+                {/* Clinical (professional + admin) */}
+                <Route path="/dashboard" element={<RoleGuard allow={[...CLINICAL]}><Dashboard /></RoleGuard>} />
+                <Route path="/patients" element={<RoleGuard allow={[...CLINICAL]}><Patients /></RoleGuard>} />
+                <Route path="/patients/:patientId" element={<RoleGuard allow={[...CLINICAL]}><PatientDetail /></RoleGuard>} />
+                <Route path="/patients/:patientId/cases/:caseId" element={<RoleGuard allow={[...CLINICAL]}><CaseDetail /></RoleGuard>} />
+                <Route path="/cases" element={<RoleGuard allow={[...CLINICAL]}><Cases /></RoleGuard>} />
+                <Route path="/curation/new" element={<RoleGuard allow={[...CLINICAL]}><NewCuration /></RoleGuard>} />
+                <Route path="/agenda" element={<RoleGuard allow={[...CLINICAL]}><Agenda /></RoleGuard>} />
+                <Route path="/assistant" element={<RoleGuard allow={[...CLINICAL]}><Assistant /></RoleGuard>} />
+
+                {/* Sponsor + admin */}
+                <Route path="/sponsor" element={<RoleGuard allow={[...SPONSOR_OR_ADMIN]}><SponsorPanel /></RoleGuard>} />
+                <Route path="/reports" element={<RoleGuard allow={[...SPONSOR_OR_ADMIN]}><Reports /></RoleGuard>} />
+                <Route path="/statistics" element={<RoleGuard allow={[...SPONSOR_OR_ADMIN]}><Statistics /></RoleGuard>} />
+
+                {/* Shared (all signed-in) */}
+                <Route path="/marketplace" element={<RoleGuard allow={[...ALL]}><Marketplace /></RoleGuard>} />
+                <Route path="/orders" element={<RoleGuard allow={[...ALL]}><Orders /></RoleGuard>} />
+                <Route path="/settings" element={<RoleGuard allow={[...ALL]}><Settings /></RoleGuard>} />
+
+                {/* Admin only */}
+                <Route path="/admin/products" element={<RoleGuard allow={['admin']}><AdminProducts /></RoleGuard>} />
+                <Route path="/admin/orders" element={<RoleGuard allow={['admin']}><AdminOrders /></RoleGuard>} />
+                <Route path="/admin/accounts" element={<RoleGuard allow={['admin']}><AdminAccounts /></RoleGuard>} />
+
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
