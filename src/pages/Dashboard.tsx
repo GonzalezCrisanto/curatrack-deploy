@@ -45,9 +45,9 @@ export default function Dashboard() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: ords } = await supabase
-        .from('supply_orders')
-        .select('id,status,created_at');
+      let q = supabase.from('supply_orders').select('id,status,created_at');
+      if (sponsor?.lab_id) q = q.eq('lab_id', sponsor.lab_id);
+      const { data: ords } = await q;
       if (cancelled) return;
       const list = ords ?? [];
       setOrderCount({
@@ -57,19 +57,13 @@ export default function Dashboard() {
       });
     })();
     (async () => {
-      if (!sponsor?.lab_id) {
-        const { data: any3 } = await supabase
-          .from('lab_products')
-          .select('name,category')
-          .limit(3);
-        if (!cancelled) setRecommendedProducts((any3 ?? []) as any);
-        return;
-      }
-      const { data } = await supabase
+      let pq = supabase
         .from('lab_products')
-        .select('name,category')
-        .eq('lab_id', sponsor.lab_id)
+        .select('name')
+        .eq('is_active', true)
         .limit(3);
+      if (sponsor?.lab_id) pq = pq.eq('lab_id', sponsor.lab_id);
+      const { data } = await pq;
       if (!cancelled) setRecommendedProducts((data ?? []) as any);
     })();
     return () => { cancelled = true; };

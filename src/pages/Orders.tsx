@@ -142,10 +142,12 @@ export default function Orders() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const { data: ordData } = await supabase
+      let q = supabase
         .from('supply_orders')
         .select('*')
         .order('created_at', { ascending: false });
+      if (sponsor?.lab_id) q = q.eq('lab_id', sponsor.lab_id);
+      const { data: ordData } = await q;
       if (cancelled) return;
       const ords = (ordData ?? []) as OrderRow[];
       setOrders(ords);
@@ -165,7 +167,7 @@ export default function Orders() {
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [sponsor?.lab_id]);
 
   const filtered = useMemo(() => {
     const now = Date.now();
@@ -218,7 +220,7 @@ export default function Orders() {
                 Solicitudes de reposición
               </h1>
               <p className="font-body text-sm text-muted-foreground mt-1 max-w-2xl">
-                Seguimiento de insumos solicitados a partir de curaciones, recomendaciones clínicas y productos sponsor.
+                Seguimiento de insumos solicitados a {sponsorName}. Los datos del paciente permanecen protegidos: solo se comparte tipo de herida, profesional e institución.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
