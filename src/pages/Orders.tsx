@@ -220,7 +220,7 @@ export default function Orders() {
                 Solicitudes de reposición
               </h1>
               <p className="font-body text-sm text-muted-foreground mt-1 max-w-2xl">
-                Seguimiento de insumos solicitados a partir de curaciones, recomendaciones clínicas y productos sponsor.
+                Seguimiento de insumos solicitados a {sponsorName}. Los datos del paciente permanecen protegidos: solo se comparte tipo de herida, profesional e institución.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
