@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Eye, EyeOff, UserPlus, LogIn, Check } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import logo from '@/assets/curatrack-logo.png';
+import { useSponsor } from '@/context/SponsorContext';
+import { SponsorLogo } from '@/components/SponsorLogo';
+import { Badge } from '@/components/ui/badge';
 
 const ROLES = [
   { value: 'enfermeria', label: 'Enfermería' },
