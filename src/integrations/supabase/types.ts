@@ -299,7 +299,7 @@ export type Database = {
           lab_id: string
           phone: string | null
           updated_at: string
-          user_id: string | null
+          user_id: string
           whatsapp: string | null
           zone: string | null
         }
@@ -313,7 +313,7 @@ export type Database = {
           lab_id: string
           phone?: string | null
           updated_at?: string
-          user_id?: string | null
+          user_id: string
           whatsapp?: string | null
           zone?: string | null
         }
@@ -327,7 +327,7 @@ export type Database = {
           lab_id?: string
           phone?: string | null
           updated_at?: string
-          user_id?: string | null
+          user_id?: string
           whatsapp?: string | null
           zone?: string | null
         }
