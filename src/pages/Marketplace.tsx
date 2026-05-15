@@ -57,7 +57,7 @@ export default function Marketplace() {
     return () => {
       cancelled = true;
     };
-  }, [toast]);
+  }, [toast, sponsor?.lab_id]);
 
   const categoriesById = useMemo(() => {
     const m = new Map<string, ProductCategory>();
