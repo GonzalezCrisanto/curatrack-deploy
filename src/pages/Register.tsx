@@ -319,7 +319,7 @@ export default function Register() {
                 />
                 <label htmlFor="terms" className="text-xs text-muted-foreground font-body leading-relaxed cursor-pointer">
                   Acepto los <a className="text-primary hover:underline" href="#">Términos y Condiciones</a> y la{' '}
-                  <a className="text-primary hover:underline" href="#">Política de Privacidad</a> de CuraTrack, incluyendo el tratamiento de datos clínicos según normativa vigente.
+                  <a className="text-primary hover:underline" href="#">Política de Privacidad</a> de {appName}, incluyendo el tratamiento de datos clínicos según normativa vigente.
                 </label>
               </div>
 
