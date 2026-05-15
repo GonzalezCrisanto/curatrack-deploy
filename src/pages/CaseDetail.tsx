@@ -31,6 +31,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 import ReactMarkdown from 'react-markdown';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 const statusBadgeClass: Record<string, string> = {
   activo: 'bg-info/10 text-info border-info/30',
