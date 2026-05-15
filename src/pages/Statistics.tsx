@@ -691,7 +691,7 @@ export default function Statistics() {
 
     const html = `
       <!doctype html><html><head><meta charset="utf-8"/>
-      <title>CuraTrack — Estadísticas</title>
+      <title>Estadísticas clínicas</title>
       <style>
         body{font-family:'Open Sans',Arial,sans-serif;color:#1f2937;padding:32px;max-width:900px;margin:0 auto;}
         h1{font-family:'Montserrat',Arial,sans-serif;color:#00965E;margin:0 0 4px;}
@@ -706,7 +706,7 @@ export default function Statistics() {
         .card .lbl{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;}
         @media print{button{display:none;}}
       </style></head><body>
-        <h1>CuraTrack — Estadísticas clínicas</h1>
+        <h1>Estadísticas clínicas</h1>
         <div class="meta">
           Generado: ${new Date().toLocaleString('es-AR')}<br/>
           Paciente: ${filterLabel}<br/>
