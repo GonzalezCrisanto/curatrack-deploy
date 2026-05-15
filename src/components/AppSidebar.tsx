@@ -5,6 +5,7 @@ import {
 import { NavLink } from '@/components/NavLink';
 import { useApp } from '@/context/AppContext';
 import { useSponsor } from '@/context/SponsorContext';
+import { useAppRole } from '@/hooks/useAppRole';
 import { useNavigate } from 'react-router-dom';
 import { SponsorLogo } from '@/components/SponsorLogo';
 import {
