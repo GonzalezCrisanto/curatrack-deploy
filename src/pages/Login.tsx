@@ -168,7 +168,7 @@ export default function Login() {
             <p className="font-body text-sm text-muted-foreground mt-1">
               {forgotMode
                 ? 'Te enviaremos un enlace a tu correo'
-                : `Accedé a ${appName} con tus credenciales`}
+                : `Accedé como profesional de salud o como laboratorio sponsor.`}
             </p>
           </CardHeader>
           <CardContent>
