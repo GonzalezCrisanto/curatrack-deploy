@@ -162,10 +162,13 @@ export default function Register() {
 
         <Card className="w-full max-w-lg border-border/50 shadow-lg my-8">
           <CardHeader className="text-center pb-2">
-            <img src={logo} alt="CuraTrack" className="h-14 mx-auto mb-4 lg:hidden" />
+            <div className="flex justify-center mb-3 lg:hidden"><SponsorLogo /></div>
+            <Badge variant="outline" className="mx-auto font-body text-[10px] uppercase tracking-wider border-primary/30 text-primary bg-primary/5 mb-2">
+              Programa sponsor: {sponsorName}
+            </Badge>
             <h1 className="heading-display text-2xl">Crear cuenta</h1>
             <p className="font-body text-sm text-muted-foreground mt-1">
-              Completá tus datos para registrarte en la plataforma
+              Completá tus datos para acceder a {appName}
             </p>
           </CardHeader>
           <CardContent>
