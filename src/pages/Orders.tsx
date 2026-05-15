@@ -142,10 +142,12 @@ export default function Orders() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const { data: ordData } = await supabase
+      let q = supabase
         .from('supply_orders')
         .select('*')
         .order('created_at', { ascending: false });
+      if (sponsor?.lab_id) q = q.eq('lab_id', sponsor.lab_id);
+      const { data: ordData } = await q;
       if (cancelled) return;
       const ords = (ordData ?? []) as OrderRow[];
       setOrders(ords);
