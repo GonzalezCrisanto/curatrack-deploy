@@ -709,9 +709,9 @@ export default function Statistics() {
       </style></head><body>
         <h1>Estadísticas clínicas</h1>
         <div class="meta">
-          Generado: ${new Date().toLocaleString('es-AR')}<br/>
-          Paciente: ${filterLabel}<br/>
-          Rango: ${fromDate || '—'} a ${toDate || '—'}
+          Generado: ${esc(new Date().toLocaleString('es-AR'))}<br/>
+          Paciente: ${esc(filterLabel)}<br/>
+          Rango: ${esc(fromDate || '—')} a ${esc(toDate || '—')}
         </div>
 
         <h2>Resumen</h2>
