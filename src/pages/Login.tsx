@@ -198,7 +198,7 @@ export default function Login() {
                   </Button>
                 </div>
                 <p className="text-[11px] text-center text-muted-foreground font-body -mt-3">
-                  Acceso instantáneo · datos de prueba precargados
+                  Acceso instantáneo con datos de prueba según el perfil seleccionado.
                 </p>
 
                 <Button type="button" variant="outline" size="lg" onClick={handleGoogle} disabled={loading}
