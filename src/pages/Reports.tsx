@@ -227,7 +227,7 @@ export default function Reports() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-body text-[10px] uppercase tracking-wider text-muted-foreground">Plataforma</div>
-                <div className="heading-display text-base sm:text-lg truncate">{sponsor?.app_name}</div>
+                <div className="heading-display text-sm sm:text-base lg:text-lg leading-tight break-words">{sponsor?.app_name}</div>
                 <div className="font-body text-xs text-muted-foreground break-words">
                   Período seleccionado: {PERIOD_LABEL[period]} · Generado el {new Date().toLocaleDateString('es-AR')}
                 </div>
