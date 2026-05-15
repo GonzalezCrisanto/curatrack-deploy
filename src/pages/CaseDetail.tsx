@@ -31,6 +31,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 import ReactMarkdown from 'react-markdown';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 const statusBadgeClass: Record<string, string> = {
   activo: 'bg-info/10 text-info border-info/30',
@@ -445,7 +446,8 @@ export default function CaseDetail() {
         return false;
       }
       const safe = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
-      const bodyHtml = marked.parse(summary, { async: false }) as string;
+      const rawHtml = marked.parse(summary, { async: false }) as string;
+      const bodyHtml = DOMPurify.sanitize(rawHtml, { USE_PROFILES: { html: true } });
       const updated = woundCase.aiSummaryUpdatedAt ? new Date(woundCase.aiSummaryUpdatedAt).toLocaleString('es-AR') : '';
       win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Resumen-IA-${safe(woundCase.woundType)}</title>
         <style>

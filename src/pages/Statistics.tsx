@@ -675,6 +675,7 @@ export default function Statistics() {
   const handleExportPdf = () => {
     const win = window.open('', '_blank');
     if (!win) return;
+    const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
     const filterLabel = patientFilter === 'all'
       ? 'Todos los pacientes'
       : (() => {
@@ -683,10 +684,10 @@ export default function Statistics() {
         })();
 
     const tableHtml = (title: string, headers: string[], rows: (string | number)[][]) => `
-      <h2>${title}</h2>
-      <table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+      <h2>${esc(title)}</h2>
+      <table><thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
         <tbody>${rows.length === 0 ? `<tr><td colspan="${headers.length}">Sin datos.</td></tr>`
-          : rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>
+          : rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody>
       </table>`;
 
     const html = `
@@ -708,9 +709,9 @@ export default function Statistics() {
       </style></head><body>
         <h1>Estadísticas clínicas</h1>
         <div class="meta">
-          Generado: ${new Date().toLocaleString('es-AR')}<br/>
-          Paciente: ${filterLabel}<br/>
-          Rango: ${fromDate || '—'} a ${toDate || '—'}
+          Generado: ${esc(new Date().toLocaleString('es-AR'))}<br/>
+          Paciente: ${esc(filterLabel)}<br/>
+          Rango: ${esc(fromDate || '—')} a ${esc(toDate || '—')}
         </div>
 
         <h2>Resumen</h2>
@@ -751,8 +752,8 @@ export default function Statistics() {
 
         <h2>Evolución del área de heridas (cm²)</h2>
         ${areaSeries.series.length === 0 ? '<p>Sin mediciones de área en el rango.</p>' : `
-          <table><thead><tr><th>Fecha</th>${areaSeries.series.map(s => `<th>${s.label}</th>`).join('')}</tr></thead>
-          <tbody>${areaSeries.data.map(r => `<tr><td>${r.date}</td>${areaSeries.series.map(s => `<td>${(r[s.key] as number | undefined) ?? ''}</td>`).join('')}</tr>`).join('')}</tbody></table>
+          <table><thead><tr><th>Fecha</th>${areaSeries.series.map(s => `<th>${esc(s.label)}</th>`).join('')}</tr></thead>
+          <tbody>${areaSeries.data.map(r => `<tr><td>${esc(r.date)}</td>${areaSeries.series.map(s => `<td>${esc((r[s.key] as number | undefined) ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>
         `}
 
         <script>window.onload=()=>setTimeout(()=>window.print(),300);</script>

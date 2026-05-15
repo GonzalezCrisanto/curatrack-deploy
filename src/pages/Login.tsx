@@ -92,8 +92,12 @@ export default function Login() {
       const fnName = kind === 'sponsor' ? 'demo-admin-login' : 'demo-login';
       const { data, error } = await supabase.functions.invoke(fnName);
       if (error || !data?.ok) throw new Error(error?.message || data?.message || 'No se pudo preparar la cuenta demo');
-      const result = await login(data.email, data.password);
-      if (!result.ok) throw new Error(result.message || 'No se pudo iniciar sesión con la cuenta demo');
+      if (!data.access_token || !data.refresh_token) throw new Error('Sesión demo inválida');
+      const { error: setErr } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
+      if (setErr) throw new Error(setErr.message || 'No se pudo iniciar sesión con la cuenta demo');
 
       // Persist sponsor link to user_sponsor after login (so it survives refresh).
       if (target) await setSponsorBySlug(target.slug, true);
