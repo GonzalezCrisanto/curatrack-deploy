@@ -66,7 +66,7 @@ export default function Login() {
       const result = await login(data.email, data.password);
       if (!result.ok) throw new Error(result.message || 'No se pudo iniciar sesión con la cuenta demo');
       toast({ title: 'Sesión demo iniciada', description: 'Estás usando la cuenta de prueba.' });
-      navigate('/dashboard');
+      await redirectByRole(navigate);
     } catch (err) {
       toast({ title: 'No se pudo entrar a la demo', description: (err as Error).message, variant: 'destructive' });
     } finally { setLoading(false); }
