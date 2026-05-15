@@ -188,7 +188,7 @@ export default function Dashboard() {
               <Button variant="outline" size="sm" className="font-body" onClick={() => navigate('/orders')}>
                 <ShoppingBag className="h-4 w-4 mr-1.5" /> Ver solicitudes
               </Button>
-              <Button size="sm" className="font-body" onClick={() => navigate('/patients')}>
+              <Button size="sm" className="font-body" onClick={() => navigate('/curation/new')}>
                 <Plus className="h-4 w-4 mr-1.5" /> Nueva curación
               </Button>
             </div>
