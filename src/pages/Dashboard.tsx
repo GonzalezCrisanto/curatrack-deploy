@@ -381,7 +381,7 @@ export default function Dashboard() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
                 {[
-                  { l: 'Nueva curación', i: CalendarPlus, to: '/patients' },
+                  { l: 'Nueva curación', i: CalendarPlus, to: '/curation/new' },
                   { l: 'Nuevo paciente', i: UserPlus, to: '/patients' },
                   { l: 'Ver agenda', i: Calendar, to: '/agenda' },
                   { l: 'Catálogo clínico', i: Package, to: '/marketplace' },
