@@ -53,8 +53,11 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const { currentUser } = useApp();
   const { sponsor } = useSponsor();
+  const { role } = useAppRole();
   const navigate = useNavigate();
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin = role === 'admin';
+  const isSponsor = role === 'sponsor';
+  const isProfessional = role === 'professional' || (!role && !!currentUser);
 
   const renderGroup = (label: string, items: typeof clinicalItems) => (
     <SidebarGroup>
