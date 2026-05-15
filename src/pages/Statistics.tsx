@@ -675,6 +675,7 @@ export default function Statistics() {
   const handleExportPdf = () => {
     const win = window.open('', '_blank');
     if (!win) return;
+    const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
     const filterLabel = patientFilter === 'all'
       ? 'Todos los pacientes'
       : (() => {
@@ -683,10 +684,10 @@ export default function Statistics() {
         })();
 
     const tableHtml = (title: string, headers: string[], rows: (string | number)[][]) => `
-      <h2>${title}</h2>
-      <table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+      <h2>${esc(title)}</h2>
+      <table><thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
         <tbody>${rows.length === 0 ? `<tr><td colspan="${headers.length}">Sin datos.</td></tr>`
-          : rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>
+          : rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody>
       </table>`;
 
     const html = `
