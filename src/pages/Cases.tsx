@@ -12,7 +12,7 @@ export default function Cases() {
   const { patients } = useApp();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<'all' | 'activo' | 'en_mejoria' | 'critico' | 'cerrado'>('all');
+  const [status, setStatus] = useState<'all' | 'activo' | 'en_mejoria' | 'critico' | 'resuelto'>('all');
 
   const allCases = useMemo(() => {
     return patients.flatMap(p =>
@@ -35,7 +35,7 @@ export default function Cases() {
       activo: { label: 'Activo', cls: 'bg-info/10 text-info border-info/30' },
       en_mejoria: { label: 'En mejoría', cls: 'bg-success/10 text-success border-success/30' },
       critico: { label: 'Crítico', cls: 'bg-destructive/10 text-destructive border-destructive/30' },
-      cerrado: { label: 'Cerrado', cls: 'bg-muted text-muted-foreground border-border' },
+      resuelto: { label: 'Resuelto', cls: 'bg-muted text-muted-foreground border-border' },
     };
     const m = map[s] ?? map.activo;
     return <Badge variant="outline" className={`${m.cls} font-body text-xs`}>{m.label}</Badge>;
@@ -55,7 +55,7 @@ export default function Cases() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {(['all','activo','en_mejoria','critico','cerrado'] as const).map(s => (
+            {(['all','activo','en_mejoria','critico','resuelto'] as const).map(s => (
               <Button key={s} size="sm" variant={status===s?'default':'outline'} onClick={()=>setStatus(s)} className="font-body text-xs">
                 {s==='all'?'Todos':s==='en_mejoria'?'En mejoría':s.charAt(0).toUpperCase()+s.slice(1)}
               </Button>
