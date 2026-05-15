@@ -81,33 +81,34 @@ export default function Login() {
     }
   };
 
-  const handleDemoLogin = async () => {
+  const handleDemoLogin = async (target?: Sponsor, kind: 'pro' | 'sponsor' = 'pro') => {
+    const key = `${target?.slug ?? 'default'}:${kind}`;
     setLoading(true);
+    setLoadingKey(key);
     try {
-      const { data, error } = await supabase.functions.invoke('demo-login');
+      // Switch sponsor context first so the post-login UI is correctly themed.
+      if (target) await setSponsorBySlug(target.slug, false);
+
+      const fnName = kind === 'sponsor' ? 'demo-admin-login' : 'demo-login';
+      const { data, error } = await supabase.functions.invoke(fnName);
       if (error || !data?.ok) throw new Error(error?.message || data?.message || 'No se pudo preparar la cuenta demo');
       const result = await login(data.email, data.password);
       if (!result.ok) throw new Error(result.message || 'No se pudo iniciar sesión con la cuenta demo');
-      toast({ title: 'Sesión demo iniciada', description: 'Estás usando la cuenta de prueba.' });
-      await redirectByRole(navigate);
+
+      // Persist sponsor link to user_sponsor after login (so it survives refresh).
+      if (target) await setSponsorBySlug(target.slug, true);
+
+      toast({
+        title: kind === 'sponsor' ? 'Sesión laboratorio iniciada' : 'Sesión profesional iniciada',
+        description: target ? `Demo de ${target.sponsor_name}` : 'Cuenta de prueba activada.',
+      });
+      if (kind === 'sponsor') navigate('/admin/orders');
+      else await redirectByRole(navigate);
     } catch (err) {
-      toast({ title: 'No se pudo entrar a la demo', description: (err as Error).message, variant: 'destructive' });
-    } finally { setLoading(false); }
+      toast({ title: 'No se pudo iniciar la demo', description: (err as Error).message, variant: 'destructive' });
+    } finally { setLoading(false); setLoadingKey(null); }
   };
 
-  const handleAdminDemoLogin = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('demo-admin-login');
-      if (error || !data?.ok) throw new Error(error?.message || data?.message || 'No se pudo preparar la cuenta admin demo');
-      const result = await login(data.email, data.password);
-      if (!result.ok) throw new Error(result.message || 'No se pudo iniciar sesión con la cuenta admin');
-      toast({ title: 'Sesión admin demo iniciada', description: 'Estás usando la cuenta de administrador/vendedor.' });
-      navigate('/admin/orders');
-    } catch (err) {
-      toast({ title: 'No se pudo entrar como admin', description: (err as Error).message, variant: 'destructive' });
-    } finally { setLoading(false); }
-  };
 
   const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();
