@@ -167,7 +167,7 @@ export default function Orders() {
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [sponsor?.lab_id]);
 
   const filtered = useMemo(() => {
     const now = Date.now();
