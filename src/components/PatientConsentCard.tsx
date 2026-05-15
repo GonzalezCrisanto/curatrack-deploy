@@ -203,7 +203,7 @@ export function PatientConsentCard({ patientId, patientName, patientDni }: Patie
 
           <div className="space-y-4">
             <p className="font-body text-xs text-muted-foreground leading-relaxed">
-              Autorizo el registro digital de mis datos personales y clínicos en CuraTrack, incluyendo información relacionada con mi atención, evolución de heridas, materiales utilizados, observaciones profesionales y documentación asociada. Entiendo que esta información será utilizada para seguimiento clínico y gestión de la atención.
+              Autorizo el registro digital de mis datos personales y clínicos en la plataforma, incluyendo información relacionada con mi atención, evolución de heridas, materiales utilizados, observaciones profesionales y documentación asociada. Entiendo que esta información será utilizada para seguimiento clínico y gestión de la atención.
             </p>
 
             <Separator />

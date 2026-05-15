@@ -608,7 +608,7 @@ export default function Statistics() {
   // ---------- Export ----------
   const handleExportCsv = () => {
     const lines: string[] = [];
-    lines.push('CuraTrack — Reporte de Estadísticas');
+    lines.push('Reporte de Estadísticas');
     lines.push(`Generado,${new Date().toISOString()}`);
     lines.push(`Paciente,${patientFilter === 'all' ? 'Todos' : (patients.find(p => p.id === patientFilter)?.firstName + ' ' + patients.find(p => p.id === patientFilter)?.lastName)}`);
     lines.push(`Desde,${fromDate || '—'}`);

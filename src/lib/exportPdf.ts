@@ -172,7 +172,7 @@ export function exportPatientPdf(patient: Patient, signatureMap?: Record<string,
   ${casesHtml}
 
   <div class="footer">
-    CuraTrack · Sistema de Gestión de Heridas Complejas · Documento confidencial — Uso exclusivo del equipo de salud
+    Documento confidencial — Uso exclusivo del equipo de salud
   </div>
 
   <script>window.onload = () => window.print();</script>
