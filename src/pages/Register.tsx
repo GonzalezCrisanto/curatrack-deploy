@@ -346,6 +346,9 @@ export default function Register() {
                 <LogIn className="mr-2 h-4 w-4" /> Iniciar sesión
               </Button>
             </form>
+            {footer && (
+              <p className="text-[10px] text-center text-muted-foreground font-body mt-6 leading-relaxed">{footer}</p>
+            )}
           </CardContent>
         </Card>
       </div>
