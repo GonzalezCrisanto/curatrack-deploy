@@ -188,7 +188,7 @@ export default function Dashboard() {
               <Button variant="outline" size="sm" className="font-body" onClick={() => navigate('/orders')}>
                 <ShoppingBag className="h-4 w-4 mr-1.5" /> Ver solicitudes
               </Button>
-              <Button size="sm" className="font-body" onClick={() => navigate('/patients')}>
+              <Button size="sm" className="font-body" onClick={() => navigate('/curation/new')}>
                 <Plus className="h-4 w-4 mr-1.5" /> Nueva curación
               </Button>
             </div>
@@ -381,7 +381,7 @@ export default function Dashboard() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
                 {[
-                  { l: 'Nueva curación', i: CalendarPlus, to: '/patients' },
+                  { l: 'Nueva curación', i: CalendarPlus, to: '/curation/new' },
                   { l: 'Nuevo paciente', i: UserPlus, to: '/patients' },
                   { l: 'Ver agenda', i: Calendar, to: '/agenda' },
                   { l: 'Catálogo clínico', i: Package, to: '/marketplace' },

@@ -15,6 +15,7 @@ import Patients from "./pages/Patients";
 import PatientDetail from "./pages/PatientDetail";
 import CaseDetail from "./pages/CaseDetail";
 import Cases from "./pages/Cases";
+import NewCuration from "./pages/NewCuration";
 import Agenda from "./pages/Agenda";
 import Marketplace from "./pages/Marketplace";
 import Orders from "./pages/Orders";
@@ -49,6 +50,7 @@ const App = () => (
                 <Route path="/patients/:patientId" element={<PatientDetail />} />
                 <Route path="/patients/:patientId/cases/:caseId" element={<CaseDetail />} />
                 <Route path="/cases" element={<Cases />} />
+                <Route path="/curation/new" element={<NewCuration />} />
                 <Route path="/agenda" element={<Agenda />} />
                 <Route path="/marketplace" element={<Marketplace />} />
                 <Route path="/orders" element={<Orders />} />

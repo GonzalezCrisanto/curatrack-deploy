@@ -24,7 +24,7 @@ const clinicalItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Pacientes', url: '/patients', icon: Users },
   { title: 'Casos de heridas', url: '/cases', icon: Activity },
-  { title: 'Nueva curación', url: '/patients', icon: PlusCircle },
+  { title: 'Nueva curación', url: '/curation/new', icon: PlusCircle },
   { title: 'Agenda', url: '/agenda', icon: Calendar },
 ];
 
