@@ -106,13 +106,14 @@ export default function NewCuration() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const q = supabase.from('lab_products').select('id,name,category:product_categories(slug,name),presentation,sku,price,currency,lab_id,wound_types').eq('is_active', true).limit(200);
+      const q = supabase.from('lab_products').select('id,name,category_id,presentation,sku,price,currency,lab_id,wound_types').eq('is_active', true).limit(200);
       if (sponsor?.lab_id) q.eq('lab_id', sponsor.lab_id);
-      const { data } = await q;
+      const [{ data }, { data: cats }] = await Promise.all([q, supabase.from('product_categories').select('id,name')]);
       if (cancelled) return;
+      const catMap = new Map<string, string>((cats ?? []).map((c: any) => [c.id, c.name]));
       const mapped: LabProduct[] = (data ?? []).map((p: any) => ({
         id: p.id, name: p.name,
-        category: p.category?.name ?? null,
+        category: p.category_id ? catMap.get(p.category_id) ?? null : null,
         presentation: p.presentation, sku: p.sku, price: p.price,
         currency: p.currency, lab_id: p.lab_id, wound_types: p.wound_types,
       }));
