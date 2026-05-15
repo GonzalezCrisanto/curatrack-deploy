@@ -14,7 +14,7 @@ import { useSponsor } from '@/context/SponsorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { exportSponsorReportPdf, type SponsorReportData } from '@/lib/exportSponsorReport';
-import SponsorLogo from '@/components/SponsorLogo';
+import { SponsorLogo } from '@/components/SponsorLogo';
 
 type Period = '7' | '30' | '90' | 'all';
 
