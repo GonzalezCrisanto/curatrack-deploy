@@ -26,17 +26,39 @@ async function redirectByRole(navigate: (p: string) => void, fallback = '/dashbo
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, loginWithGoogle } = useApp();
-  const { sponsor } = useSponsor();
+  const { sponsor, sponsors, setSponsorBySlug } = useSponsor();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [forgotMode, setForgotMode] = useState(false);
+
+  const sponsorParam = searchParams.get('sponsor');
+  const isSponsorLocked = !!sponsorParam;
 
   const sponsorName = sponsor?.sponsor_name ?? 'Programa clínico';
   const appName = sponsor?.app_name ?? 'Plataforma';
   const footer = sponsor?.legal_footer ?? sponsor?.powered_by_label ?? '';
+
+  // Demo cards: in locked mode show only the matching sponsor; otherwise show all available.
+  const demoSponsors = useMemo<Sponsor[]>(() => {
+    if (!sponsors?.length) return [];
+    if (sponsorParam) {
+      const found = sponsors.find(s => s.slug.toLowerCase() === sponsorParam.toLowerCase());
+      return found ? [found] : [];
+    }
+    // Internal mode: order Convatec, B. Braun, Demo first if present
+    const priority = ['convatec', 'bbraun', 'demo'];
+    return [...sponsors].sort((a, b) => {
+      const ai = priority.indexOf(a.slug);
+      const bi = priority.indexOf(b.slug);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
+  }, [sponsors, sponsorParam]);
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
