@@ -106,6 +106,12 @@ export default function AdminAccounts() {
     try {
       await supabase.from('user_lab_sponsors').delete().eq('user_id', uid);
       await supabase.from('user_lab_sponsors').insert({ user_id: uid, lab_id: labId, is_active: true });
+      // Also map to the matching sponsor row (for white-label theming)
+      const { data: sp } = await supabase.from('sponsors').select('id').eq('lab_id', labId).maybeSingle();
+      if (sp?.id) {
+        await supabase.from('user_sponsor').delete().eq('user_id', uid);
+        await supabase.from('user_sponsor').insert({ user_id: uid, sponsor_id: sp.id });
+      }
       toast({ title: 'Laboratorio asignado' });
       await load();
     } catch (e) {
