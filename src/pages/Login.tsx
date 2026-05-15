@@ -46,7 +46,7 @@ export default function Login() {
       toast({ title: 'No se pudo iniciar sesión', description: result.message, variant: 'destructive' });
       return;
     }
-    navigate('/dashboard');
+    await redirectByRole(navigate);
   };
 
   const handleGoogle = async () => {
