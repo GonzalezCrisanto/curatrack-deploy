@@ -12,12 +12,14 @@ import { Search, Filter, X, ShoppingBag, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useCart } from '@/context/CartContext';
+import { useSponsor } from '@/context/SponsorContext';
 
 type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';
 
 export default function Marketplace() {
   const { toast } = useToast();
   const { addProduct } = useCart();
+  const { sponsor } = useSponsor();
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<LabProduct[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
@@ -32,8 +34,10 @@ export default function Marketplace() {
     let cancelled = false;
     (async () => {
       setLoading(true);
+      let prodQuery = supabase.from('lab_products').select('*').eq('is_active', true).order('is_featured', { ascending: false }).order('name');
+      if (sponsor?.lab_id) prodQuery = prodQuery.eq('lab_id', sponsor.lab_id);
       const [prodRes, catRes, tagRes] = await Promise.all([
-        supabase.from('lab_products').select('*').eq('is_active', true).order('is_featured', { ascending: false }).order('name'),
+        prodQuery,
         supabase.from('product_categories').select('*').order('sort_order'),
         supabase.from('product_clinical_tags').select('*').order('name'),
       ]);
