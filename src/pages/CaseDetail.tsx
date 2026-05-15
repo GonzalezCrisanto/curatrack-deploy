@@ -539,7 +539,7 @@ export default function CaseDetail() {
   <button class="alt" onclick="window.close()">Cerrar</button>
 </div>
 <div class="header">
-  <div><div class="brand">CuraTrack<small>Sistema de Gestión de Heridas</small></div></div>
+  <div><div class="brand">Care Platform<small>Gestión clínica de heridas</small></div></div>
   <div class="meta"><strong>Orden N° ${escape(orderId)}</strong>Emitida: ${escape(dateStr)} · ${escape(timeStr)}</div>
 </div>
 
@@ -593,7 +593,7 @@ export default function CaseDetail() {
   <div class="sig-line">Firma y sello</div>
 </div>
 
-<div class="footer">Documento generado electrónicamente por CuraTrack · ${escape(dateStr)} ${escape(timeStr)} · Orden ${escape(orderId)}</div>
+<div class="footer">Documento generado electrónicamente · ${escape(dateStr)} ${escape(timeStr)} · Orden ${escape(orderId)}</div>
 </body></html>`;
 
     const w = window.open('', '_blank', 'width=900,height=1000');

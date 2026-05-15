@@ -2,15 +2,16 @@ import { ReactNode } from 'react';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { useApp } from '@/context/AppContext';
+import { useSponsor } from '@/context/SponsorContext';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { LogOut } from 'lucide-react';
+import { LogOut, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import logo from '@/assets/curatrack-logo.png';
 import { CartButton, CartDrawer } from '@/components/marketplace/CartDrawer';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { currentUser, currentUserName, logout } = useApp();
+  const { sponsor } = useSponsor();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -32,10 +33,17 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-20 flex items-center justify-between border-b border-border/50 px-4 bg-card/50 backdrop-blur-sm shrink-0">
+          <header className="h-16 flex items-center justify-between border-b border-border/50 px-4 bg-card/50 backdrop-blur-sm shrink-0">
             <div className="flex items-center gap-3">
               <SidebarTrigger />
-              <img src={logo} alt="CuraTrack" className="h-14 md:h-16 w-auto hidden md:block" />
+              {sponsor && (
+                <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-full bg-accent/60 border border-border/50">
+                  <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                  <span className="font-body text-[11px] text-foreground/80">
+                    {sponsor.sponsor_label} · <span className="font-semibold text-foreground">{sponsor.sponsor_name}</span>
+                  </span>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <CartButton />

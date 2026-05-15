@@ -1,225 +1,214 @@
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Activity, Shield, Users, BarChart3, ArrowRight, ChevronRight, HelpCircle } from 'lucide-react';
-import logo from '@/assets/curatrack-logo.png';
-
-const features = [
-  {
-    icon: Users,
-    title: 'Gestión de Pacientes',
-    desc: 'Perfiles completos con historial clínico, diagnósticos y seguimiento integral de cada paciente.',
-  },
-  {
-    icon: Activity,
-    title: 'Seguimiento de Heridas',
-    desc: 'Registro detallado de evoluciones, fotografías comparativas y timeline cronológico por caso.',
-  },
-  {
-    icon: Shield,
-    title: 'Seguridad Clínica',
-    desc: 'Datos protegidos con estándares de seguridad hospitalaria y trazabilidad completa.',
-  },
-  {
-    icon: BarChart3,
-    title: 'Métricas y Reportes',
-    desc: 'Dashboard con indicadores clave, alertas automáticas y análisis de evolución.',
-  },
-];
-
-const faqs = [
-  {
-    q: '¿Qué es CuraTrack?',
-    a: 'CuraTrack es una plataforma clínica para el seguimiento de heridas crónicas y agudas (úlceras por presión, pie diabético, heridas quirúrgicas, quemaduras y más). Permite registrar pacientes, casos, evoluciones con fotografías y generar historias clínicas en PDF.',
-  },
-  {
-    q: '¿Quiénes pueden usar CuraTrack?',
-    a: 'Está pensada para equipos de enfermería, médicos, kinesiólogos y profesionales de la salud que realicen curaciones y seguimiento de heridas, tanto en hospitales, centros de salud como en atención domiciliaria.',
-  },
-  {
-    q: '¿Cómo registro una evolución de una herida?',
-    a: 'Desde la ficha del paciente, abrí el caso correspondiente y agregá una nueva evolución. Podés cargar la descripción clínica, procedimiento, materiales utilizados, frecuencia de curación, próximo control y adjuntar fotografías comparativas del lecho de la herida.',
-  },
-  {
-    q: '¿Puedo cargar fotografías clínicas de las heridas?',
-    a: 'Sí. Cada evolución soporta múltiples fotografías con descripción. Las imágenes se organizan en una galería por caso y en una línea de tiempo cronológica para comparar la evolución visual de la herida.',
-  },
-  {
-    q: '¿Cómo se calculan los próximos controles?',
-    a: 'Cada paciente tiene un intervalo de control configurable (por ejemplo, cada 3, 7 o 14 días). El calendario sugiere automáticamente las próximas fechas y el dashboard muestra los turnos próximos y vencidos.',
-  },
-  {
-    q: '¿Puedo exportar la historia clínica en PDF?',
-    a: 'Sí. Desde la ficha del paciente podés generar un PDF profesional con todos los datos del paciente, casos, evoluciones y fotografías. Es ideal para auditorías, derivaciones o entregar al paciente.',
-  },
-  {
-    q: '¿Los datos de los pacientes están seguros?',
-    a: 'CuraTrack utiliza estándares de seguridad clínica con cifrado en tránsito y en reposo, control de acceso por usuario y trazabilidad de cada cambio. Cada profesional sólo ve los pacientes y casos a los que tiene acceso.',
-  },
-  {
-    q: '¿Necesito instalar algo o funciona en el navegador?',
-    a: 'CuraTrack es una aplicación web responsive: funciona desde cualquier navegador moderno en computadora, tablet o teléfono, sin instalación.',
-  },
-];
+import {
+  Activity, Shield, Users, BarChart3, ArrowRight, ChevronRight, HelpCircle,
+  ShoppingBag, Truck, Briefcase, Sparkles, ShieldCheck, TrendingUp,
+} from 'lucide-react';
+import { useSponsor } from '@/context/SponsorContext';
+import { SponsorLogo } from '@/components/SponsorLogo';
 
 export default function Landing() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { sponsor, setSponsorBySlug, sponsors } = useSponsor();
+
+  useEffect(() => {
+    const slug = searchParams.get('sponsor');
+    if (slug && sponsors.find(s => s.slug === slug)) {
+      setSponsorBySlug(slug, false);
+    }
+  }, [searchParams, sponsors, setSponsorBySlug]);
+
+  const appName = sponsor?.app_name ?? 'Care Platform';
+  const sponsorName = sponsor?.sponsor_name ?? 'Laboratorio sponsor';
+  const catalogName = sponsor?.catalog_name ?? 'Catálogo clínico';
+
+  const valueProps = [
+    { icon: Activity, title: 'Seguimiento clínico de heridas', desc: 'Pacientes, casos, evoluciones, fotos comparativas y firmas digitales.' },
+    { icon: Sparkles, title: 'Asistencia clínica con IA', desc: 'Resumen de evoluciones, agenda inteligente y soporte en decisiones de curación.' },
+    { icon: ShoppingBag, title: 'Catálogo clínico sponsor', desc: 'Productos del laboratorio asociados al tipo de herida y al protocolo de tratamiento.' },
+    { icon: Truck, title: 'Reposición inteligente', desc: 'Solicitudes de insumos directamente desde el flujo clínico, con trazabilidad.' },
+  ];
+
+  const forLab = [
+    'Financiá suscripciones para enfermeros y profesionales clínicos.',
+    'Visibilidad real del uso de tus productos en el flujo de curación.',
+    'Métricas agregadas de adopción, demanda y conversión, sin información identificable de pacientes.',
+    'Embudo comercial: recomendación → reposición → pedido confirmado.',
+    'Reportes mensuales listos para tu equipo comercial y de marketing.',
+  ];
+
+  const forNurse = [
+    'Registro rápido de curaciones y evoluciones con fotos.',
+    'Agenda automática con próximos controles y alertas clínicas.',
+    'Historia clínica en PDF con firma del profesional y consentimiento.',
+    'Asistente clínico para resumir evoluciones y organizar el día.',
+    'Catálogo y reposición sin salir del flujo de trabajo.',
+  ];
+
+  const faqs = [
+    { q: `¿Qué es ${appName}?`, a: `${appName} es una plataforma clínica-comercial para el seguimiento de heridas complejas, asistencia clínica con IA y reposición inteligente de insumos médicos. Está adaptada al programa de acompañamiento de ${sponsorName}.` },
+    { q: '¿Quiénes usan la plataforma?', a: 'Profesionales de enfermería, médicos y kinesiólogos que realizan seguimiento de heridas crónicas y agudas en hospitales, centros de salud o atención domiciliaria.' },
+    { q: '¿Qué obtiene el laboratorio sponsor?', a: 'Métricas agregadas y anónimas de adopción, demanda y conversión de productos. El laboratorio nunca accede a información identificable de pacientes ni a su historia clínica.' },
+    { q: '¿Cómo se protegen los datos clínicos?', a: 'La información clínica del paciente está protegida con cifrado, control de acceso por usuario y separación lógica entre datos clínicos y métricas comerciales.' },
+    { q: '¿Puedo exportar reportes?', a: 'Sí. La plataforma genera historias clínicas en PDF para uso profesional y reportes ejecutivos agregados para el laboratorio sponsor.' },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
-        <div className="container mx-auto flex items-center justify-between h-24 md:h-28 px-6">
-          <img src={logo} alt="CuraTrack" className="h-20 md:h-24 lg:h-28 w-auto object-contain" />
+        <div className="container mx-auto flex items-center justify-between h-20 px-6">
+          <SponsorLogo />
           <div className="flex items-center gap-3">
             <Button variant="ghost" onClick={() => navigate('/login')} className="font-body text-sm">
               Iniciar sesión
             </Button>
-            <Button onClick={() => navigate('/login')} className="font-body text-sm">
-              Registrarse <ArrowRight className="ml-1 h-4 w-4" />
+            <Button onClick={() => navigate('/register')} className="font-body text-sm">
+              Solicitar demo <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </div>
         </div>
       </nav>
 
       {/* Hero */}
-      <section className="gradient-hero pt-32 pb-24 px-6">
-        <div className="container mx-auto max-w-5xl">
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-            className="text-center"
-          >
-            <span className="inline-block mb-4 px-4 py-1.5 rounded-full border border-primary-foreground/30 text-primary-foreground/80 text-xs font-body font-medium tracking-wider uppercase">
-              CuraTrack — Cuidado clínico inteligente
+      <section
+        className="pt-32 pb-24 px-6 relative overflow-hidden"
+        style={{
+          background: sponsor
+            ? `linear-gradient(135deg, ${sponsor.secondary_color} 0%, ${sponsor.primary_color} 70%, ${sponsor.accent_color} 100%)`
+            : undefined,
+        }}
+      >
+        <div className="container mx-auto max-w-5xl relative">
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="text-center">
+            <span className="inline-flex items-center gap-1.5 mb-5 px-4 py-1.5 rounded-full border border-white/30 text-white/90 text-xs font-body font-medium tracking-wider uppercase backdrop-blur-sm">
+              <ShieldCheck className="h-3.5 w-3.5" /> Programa {sponsorName}
             </span>
-            <h1 className="heading-display text-4xl md:text-6xl lg:text-7xl text-primary-foreground mb-6 leading-tight">
-              Seguimiento inteligente<br />
-              de heridas complejas
+            <h1 className="heading-display text-4xl md:text-6xl lg:text-7xl text-white mb-6 leading-[1.05]">
+              Seguimiento clínico de heridas,<br />
+              <span className="opacity-80">IA y reposición inteligente</span>
             </h1>
-            <p className="font-body text-primary-foreground/70 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-              Plataforma profesional para el registro, seguimiento y análisis de heridas crónicas y agudas. 
-              Diseñada para equipos de enfermería y salud.
+            <p className="font-body text-white/80 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+              {appName} acompaña al equipo clínico en cada curación y le da al laboratorio visibilidad real
+              sobre adopción, demanda y oportunidades comerciales — sin comprometer la información sensible del paciente.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" onClick={() => navigate('/login')} className="font-body text-base px-8 py-6 bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-semibold">
-                Acceder a la plataforma <ChevronRight className="ml-1 h-5 w-5" />
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button size="lg" onClick={() => navigate('/register')} className="font-body text-base px-8 py-6 bg-white text-foreground hover:bg-white/90 font-semibold shadow-lg">
+                Solicitar demo <ChevronRight className="ml-1 h-5 w-5" />
               </Button>
-              <Button size="lg" variant="outline" onClick={() => navigate('/login')} className="font-body text-base px-8 py-6 border-primary-foreground text-primary-foreground bg-primary-foreground/15 hover:bg-primary-foreground/25">
-                Solicitar demo
+              <Button size="lg" variant="outline" onClick={() => navigate('/login')} className="font-body text-base px-8 py-6 border-white/40 text-white bg-white/10 hover:bg-white/20">
+                Ver plataforma
               </Button>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="py-24 px-6">
-        <div className="container mx-auto max-w-6xl">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-16"
-          >
-            <h2 className="heading-display text-3xl md:text-4xl mb-4">
-              Todo lo que necesitás para el cuidado de heridas
-            </h2>
+      {/* Problema */}
+      <section className="py-20 px-6">
+        <div className="container mx-auto max-w-5xl">
+          <div className="text-center mb-12">
+            <h2 className="heading-display text-3xl md:text-4xl mb-3">El problema actual</h2>
             <p className="font-body text-muted-foreground text-lg max-w-2xl mx-auto">
-              Herramientas clínicas diseñadas por profesionales, para profesionales.
+              Seguimiento manual, baja trazabilidad clínica, poca visibilidad del uso real de insumos
+              y dificultad para medir el impacto de los programas de acompañamiento.
             </p>
-          </motion.div>
+          </div>
+          <div className="grid md:grid-cols-3 gap-4">
+            {[
+              { t: 'Para el equipo clínico', d: 'Registro disperso en papel, planillas y mensajería. Tiempo perdido y errores de seguimiento.' },
+              { t: 'Para el laboratorio', d: 'Sin datos sobre cómo se usan los productos en el campo ni qué oportunidades se pierden.' },
+              { t: 'Para la institución', d: 'Auditoría compleja, poca trazabilidad y baja capacidad de medir resultados clínicos.' },
+            ].map(p => (
+              <div key={p.t} className="p-6 rounded-xl border border-border bg-card">
+                <p className="font-display font-semibold text-base mb-2">{p.t}</p>
+                <p className="font-body text-sm text-muted-foreground leading-relaxed">{p.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {features.map((f, i) => (
+      {/* Solución */}
+      <section className="py-20 px-6 bg-secondary/40">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <h2 className="heading-display text-3xl md:text-4xl mb-3">Una sola plataforma. Dos audiencias.</h2>
+            <p className="font-body text-muted-foreground text-lg max-w-2xl mx-auto">
+              {appName} unifica el flujo clínico del enfermero con la inteligencia comercial del laboratorio sponsor.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {valueProps.map((f, i) => (
               <motion.div
                 key={f.title}
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.1 }}
-                className="glass-card rounded-xl p-8 hover:shadow-md transition-shadow"
+                transition={{ duration: 0.4, delay: i * 0.08 }}
+                className="bg-card rounded-xl p-6 border border-border/60 hover:shadow-md transition-shadow"
               >
-                <div className="w-12 h-12 rounded-lg bg-accent flex items-center justify-center mb-5">
-                  <f.icon className="h-6 w-6 text-accent-foreground" />
+                <div className="w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                  <f.icon className="h-5 w-5 text-primary" />
                 </div>
-                <h3 className="heading-display text-xl mb-2">{f.title}</h3>
-                <p className="font-body text-muted-foreground leading-relaxed">{f.desc}</p>
+                <h3 className="heading-display text-base mb-1.5">{f.title}</h3>
+                <p className="font-body text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="py-24 px-6 bg-secondary/40">
-        <div className="container mx-auto max-w-3xl">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-12"
-          >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-body font-medium mb-4">
-              <HelpCircle className="h-3.5 w-3.5" /> Preguntas frecuentes
-            </div>
-            <h2 className="heading-display text-3xl md:text-4xl mb-4">
-              Resolvé tus dudas sobre CuraTrack
-            </h2>
-            <p className="font-body text-muted-foreground text-lg">
-              Todo lo que necesitás saber para empezar a hacer seguimiento clínico de heridas.
+      {/* Para laboratorios + Para enfermeros */}
+      <section className="py-20 px-6">
+        <div className="container mx-auto max-w-6xl grid md:grid-cols-2 gap-6">
+          <div className="p-8 rounded-2xl border border-primary/30 bg-primary/5">
+            <Briefcase className="h-7 w-7 text-primary mb-3" />
+            <h3 className="heading-display text-2xl mb-2">Para {sponsorName}</h3>
+            <p className="font-body text-muted-foreground mb-5 text-sm">
+              Una plataforma white-label adaptada a la identidad y al programa comercial del laboratorio.
             </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <Accordion type="single" collapsible className="space-y-3">
-              {faqs.map((faq, i) => (
-                <AccordionItem
-                  key={i}
-                  value={`item-${i}`}
-                  className="glass-card rounded-xl border border-border/60 px-5 data-[state=open]:shadow-md transition-shadow"
-                >
-                  <AccordionTrigger className="font-body font-semibold text-left hover:no-underline py-5 text-base">
-                    {faq.q}
-                  </AccordionTrigger>
-                  <AccordionContent className="font-body text-muted-foreground leading-relaxed pb-5">
-                    {faq.a}
-                  </AccordionContent>
-                </AccordionItem>
+            <ul className="space-y-2.5">
+              {forLab.map(t => (
+                <li key={t} className="flex gap-2.5 font-body text-sm">
+                  <TrendingUp className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <span>{t}</span>
+                </li>
               ))}
-            </Accordion>
-          </motion.div>
-
-          <div className="text-center mt-10">
-            <p className="font-body text-sm text-muted-foreground mb-3">
-              ¿Tenés otra pregunta?
+            </ul>
+          </div>
+          <div className="p-8 rounded-2xl border border-border bg-card">
+            <Users className="h-7 w-7 text-foreground mb-3" />
+            <h3 className="heading-display text-2xl mb-2">Para el equipo clínico</h3>
+            <p className="font-body text-muted-foreground mb-5 text-sm">
+              Una herramienta clínica premium financiada por el laboratorio sponsor.
             </p>
-            <Button variant="outline" onClick={() => navigate('/login')} className="font-body">
-              Probá la plataforma <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
+            <ul className="space-y-2.5">
+              {forNurse.map(t => (
+                <li key={t} className="flex gap-2.5 font-body text-sm">
+                  <Activity className="h-4 w-4 text-foreground mt-0.5 shrink-0" />
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="py-20 px-6 bg-secondary/50">
-        <div className="container mx-auto max-w-4xl">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+      {/* Métricas */}
+      <section className="py-16 px-6 bg-secondary/40">
+        <div className="container mx-auto max-w-5xl">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             {[
-              { n: '2,400+', l: 'Pacientes registrados' },
-              { n: '8,500+', l: 'Evoluciones clínicas' },
-              { n: '15+', l: 'Centros de salud' },
-              { n: '98%', l: 'Satisfacción' },
-            ].map((s) => (
+              { n: '120+', l: 'Enfermeros activos' },
+              { n: '8.500+', l: 'Curaciones registradas' },
+              { n: '340+', l: 'Productos recomendados' },
+              { n: '210+', l: 'Solicitudes de reposición' },
+            ].map(s => (
               <div key={s.l}>
                 <div className="heading-display text-3xl md:text-4xl text-primary mb-1">{s.n}</div>
                 <div className="font-body text-sm text-muted-foreground">{s.l}</div>
@@ -229,12 +218,74 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Seguridad */}
+      <section className="py-20 px-6">
+        <div className="container mx-auto max-w-4xl text-center">
+          <Shield className="h-10 w-10 text-primary mx-auto mb-4" />
+          <h2 className="heading-display text-3xl md:text-4xl mb-3">Seguridad clínica y separación de datos</h2>
+          <p className="font-body text-muted-foreground text-lg max-w-2xl mx-auto leading-relaxed">
+            La información clínica del paciente está protegida y nunca se comparte con el laboratorio.
+            El sponsor accede únicamente a métricas agregadas, anónimas y orientadas al programa comercial.
+          </p>
+          <div className="grid md:grid-cols-3 gap-4 mt-10 text-left">
+            {[
+              { t: 'Datos clínicos protegidos', d: 'Cifrado en tránsito y reposo. Control de acceso por usuario.' },
+              { t: 'Métricas agregadas para sponsor', d: 'Sin nombre, DNI, fotos ni historia clínica individual.' },
+              { t: 'Trazabilidad y auditoría', d: 'Firmas digitales del profesional y consentimiento del paciente.' },
+            ].map(s => (
+              <div key={s.t} className="p-5 rounded-lg border border-border bg-card">
+                <p className="font-display font-semibold mb-1.5 text-sm">{s.t}</p>
+                <p className="font-body text-xs text-muted-foreground leading-relaxed">{s.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-20 px-6 bg-secondary/40">
+        <div className="container mx-auto max-w-3xl">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-body font-medium mb-3">
+              <HelpCircle className="h-3.5 w-3.5" /> Preguntas frecuentes
+            </div>
+            <h2 className="heading-display text-3xl md:text-4xl">Sobre {appName}</h2>
+          </div>
+          <Accordion type="single" collapsible className="space-y-3">
+            {faqs.map((faq, i) => (
+              <AccordionItem key={i} value={`item-${i}`} className="bg-card rounded-xl border border-border/60 px-5">
+                <AccordionTrigger className="font-body font-semibold text-left hover:no-underline py-4 text-sm">{faq.q}</AccordionTrigger>
+                <AccordionContent className="font-body text-muted-foreground leading-relaxed pb-4 text-sm">{faq.a}</AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
+      </section>
+
+      {/* CTA final */}
+      <section className="py-20 px-6">
+        <div className="container mx-auto max-w-3xl text-center">
+          <h2 className="heading-display text-3xl md:text-4xl mb-4">¿Querés ver {appName} en acción?</h2>
+          <p className="font-body text-muted-foreground text-lg mb-8">
+            Coordinamos una demo personalizada con tu equipo comercial y clínico.
+          </p>
+          <Button size="lg" onClick={() => navigate('/register')} className="font-body text-base px-8 py-6">
+            Solicitar demo <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+          {sponsor?.support_email && (
+            <p className="font-body text-xs text-muted-foreground mt-4">
+              Contacto: <a href={`mailto:${sponsor.support_email}`} className="text-primary underline">{sponsor.support_email}</a>
+            </p>
+          )}
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer className="py-12 px-6 border-t border-border">
+      <footer className="py-10 px-6 border-t border-border bg-card">
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <img src={logo} alt="CuraTrack" className="h-16 opacity-70" />
-          <p className="font-body text-sm text-muted-foreground">
-            © 2026 CuraTrack. Todos los derechos reservados.
+          <SponsorLogo />
+          <p className="font-body text-xs text-muted-foreground text-center max-w-2xl">
+            {sponsor?.legal_footer ?? `© ${new Date().getFullYear()} ${appName}. Todos los derechos reservados.`}
           </p>
         </div>
       </footer>

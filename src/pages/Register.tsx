@@ -97,7 +97,7 @@ export default function Register() {
       navigate('/login');
       return;
     }
-    toast({ title: '¡Cuenta creada!', description: `Bienvenido/a ${firstName}. Ya podés ingresar a CuraTrack.` });
+    toast({ title: '¡Cuenta creada!', description: `Bienvenido/a ${firstName}. Ya podés ingresar.` });
     navigate('/dashboard');
   };
 

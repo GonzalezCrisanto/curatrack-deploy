@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/context/AppContext";
 import { CartProvider } from "@/context/CartContext";
+import { SponsorProvider } from "@/context/SponsorContext";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -13,8 +14,12 @@ import Dashboard from "./pages/Dashboard";
 import Patients from "./pages/Patients";
 import PatientDetail from "./pages/PatientDetail";
 import CaseDetail from "./pages/CaseDetail";
+import Cases from "./pages/Cases";
+import Agenda from "./pages/Agenda";
 import Marketplace from "./pages/Marketplace";
 import Orders from "./pages/Orders";
+import SponsorPanel from "./pages/SponsorPanel";
+import Reports from "./pages/Reports";
 import AdminProducts from "./pages/AdminProducts";
 import AdminOrders from "./pages/AdminOrders";
 import AdminAccounts from "./pages/AdminAccounts";
@@ -28,33 +33,39 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <AppProvider>
-        <CartProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/patients" element={<Patients />} />
-              <Route path="/patients/:patientId" element={<PatientDetail />} />
-              <Route path="/patients/:patientId/cases/:caseId" element={<CaseDetail />} />
-              <Route path="/marketplace" element={<Marketplace />} />
-              <Route path="/orders" element={<Orders />} />
-              <Route path="/admin/products" element={<AdminProducts />} />
-              <Route path="/admin/orders" element={<AdminOrders />} />
-              <Route path="/admin/accounts" element={<AdminAccounts />} />
-              <Route path="/assistant" element={<Assistant />} />
-              <Route path="/statistics" element={<Statistics />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </CartProvider>
-      </AppProvider>
+      <SponsorProvider>
+        <AppProvider>
+          <CartProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/patients" element={<Patients />} />
+                <Route path="/patients/:patientId" element={<PatientDetail />} />
+                <Route path="/patients/:patientId/cases/:caseId" element={<CaseDetail />} />
+                <Route path="/cases" element={<Cases />} />
+                <Route path="/agenda" element={<Agenda />} />
+                <Route path="/marketplace" element={<Marketplace />} />
+                <Route path="/orders" element={<Orders />} />
+                <Route path="/sponsor" element={<SponsorPanel />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/admin/products" element={<AdminProducts />} />
+                <Route path="/admin/orders" element={<AdminOrders />} />
+                <Route path="/admin/accounts" element={<AdminAccounts />} />
+                <Route path="/assistant" element={<Assistant />} />
+                <Route path="/statistics" element={<Statistics />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </CartProvider>
+        </AppProvider>
+      </SponsorProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

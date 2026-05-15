@@ -148,7 +148,7 @@ export function exportPatientPdf(patient: Patient, signatureMap?: Record<string,
       <h1>Historia Clínica</h1>
       <div class="subtitle">Informe generado el ${new Date().toLocaleDateString('es-AR')} a las ${new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</div>
     </div>
-    <div class="brand">CuraTrack</div>
+    <div class="brand">Care Platform</div>
   </div>
 
   <div class="patient-info">
@@ -172,7 +172,7 @@ export function exportPatientPdf(patient: Patient, signatureMap?: Record<string,
   ${casesHtml}
 
   <div class="footer">
-    CuraTrack · Sistema de Gestión de Heridas Complejas · Documento confidencial — Uso exclusivo del equipo de salud
+    Documento confidencial — Uso exclusivo del equipo de salud
   </div>
 
   <script>window.onload = () => window.print();</script>

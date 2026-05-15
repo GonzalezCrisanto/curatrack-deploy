@@ -770,6 +770,69 @@ export type Database = {
           },
         ]
       }
+      sponsors: {
+        Row: {
+          accent_color: string
+          app_name: string
+          catalog_name: string
+          created_at: string
+          id: string
+          is_active: boolean
+          lab_id: string | null
+          legal_footer: string | null
+          logo_url: string | null
+          powered_by_label: string | null
+          primary_color: string
+          sales_contact_label: string | null
+          secondary_color: string
+          slug: string
+          sponsor_label: string
+          sponsor_name: string
+          support_email: string | null
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          app_name: string
+          catalog_name?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          lab_id?: string | null
+          legal_footer?: string | null
+          logo_url?: string | null
+          powered_by_label?: string | null
+          primary_color?: string
+          sales_contact_label?: string | null
+          secondary_color?: string
+          slug: string
+          sponsor_label?: string
+          sponsor_name: string
+          support_email?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          app_name?: string
+          catalog_name?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          lab_id?: string | null
+          legal_footer?: string | null
+          logo_url?: string | null
+          powered_by_label?: string | null
+          primary_color?: string
+          sales_contact_label?: string | null
+          secondary_color?: string
+          slug?: string
+          sponsor_label?: string
+          sponsor_name?: string
+          support_email?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       supply_order_items: {
         Row: {
           created_at: string
@@ -988,6 +1051,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_sponsor: {
+        Row: {
+          created_at: string
+          sponsor_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          sponsor_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          sponsor_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sponsor_sponsor_id_fkey"
+            columns: ["sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "sponsors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wound_cases: {
         Row: {
