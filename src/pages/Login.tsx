@@ -178,13 +178,13 @@ export default function Login() {
           <ArrowLeft className="mr-1 h-4 w-4" /> Volver al inicio
         </Button>
 
-        <Card className="w-full max-w-md border-border/50 shadow-lg my-8">
+        <Card className="w-full max-w-lg border-border/50 shadow-lg my-8">
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-3 lg:hidden">
               <SponsorLogo />
             </div>
             <Badge variant="outline" className="mx-auto font-body text-[10px] uppercase tracking-wider border-primary/30 text-primary bg-primary/5 mb-2">
-              Programa sponsor: {sponsorName}
+              {isSponsorLocked ? `Programa sponsor: ${sponsorName}` : 'Demo interna · multi-sponsor'}
             </Badge>
             <h1 className="heading-display text-2xl">
               {forgotMode ? 'Restablecer contraseña' : 'Iniciar sesión'}
@@ -192,9 +192,12 @@ export default function Login() {
             <p className="font-body text-sm text-muted-foreground mt-1">
               {forgotMode
                 ? 'Te enviaremos un enlace a tu correo'
-                : `Accedé como profesional de salud o como laboratorio sponsor.`}
+                : isSponsorLocked
+                  ? `Accedé a ${appName} como profesional o como laboratorio sponsor.`
+                  : `Elegí un laboratorio para ver la experiencia white-label.`}
             </p>
           </CardHeader>
+
           <CardContent>
             {forgotMode ? (
               <form onSubmit={handleForgot} className="space-y-5">
