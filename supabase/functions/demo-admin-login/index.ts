@@ -1,3 +1,6 @@
+// Provisions a demo admin/sponsor account with a freshly rotated password
+// and returns a server-issued session. The password is never returned to
+// the client, eliminating the unauthenticated credential-disclosure risk.
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -7,7 +10,12 @@ const corsHeaders = {
 };
 
 const DEMO_ADMIN_EMAIL = "admin-demo@curatrack.app";
-const DEMO_ADMIN_PASSWORD = "AdminDemo2026!";
+
+function randomPassword() {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return "Ax-" + Array.from(bytes, (b) => b.toString(36)).join("") + "!9";
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -17,9 +25,12 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const admin = createClient(supabaseUrl, serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
+
+    const password = randomPassword();
 
     // Find or create the demo admin user
     let existingId: string | null = null;
@@ -35,13 +46,13 @@ Deno.serve(async (req) => {
 
     if (existingId) {
       await admin.auth.admin.updateUserById(existingId, {
-        password: DEMO_ADMIN_PASSWORD,
+        password,
         email_confirm: true,
       });
     } else {
       const { data: created, error: createErr } = await admin.auth.admin.createUser({
         email: DEMO_ADMIN_EMAIL,
-        password: DEMO_ADMIN_PASSWORD,
+        password,
         email_confirm: true,
         user_metadata: {
           first_name: "Admin",
@@ -61,7 +72,6 @@ Deno.serve(async (req) => {
     }
 
     if (existingId) {
-      // Ensure profile exists
       const { data: prof } = await admin
         .from("profiles")
         .select("user_id")
@@ -77,14 +87,12 @@ Deno.serve(async (req) => {
           license: "ADMIN-0001",
         });
       } else {
-        // Make sure role is admin
         await admin
           .from("profiles")
           .update({ role: "admin" })
           .eq("user_id", existingId);
       }
 
-      // Ensure admin role in user_roles table
       const { data: existingRole } = await admin
         .from("user_roles")
         .select("id")
@@ -98,7 +106,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Ensure lab_seller entry exists for this admin
       const { data: labs } = await admin
         .from("labs")
         .select("id")
@@ -125,8 +132,27 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Sign in server-side and return only session tokens.
+    const anon = createClient(supabaseUrl, anonKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data: signIn, error: signErr } = await anon.auth.signInWithPassword({
+      email: DEMO_ADMIN_EMAIL,
+      password,
+    });
+    if (signErr || !signIn.session) {
+      return new Response(
+        JSON.stringify({ ok: false, message: signErr?.message ?? "No se pudo iniciar la sesión demo" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
-      JSON.stringify({ ok: true, email: DEMO_ADMIN_EMAIL, password: DEMO_ADMIN_PASSWORD }),
+      JSON.stringify({
+        ok: true,
+        access_token: signIn.session.access_token,
+        refresh_token: signIn.session.refresh_token,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
