@@ -1,16 +1,17 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
-import { useSponsor } from '@/context/SponsorContext';
+import { useSponsor, type Sponsor } from '@/context/SponsorContext';
 import { SponsorLogo } from '@/components/SponsorLogo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, Mail, Sparkles, ShieldCheck, Check } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, Mail, Sparkles, ShieldCheck, Check, Activity, Briefcase, Stethoscope } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+
 
 async function redirectByRole(navigate: (p: string) => void, fallback = '/dashboard') {
   const { data: sess } = await supabase.auth.getSession();
