@@ -74,7 +74,7 @@ export default function SponsorPanel() {
   }, [sponsor?.lab_id]);
 
   const real = useMemo(() => {
-    const activeCases = patients.flatMap(p => p.cases).filter(c => c.status !== 'cerrado').length;
+    const activeCases = patients.flatMap(p => p.cases).filter(c => c.status !== 'resuelto').length;
     const evolutions = patients.flatMap(p => p.cases.flatMap(c => c.evolutions)).length;
     const today = new Date().toISOString().slice(0, 10);
     const todayCount = patients.flatMap(p => p.cases.flatMap(c => c.evolutions)).filter(e => e.date === today).length;
