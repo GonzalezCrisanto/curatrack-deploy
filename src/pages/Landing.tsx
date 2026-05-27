@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   Activity, Shield, Users, BarChart3, ArrowRight, ChevronRight, HelpCircle,
-  ShoppingBag, Truck, Briefcase, Sparkles, ShieldCheck, TrendingUp,
+  ShoppingBag, Truck, Briefcase, Sparkles, ShieldCheck, TrendingUp, Stethoscope,
 } from 'lucide-react';
 import { useSponsor } from '@/context/SponsorContext';
 import { SponsorLogo } from '@/components/SponsorLogo';
@@ -32,7 +32,7 @@ export default function Landing() {
     navigate(role === 'sponsor' ? '/sponsor' : '/dashboard', { replace: true });
   }, [authReady, isLoggedIn, roleReady, role, navigate]);
 
-  const appName = sponsor?.app_name ?? 'Care Platform';
+  const appName = sponsor?.app_name ?? 'CuraTrack';
   const sponsorName = sponsor?.sponsor_name ?? 'Laboratorio sponsor';
   const catalogName = sponsor?.catalog_name ?? 'Catálogo clínico';
 
@@ -84,39 +84,61 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* Hero */}
-      <section
-        className="pt-32 pb-24 px-6 relative overflow-hidden"
-        style={{
-          background: sponsor
-            ? `linear-gradient(135deg, ${sponsor.secondary_color} 0%, ${sponsor.primary_color} 70%, ${sponsor.accent_color} 100%)`
-            : undefined,
-        }}
+      {/* Hero + acceso demo (mismo gradiente; botones fuera del bloque de copy del hero) */}
+      <div
+        className={`relative overflow-hidden ${!sponsor ? 'gradient-hero' : ''}`}
+        style={
+          sponsor
+            ? {
+                background: `linear-gradient(135deg, ${sponsor.secondary_color} 0%, ${sponsor.primary_color} 70%, ${sponsor.accent_color} 100%)`,
+              }
+            : undefined
+        }
       >
-        <div className="container mx-auto max-w-5xl relative">
-          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="text-center">
-            <span className="inline-flex items-center gap-1.5 mb-5 px-4 py-1.5 rounded-full border border-white/30 text-white/90 text-xs font-body font-medium tracking-wider uppercase backdrop-blur-sm">
-              <ShieldCheck className="h-3.5 w-3.5" /> Programa {sponsorName}
-            </span>
-            <h1 className="heading-display text-4xl md:text-6xl lg:text-7xl text-white mb-6 leading-[1.05]">
-              Seguimiento clínico de heridas,<br />
-              <span className="opacity-80">IA y reposición inteligente</span>
-            </h1>
-            <p className="font-body text-white/80 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-              {appName} acompaña al equipo clínico en cada curación y le da al laboratorio visibilidad real
-              sobre adopción, demanda y oportunidades comerciales — sin comprometer la información sensible del paciente.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button size="lg" onClick={() => navigate('/register')} className="font-body text-base px-8 py-6 bg-white text-foreground hover:bg-white/90 font-semibold shadow-lg">
-                Solicitar demo <ChevronRight className="ml-1 h-5 w-5" />
-              </Button>
-              <Button size="lg" variant="outline" onClick={() => navigate('/login')} className="font-body text-base px-8 py-6 border-white/40 text-white bg-white/10 hover:bg-white/20">
-                Ver plataforma
-              </Button>
+        <section className="pt-32 pb-8 px-6">
+          <div className="container mx-auto max-w-5xl relative">
+            <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="text-center">
+              <span className="inline-flex items-center gap-1.5 mb-5 px-4 py-1.5 rounded-full border border-white/30 text-white/90 text-xs font-body font-medium tracking-wider uppercase backdrop-blur-sm">
+                <ShieldCheck className="h-3.5 w-3.5" /> Programa {sponsorName}
+              </span>
+              <h1 className="heading-display text-4xl md:text-6xl lg:text-7xl text-white mb-6 leading-[1.05]">
+                Seguimiento clínico de heridas,<br />
+                <span className="opacity-80">IA y reposición inteligente</span>
+              </h1>
+              <p className="font-body text-white/80 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+                {appName} acompaña al equipo clínico en cada curación y le da al laboratorio visibilidad real
+                sobre adopción, demanda y oportunidades comerciales — sin comprometer la información sensible del paciente.
+              </p>
+            </motion.div>
+          </div>
+        </section>
+
+        <section className="pb-24 px-6">
+          <div className="container mx-auto max-w-5xl">
+            <div className="p-2 text-left rounded-xl bg-white/10 backdrop-blur-sm border border-white/20">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Button
+                  size="lg"
+                  onClick={() => navigate('/login?demo=pro')}
+                  className="font-body text-base px-8 py-6 bg-white text-foreground hover:bg-white/90 shadow-sm"
+                >
+                  <Stethoscope className="mr-2 h-4 w-4" />
+                  Ingresar como demo profesional
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => navigate('/login?demo=sponsor')}
+                  className="font-body text-base px-8 py-6 border-white/40 text-white bg-transparent hover:bg-white/15"
+                >
+                  <Briefcase className="mr-2 h-4 w-4" />
+                  Ingresar como demo laboratorio
+                </Button>
+              </div>
             </div>
-          </motion.div>
-        </div>
-      </section>
+          </div>
+        </section>
+      </div>
 
       {/* Problema */}
       <section className="py-20 px-6">

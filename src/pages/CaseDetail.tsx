@@ -541,7 +541,7 @@ export default function CaseDetail() {
   <button class="alt" onclick="window.close()">Cerrar</button>
 </div>
 <div class="header">
-  <div><div class="brand">Care Platform<small>Gestión clínica de heridas</small></div></div>
+  <div><div class="brand">CuraTrack<small>Gestión clínica de heridas</small></div></div>
   <div class="meta"><strong>Orden N° ${escape(orderId)}</strong>Emitida: ${escape(dateStr)} · ${escape(timeStr)}</div>
 </div>
 

@@ -1,0 +1,21 @@
+---
+description: CuraTrack — arquitectura, setup local, roles y convenciones del repo
+alwaysApply: true
+---
+
+# CuraTrack — contexto del repositorio
+
+Lee el contexto completo en **`AGENTS.md`** en la raíz del repo antes de cambios arquitectónicos o de setup.
+
+## Resumen operativo
+
+- **Stack:** React 18 + Vite + TypeScript + Tailwind/shadcn + Supabase (cloud Lovable).
+- **Dev local:** `npm install` → `npm run dev` → http://localhost:8080 (puerto 8080).
+- **Env:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID` en `.env`.
+- **Backend:** No hay API Node propia; auth, DB y Edge Functions en Supabase remoto.
+- **Roles app** (`user_roles`): `admin` | `sponsor` | `professional`. **Rutas:** `RoleGuard` en `src/App.tsx`.
+- **Demo login:** `/login` → botones Profesional (`demo-login`) / Laboratorio (`demo-admin-login`).
+- **Contextos:** `AppContext` (auth, pacientes, casos), `SponsorContext` (white-label), `CartContext` (marketplace).
+- **Integraciones:** `src/integrations/supabase/client.ts` (no editar manual), `src/integrations/lovable` (OAuth).
+- **Migraciones:** `supabase/migrations/`. **Functions:** `supabase/functions/` (demo-login, nurse-assistant, etc.).
+- **UI en español.** Alias `@/` → `src/`. Commits solo si el usuario lo pide.

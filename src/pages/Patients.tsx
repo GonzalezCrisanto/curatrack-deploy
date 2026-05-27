@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AppLayout from '@/components/AppLayout';
@@ -88,6 +88,14 @@ export default function Patients() {
     setForm({ ...emptyPatient, admissionDate: new Date().toISOString().split('T')[0] });
     setDialogOpen(true);
   };
+
+  useEffect(() => {
+    if (searchParams.get('new') !== '1') return;
+    openNew();
+    const next = new URLSearchParams(searchParams);
+    next.delete('new');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const openEdit = (p: Patient, e: React.MouseEvent) => {
     e.stopPropagation();

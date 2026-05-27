@@ -88,11 +88,26 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Force demo professional account to Laboratorio Demo sponsor.
+      const { data: demoSponsor } = await admin
+        .from("sponsors")
+        .select("id")
+        .eq("slug", "demo")
+        .maybeSingle();
+      if (demoSponsor?.id) {
+        await admin
+          .from("user_sponsor")
+          .upsert(
+            { user_id: existingId, sponsor_id: demoSponsor.id },
+            { onConflict: "user_id" },
+          );
+      }
+
       const { count: patientCount } = await admin
         .from("patients")
         .select("*", { count: "exact", head: true })
         .eq("user_id", existingId);
-      if (!patientCount || patientCount < 6) {
+      if (!patientCount || patientCount < 10) {
         const today = new Date();
         const ago = (d: number) => new Date(today.getTime() - d * 86400000).toISOString().slice(0, 10);
         const seedPatients = [
@@ -102,6 +117,10 @@ Deno.serve(async (req) => {
           { first_name: "Lucía", last_name: "Fernández", age: 58, gender: "Femenino", dni: "20.123.456", phone: "+54 11 6789-2345", email: "lucia.fernandez@email.com", address: "Av. Santa Fe 2345, CABA", diagnosis: "Pie diabético con neuropatía periférica severa. DBT2 mal controlada.", assigned_professional: "Dr. Carlos Rodríguez", observations: "Riesgo de amputación. Educación intensiva sobre cuidado de pies.", admission_date: ago(60), control_interval_days: 3 },
           { first_name: "Roberto", last_name: "Méndez", age: 70, gender: "Masculino", dni: "10.987.654", phone: "+54 11 7890-3456", email: "roberto.mendez@email.com", address: "Av. Cabildo 4567, CABA", diagnosis: "Lesión por presión en talón izquierdo. Inmovilidad por fractura de cadera.", assigned_professional: "Lic. María González", observations: "En domicilio con cuidador. Colchón antiescaras.", admission_date: ago(30), control_interval_days: 4 },
           { first_name: "Patricia", last_name: "Gómez", age: 52, gender: "Femenino", dni: "22.345.678", phone: "+54 11 8901-4567", email: "patricia.gomez@email.com", address: "Av. Las Heras 3456, CABA", diagnosis: "Quemadura de segundo grado en antebrazo derecho. Accidente doméstico.", assigned_professional: "Lic. Ana Martínez", observations: "Buena evolución. Cuidados domiciliarios.", admission_date: ago(20), control_interval_days: 7 },
+          { first_name: "Silvia", last_name: "Acosta", age: 67, gender: "Femenino", dni: "16.778.901", phone: "+54 11 4788-3321", email: "silvia.acosta@email.com", address: "Belgrano 1550, CABA", diagnosis: "Insuficiencia arterial periférica en seguimiento.", assigned_professional: "Lic. Laura Fernández", observations: "Control ambulatorio mensual.", admission_date: ago(18), control_interval_days: 10 },
+          { first_name: "Gabriel", last_name: "Suárez", age: 49, gender: "Masculino", dni: "26.554.219", phone: "+54 11 4366-8812", email: "gabriel.suarez@email.com", address: "Boedo 944, CABA", diagnosis: "Herida traumática en evolución favorable.", assigned_professional: "Dr. Roberto Sánchez", observations: "Cumple indicaciones domiciliarias.", admission_date: ago(26), control_interval_days: 6 },
+          { first_name: "Nora", last_name: "Benítez", age: 74, gender: "Femenino", dni: "11.908.445", phone: "+54 11 4992-7301", email: "nora.benitez@email.com", address: "San Cristóbal 220, CABA", diagnosis: "Paciente frágil con riesgo de UPP.", assigned_professional: "Lic. María González", observations: "Seguimiento preventivo.", admission_date: ago(34), control_interval_days: 5 },
+          { first_name: "Eduardo", last_name: "Paredes", age: 61, gender: "Masculino", dni: "14.772.630", phone: "+54 11 4123-1004", email: "eduardo.paredes@email.com", address: "Parque Chacabuco 842, CABA", diagnosis: "Postquirúrgico sin complicaciones activas.", assigned_professional: "Dr. Carlos Rodríguez", observations: "Controles periódicos.", admission_date: ago(12), control_interval_days: 8 },
         ].map((row) => ({ ...row, user_id: existingId }));
 
         for (const row of seedPatients) {

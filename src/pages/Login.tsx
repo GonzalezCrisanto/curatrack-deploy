@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import { useSponsor, type Sponsor } from '@/context/SponsorContext';
@@ -35,9 +35,11 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [forgotMode, setForgotMode] = useState(false);
+  const demoAutoTriggered = useRef(false);
 
   const sponsorParam = searchParams.get('sponsor');
   const isSponsorLocked = !!sponsorParam;
+  const demoParam = searchParams.get('demo');
 
   const sponsorName = sponsor?.sponsor_name ?? 'Programa clínico';
   const appName = sponsor?.app_name ?? 'Plataforma';
@@ -126,6 +128,16 @@ export default function Login() {
     toast({ title: 'Revisá tu correo', description: 'Te enviamos un enlace para restablecer tu contraseña.' });
     setForgotMode(false);
   };
+
+  useEffect(() => {
+    if (demoAutoTriggered.current) return;
+    if (loading) return;
+    if (forgotMode) return;
+    if (demoParam !== 'pro' && demoParam !== 'sponsor') return;
+
+    demoAutoTriggered.current = true;
+    void handleDemoLogin(undefined, demoParam === 'sponsor' ? 'sponsor' : 'pro');
+  }, [demoParam, loading, forgotMode]);
 
   return (
     <div className="min-h-screen flex">

@@ -82,7 +82,7 @@ ON CONFLICT (slug) DO NOTHING;
 
 -- 4. Seed sponsors linked to those labs
 INSERT INTO public.sponsors (slug, sponsor_name, app_name, primary_color, secondary_color, accent_color, catalog_name, sponsor_label, support_email, legal_footer, lab_id, is_active)
-SELECT 'bbraun', 'B. Braun', 'B. Braun Care Platform', '#00965E', '#003D2C', '#22C55E',
+SELECT 'bbraun', 'B. Braun', 'B. Braun CuraTrack', '#00965E', '#003D2C', '#22C55E',
        'Catálogo clínico B. Braun', 'Programa B. Braun',
        'soporte@bbraun-platform.com',
        'Plataforma clínica del programa de acompañamiento B. Braun. Datos clínicos protegidos. Métricas para sponsor agregadas y anonimizadas.',
@@ -98,7 +98,7 @@ SELECT 'convatec', 'Convatec', 'Convatec Wound Care Hub', '#E11D48', '#7F1D1D', 
 ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO public.sponsors (slug, sponsor_name, app_name, primary_color, secondary_color, accent_color, catalog_name, sponsor_label, support_email, legal_footer, lab_id, is_active)
-SELECT 'demo', 'Laboratorio Demo', 'Care Platform', '#1763D2', '#0F172A', '#3B82F6',
+SELECT 'demo', 'Laboratorio Demo', 'CuraTrack', '#1763D2', '#0F172A', '#3B82F6',
        'Catálogo clínico demo', 'Programa Sponsor',
        'soporte@care-platform.demo',
        'Plataforma clínica white-label de demostración. Datos clínicos protegidos. Métricas para sponsor agregadas y anonimizadas.',
