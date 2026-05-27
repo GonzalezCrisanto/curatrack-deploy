@@ -7,7 +7,6 @@ import { useApp } from '@/context/AppContext';
 import { useSponsor } from '@/context/SponsorContext';
 import { useAppRole } from '@/hooks/useAppRole';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { SponsorLogo } from '@/components/SponsorLogo';
 import {
   Sidebar,
   SidebarContent,
@@ -118,7 +117,7 @@ export function AppSidebar() {
                     if (item.children?.length) setOpen((prev) => ({ ...prev, [item.title]: true }));
                   }}
                   className="hover:bg-sidebar-accent/50"
-                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  activeClassName="bg-sidebar-accent/45 text-sidebar-accent-foreground font-medium"
                 >
                   <item.icon className="mr-2 h-4 w-4" />
                   {!collapsed && <span className="font-body text-sm">{item.title}</span>}
@@ -133,7 +132,7 @@ export function AppSidebar() {
                         <NavLink
                           to={child.url}
                           className="hover:bg-sidebar-accent/50"
-                          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                          activeClassName="bg-sidebar-accent/45 text-sidebar-accent-foreground font-medium"
                         >
                           <UserPlus className="h-4 w-4" />
                           {!collapsed && <span className="font-body">{child.title}</span>}
@@ -180,9 +179,21 @@ export function AppSidebar() {
         <button
           onClick={() => navigate(homePath)}
           className="flex items-center gap-2 px-2 py-3 hover:opacity-80 transition-opacity w-full text-left"
-          title={sponsor?.app_name}
+          title="CuraTrack"
         >
-          <SponsorLogo showName={!collapsed} />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
+            <Activity className="h-4 w-4 text-primary" />
+          </div>
+          {!collapsed && (
+            <div className="leading-tight">
+              <p className="font-display text-sm font-semibold tracking-tight">CuraTrack</p>
+              {sponsor && (
+                <p className="font-body text-[10px] text-muted-foreground">
+                  para {sponsor.sponsor_name}
+                </p>
+              )}
+            </div>
+          )}
         </button>
       </SidebarHeader>
       <SidebarContent className="pt-2 overflow-visible">

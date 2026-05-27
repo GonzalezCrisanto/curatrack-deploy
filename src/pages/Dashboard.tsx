@@ -8,11 +8,13 @@ import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Activity, Users, AlertTriangle, CalendarClock, Clock, ShoppingBag,
   TrendingUp, Sparkles, Plus, ArrowRight, Stethoscope, Package,
-  AlertCircle, CheckCircle2, Lightbulb, Pill, FileBarChart, ChevronLeft, ChevronRight,
+  AlertCircle, CheckCircle2, Lightbulb, Pill, FileBarChart, ChevronLeft, ChevronRight, Search,
 } from 'lucide-react';
 
 const SPANISH_DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -48,11 +50,40 @@ function monthLabel(d: Date) {
   return `${SPANISH_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+function daysSince(dateIso?: string) {
+  if (!dateIso) return null;
+  const base = new Date(`${dateIso}T12:00:00`).getTime();
+  if (Number.isNaN(base)) return null;
+  return Math.max(0, Math.floor((Date.now() - base) / 86400000));
+}
+
+function statusPriority(status?: string) {
+  if (status === 'critico') return 0;
+  if (status === 'activo') return 1;
+  if (status === 'en_mejoria') return 2;
+  return 3;
+}
+
+function statusLabel(status?: string) {
+  if (status === 'critico') return 'Crítico';
+  if (status === 'activo') return 'Activo';
+  if (status === 'en_mejoria') return 'En mejoría';
+  return 'Estable';
+}
+
+function statusChipClasses(status?: string) {
+  if (status === 'critico') return 'bg-destructive/10 text-destructive border-destructive/40';
+  if (status === 'activo') return 'bg-warning/10 text-warning border-warning/40';
+  if (status === 'en_mejoria') return 'bg-success/10 text-success border-success/40';
+  return 'bg-muted text-muted-foreground border-border';
+}
+
 export default function Dashboard() {
-  const { patients, currentUserName } = useApp();
+  const { patients, currentUserName, patientsLoading } = useApp();
   const { sponsor } = useSponsor();
   const { role } = useAppRole();
   const navigate = useNavigate();
+  const patientSearchRef = useRef<HTMLInputElement | null>(null);
   const [orderCount, setOrderCount] = useState({ total: 0, pending: 0, sent: 0 });
   const [recommendedProducts, setRecommendedProducts] = useState<Array<{ name: string; category?: string }>>([]);
   const [showAllOpportunities, setShowAllOpportunities] = useState(false);
@@ -69,6 +100,15 @@ export default function Dashboard() {
     suggestion: string;
     to: string;
   } | null>(null);
+  const [patientQuery, setPatientQuery] = useState('');
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const isProfessionalView = role === 'professional';
+
+  useEffect(() => {
+    if (isProfessionalView) {
+      patientSearchRef.current?.focus();
+    }
+  }, [isProfessionalView]);
 
   useEffect(() => {
     let cancelled = false;
@@ -203,6 +243,68 @@ export default function Dashboard() {
   }, [casesWithPatient, today]);
 
   const alertCaseCount = new Set(alerts.filter(a => a.to).map(a => a.to)).size;
+  const criticalAlerts = alerts.filter((a) => a.type === 'critical' && a.to).slice(0, 3);
+
+  const professionalPatientCards = useMemo(() => {
+    const todayIso = toISO(new Date());
+    const entries = patients.flatMap((patient) => {
+      const patientName = `${patient.firstName ?? ''} ${patient.lastName ?? ''}`.trim() || 'Paciente sin identificar';
+      const activeOrScheduledCases = patient.cases.filter((c) => {
+        const hasTodayControl = c.evolutions.some((e) => e.nextControl === todayIso);
+        const isActiveCase = c.status === 'critico' || c.status === 'activo' || c.status === 'en_mejoria';
+        return hasTodayControl || isActiveCase;
+      });
+
+      if (activeOrScheduledCases.length === 0) {
+        return [];
+      }
+
+      const representative = [...activeOrScheduledCases].sort((a, b) => {
+        const byStatus = statusPriority(a.status) - statusPriority(b.status);
+        if (byStatus !== 0) return byStatus;
+        const aLast = [...a.evolutions].sort((x, y) => y.date.localeCompare(x.date))[0]?.date;
+        const bLast = [...b.evolutions].sort((x, y) => y.date.localeCompare(x.date))[0]?.date;
+        return (daysSince(bLast) ?? -1) - (daysSince(aLast) ?? -1);
+      })[0];
+
+      const lastEvolutionDate = [...representative.evolutions].sort((a, b) => b.date.localeCompare(a.date))[0]?.date;
+
+      return [{
+        patientId: patient.id,
+        patientName,
+        patientDni: patient.dni || '',
+        diagnosis: `${representative.woundType || 'Herida'}${representative.anatomicalLocation ? ` - ${representative.anatomicalLocation}` : ''}`,
+        status: representative.status,
+        caseId: representative.id,
+        lastEvolutionDate,
+        urgency: statusPriority(representative.status),
+        ageLastCuracion: daysSince(lastEvolutionDate) ?? 0,
+      }];
+    });
+
+    return entries
+      .sort((a, b) => {
+        if (a.urgency !== b.urgency) return a.urgency - b.urgency;
+        return b.ageLastCuracion - a.ageLastCuracion;
+      });
+  }, [patients]);
+
+  const selectedPatient = useMemo(
+    () => patients.find((p) => p.id === selectedPatientId) ?? null,
+    [patients, selectedPatientId],
+  );
+
+  const patientSuggestions = useMemo(() => {
+    const q = patientQuery.trim().toLowerCase();
+    if (!q) return [];
+    return patients
+      .filter((p) => {
+        const fullName = `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim().toLowerCase();
+        const dni = (p.dni ?? '').toLowerCase();
+        return fullName.includes(q) || dni.includes(q);
+      })
+      .slice(0, 6);
+  }, [patients, patientQuery]);
 
   const opportunities = [
     {
@@ -328,6 +430,190 @@ export default function Dashboard() {
   useEffect(() => {
     dayRefs.current[focusedDate]?.focus();
   }, [focusedDate, calendarMonth]);
+
+  if (isProfessionalView) {
+    return (
+      <AppLayout>
+        <div className="mx-auto w-full max-w-7xl flex-1">
+          <div className="flex h-full flex-col gap-4 md:gap-5">
+            <section className="rounded-2xl border border-border/70 bg-card p-4 md:p-6">
+              <div className="mx-auto flex max-w-3xl flex-col gap-4">
+                <Button
+                  size="lg"
+                  className="h-20 w-full text-lg md:text-xl font-semibold shadow-sm active:scale-[0.99]"
+                  style={sponsor?.primary_color ? { backgroundColor: sponsor.primary_color } : undefined}
+                  onClick={() => navigate('/curation/new')}
+                >
+                  <Plus className="mr-2 h-5 w-5" />
+                  Nueva curación
+                </Button>
+
+                <div className="sticky top-0 z-20 bg-card/95 py-1 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      ref={patientSearchRef}
+                      value={patientQuery}
+                      onChange={(e) => setPatientQuery(e.target.value)}
+                      placeholder="Buscar paciente por nombre o DNI..."
+                      className="h-12 pl-10 text-base"
+                      aria-label="Buscar paciente por nombre o DNI"
+                    />
+                  </div>
+                  {patientQuery.trim().length > 0 && (
+                    <div className="mt-2 rounded-xl border border-border bg-background shadow-sm">
+                      {patientSuggestions.length > 0 ? (
+                        <div className="p-1">
+                          {patientSuggestions.map((p) => {
+                            const name = `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim();
+                            return (
+                              <button
+                                key={p.id}
+                                onClick={() => {
+                                  setSelectedPatientId(p.id);
+                                  setPatientQuery(name);
+                                }}
+                                className="flex min-h-11 w-full items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              >
+                                <span className="font-body text-sm font-medium">{name || 'Paciente sin identificar'}</span>
+                                <span className="font-body text-xs text-muted-foreground">{p.dni || 'Sin DNI'}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="p-3">
+                          <p className="font-body text-sm text-muted-foreground">No encontramos resultados.</p>
+                          <Button
+                            variant="link"
+                            className="h-auto px-0 text-sm"
+                            onClick={() => navigate('/patients?new=1')}
+                          >
+                            Crear nuevo paciente
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {selectedPatient && (
+                  <Button
+                    variant="outline"
+                    className="h-12 justify-start border-primary/40 text-sm font-medium"
+                    onClick={() => navigate(`/curation/new?patientId=${selectedPatient.id}`)}
+                  >
+                    Nueva curación para {`${selectedPatient.firstName ?? ''} ${selectedPatient.lastName ?? ''}`.trim()}
+                  </Button>
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-border/70 bg-card p-4 md:p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="heading-display text-xl">Pacientes activos hoy</h2>
+                {professionalPatientCards.length > 6 && (
+                  <Button variant="ghost" size="sm" onClick={() => navigate('/patients')}>
+                    Ver todos los pacientes ({professionalPatientCards.length})
+                  </Button>
+                )}
+              </div>
+
+              {patientsLoading ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {[...Array(6)].map((_, idx) => (
+                    <div key={idx} className="rounded-xl border border-border/60 p-4">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-14 w-14 rounded-full" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-5 w-3/5" />
+                          <Skeleton className="h-4 w-4/5" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : professionalPatientCards.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border p-5 text-center">
+                  <p className="font-body text-base font-medium">No hay pacientes activos hoy</p>
+                  <p className="mt-1 font-body text-sm text-muted-foreground">Buscá un paciente o creá uno nuevo.</p>
+                  <Button className="mt-4" onClick={() => navigate('/patients?new=1')}>
+                    <Plus className="mr-1.5 h-4 w-4" />
+                    Nuevo paciente
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {professionalPatientCards.slice(0, 6).map((entry) => {
+                    const initials = entry.patientName
+                      .split(' ')
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((n) => n[0]?.toUpperCase() ?? '')
+                      .join('');
+                    const lastDays = daysSince(entry.lastEvolutionDate);
+                    return (
+                      <button
+                        key={`${entry.patientId}-${entry.caseId}`}
+                        onClick={() => navigate(`/patients/${entry.patientId}/cases/${entry.caseId}`)}
+                        className="group min-h-44 rounded-xl border border-border/70 bg-background p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-base font-semibold text-primary">
+                            {initials || 'P'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xl font-semibold leading-tight">{entry.patientName}</p>
+                            <p className="mt-1 truncate text-sm text-muted-foreground">{entry.diagnosis}</p>
+                            <Badge variant="outline" className={`mt-2 text-xs ${statusChipClasses(entry.status)}`}>
+                              {statusLabel(entry.status)}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+                          <span>
+                            {lastDays == null ? 'Sin curaciones previas' : `Última curación: hace ${lastDays} ${lastDays === 1 ? 'día' : 'días'}`}
+                          </span>
+                          <span className="font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">Abrir</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            {criticalAlerts.length > 0 && (
+              <section className="space-y-2">
+                {criticalAlerts.map((a, idx) => (
+                  <button
+                    key={`${a.type}-${idx}`}
+                    onClick={() => navigate(a.to!)}
+                    className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    <span className="flex-1 truncate">{a.label}</span>
+                    <span className="font-medium underline underline-offset-2">Atender ahora</span>
+                  </button>
+                ))}
+              </section>
+            )}
+          </div>
+        </div>
+
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 shadow-lg backdrop-blur md:hidden">
+          <Button
+            className="h-12 w-full text-base font-semibold active:scale-[0.99]"
+            style={sponsor?.primary_color ? { backgroundColor: sponsor.primary_color } : undefined}
+            onClick={() => navigate('/curation/new')}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva curación
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>

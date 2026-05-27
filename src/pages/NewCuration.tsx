@@ -17,7 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import {
   ChevronLeft, ChevronRight, Search, User, Activity, Camera, Package, Sparkles,
-  CheckCircle2, ShoppingBag, Save, Copy, ArrowLeft, AlertCircle, Pill, Plus, X, FileText,
+  CheckCircle2, ShoppingBag, Save, Copy, ArrowLeft, AlertCircle, Pill, Plus, X, FileText, UserPlus,
 } from 'lucide-react';
 import type { Patient, WoundCase } from '@/data/demoData';
 
@@ -59,9 +59,18 @@ const STEPS = [
 function newId() { return Math.random().toString(36).slice(2, 10); }
 function todayISO() { return new Date().toISOString().split('T')[0]; }
 function nowHM() { const d = new Date(); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+function ageFromBirthDate(birthDate: string) {
+  const birth = new Date(`${birthDate}T12:00:00`);
+  if (Number.isNaN(birth.getTime())) return 0;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return Math.max(0, age);
+}
 
 export default function NewCuration() {
-  const { patients, currentUser, currentUserName } = useApp();
+  const { patients, currentUser, currentUserName, addPatient, addCase } = useApp();
   const { sponsor } = useSponsor();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -71,6 +80,28 @@ export default function NewCuration() {
   const [search, setSearch] = useState('');
   const [patientId, setPatientId] = useState<string | null>(params.get('patientId'));
   const [caseId, setCaseId] = useState<string | null>(params.get('caseId'));
+  const [showNewPatientForm, setShowNewPatientForm] = useState(false);
+  const [creatingPatient, setCreatingPatient] = useState(false);
+  const [newPatient, setNewPatient] = useState({
+    firstName: '',
+    lastName: '',
+    dni: '',
+    birthDate: '',
+    phone: '',
+  });
+  const [newPatientErrors, setNewPatientErrors] = useState<Record<string, string>>({});
+
+  const [showNewCaseForm, setShowNewCaseForm] = useState(false);
+  const [creatingCase, setCreatingCase] = useState(false);
+  const [newCase, setNewCase] = useState({
+    woundType: '',
+    anatomicalLocation: '',
+    laterality: 'na',
+    startDate: todayISO(),
+    status: 'activo' as WoundCase['status'],
+    notes: '',
+  });
+  const [newCaseErrors, setNewCaseErrors] = useState<Record<string, string>>({});
 
   // Step 2 — clinical
   const [evo, setEvo] = useState({
@@ -136,6 +167,12 @@ export default function NewCuration() {
     );
   }, [patients, search]);
 
+  const visibleCases = useMemo(() => {
+    if (!patient) return [];
+    const active = patient.cases.filter(c => c.status !== 'resuelto');
+    return active.length > 0 ? active : patient.cases;
+  }, [patient]);
+
   // --- Recommendations: derive from wound type + exudate + sponsor catalog ---
   const recommendations = useMemo(() => {
     const recs: Array<{ category: string; reason: string; sponsor?: LabProduct }> = [];
@@ -194,6 +231,140 @@ export default function NewCuration() {
   const removeSupply = (id: string) => setSupplies(prev => prev.filter(s => s.id !== id));
 
   const restockItems = supplies.filter(s => s.restock);
+
+  const resetNewCaseForm = () => {
+    setNewCase({
+      woundType: '',
+      anatomicalLocation: '',
+      laterality: 'na',
+      startDate: todayISO(),
+      status: 'activo',
+      notes: '',
+    });
+    setNewCaseErrors({});
+  };
+
+  const handleCreatePatientInline = async () => {
+    const errors: Record<string, string> = {};
+    if (!newPatient.firstName.trim()) errors.firstName = 'Ingresá nombre.';
+    if (!newPatient.lastName.trim()) errors.lastName = 'Ingresá apellido.';
+    if (!newPatient.dni.trim()) errors.dni = 'Ingresá DNI.';
+    if (!newPatient.birthDate) errors.birthDate = 'Ingresá fecha de nacimiento.';
+    if (!newPatient.phone.trim()) errors.phone = 'Ingresá teléfono de contacto.';
+    setNewPatientErrors(errors);
+    if (Object.keys(errors).length > 0 || !currentUser) return;
+
+    setCreatingPatient(true);
+    try {
+      await addPatient({
+        id: '',
+        firstName: newPatient.firstName.trim(),
+        lastName: newPatient.lastName.trim(),
+        age: ageFromBirthDate(newPatient.birthDate),
+        birthDate: newPatient.birthDate,
+        gender: '',
+        dni: newPatient.dni.trim(),
+        phone: newPatient.phone.trim(),
+        email: '',
+        address: '',
+        diagnosis: '',
+        assignedProfessional: currentUserName || '',
+        observations: `Alta rápida desde Nueva curación. Fecha de nacimiento: ${newPatient.birthDate}.`,
+        admissionDate: todayISO(),
+        controlIntervalDays: 7,
+        cases: [],
+      });
+
+      const { data: createdPatient, error } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('dni', newPatient.dni.trim())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !createdPatient?.id) {
+        throw error || new Error('No se pudo recuperar el paciente creado.');
+      }
+
+      setPatientId(createdPatient.id);
+      setCaseId(null);
+      setShowNewPatientForm(false);
+      setNewPatient({ firstName: '', lastName: '', dni: '', birthDate: '', phone: '' });
+      toast({ title: 'Paciente creado', description: 'Ahora registrá su primera herida para continuar.' });
+    } catch (e: any) {
+      toast({
+        title: 'No se pudo crear el paciente',
+        description: e?.message ?? 'Reintentá en unos segundos.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCreatingPatient(false);
+    }
+  };
+
+  const handleCreateCaseInline = async () => {
+    if (!patient || !currentUser) return;
+    const errors: Record<string, string> = {};
+    if (!newCase.woundType) errors.woundType = 'Seleccioná tipo de herida.';
+    if (!newCase.anatomicalLocation.trim()) errors.anatomicalLocation = 'Indicá ubicación anatómica.';
+    if (!newCase.startDate) errors.startDate = 'Ingresá fecha de aparición.';
+    if (!newCase.status) errors.status = 'Seleccioná estado inicial.';
+    setNewCaseErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    setCreatingCase(true);
+    try {
+      const lateralityLabel =
+        newCase.laterality === 'izquierdo' ? 'Lado izquierdo'
+          : newCase.laterality === 'derecho' ? 'Lado derecho'
+            : newCase.laterality === 'bilateral' ? 'Bilateral'
+              : null;
+      const anatomicalLocation = lateralityLabel
+        ? `${newCase.anatomicalLocation.trim()} (${lateralityLabel})`
+        : newCase.anatomicalLocation.trim();
+
+      const { data: inserted, error } = await supabase
+        .from('wound_cases')
+        .insert({
+          user_id: currentUser.id,
+          patient_id: patient.id,
+          wound_type: newCase.woundType,
+          anatomical_location: anatomicalLocation,
+          start_date: newCase.startDate,
+          status: newCase.status,
+          treatment: newCase.notes.trim() || null,
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+
+      const createdCase: WoundCase = {
+        id: inserted.id,
+        patientId: patient.id,
+        woundType: newCase.woundType,
+        anatomicalLocation,
+        startDate: newCase.startDate,
+        status: newCase.status,
+        treatment: newCase.notes.trim() || '',
+        evolutions: [],
+        photos: [],
+      };
+      addCase(patient.id, createdCase);
+      setCaseId(inserted.id);
+      setShowNewCaseForm(false);
+      resetNewCaseForm();
+      toast({ title: 'Herida registrada', description: 'Ya podés avanzar a Evaluación.' });
+    } catch (e: any) {
+      toast({
+        title: 'No se pudo crear la herida',
+        description: e?.message ?? 'Reintentá en unos segundos.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCreatingCase(false);
+    }
+  };
 
   // --- Save ---
   const saveEvolution = async (alsoCreateOrder: boolean) => {
@@ -321,9 +492,25 @@ export default function NewCuration() {
                 Flujo guiado: paciente → evaluación → fotos → insumos → recomendaciones → resumen.
               </p>
             </div>
-            <Button variant="ghost" size="sm" className="font-body" onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-4 w-4 mr-1" /> Volver
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" className="font-body" onClick={() => navigate(-1)}>
+                <ArrowLeft className="h-4 w-4 mr-1" /> Volver
+              </Button>
+              {step === 1 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="font-body border-primary/40 text-primary hover:bg-primary/5"
+                  onClick={() => {
+                    setShowNewPatientForm((prev) => !prev);
+                    setNewPatientErrors({});
+                  }}
+                >
+                  <UserPlus className="h-4 w-4 mr-1.5" />
+                  Nuevo paciente
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Stepper */}
@@ -362,6 +549,71 @@ export default function NewCuration() {
                 <CardTitle className="heading-display text-lg flex items-center gap-2"><User className="h-5 w-5 text-primary" /> Seleccionar paciente y caso</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {showNewPatientForm && (
+                  <div className="rounded-lg border border-primary/25 bg-primary/5 p-4 space-y-3 transition-all duration-200">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-body text-sm font-medium">Alta rápida de paciente</p>
+                      <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setShowNewPatientForm(false)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <div>
+                        <Label className="font-body text-xs">Nombre *</Label>
+                        <Input
+                          value={newPatient.firstName}
+                          onChange={(e) => setNewPatient((prev) => ({ ...prev, firstName: e.target.value }))}
+                          aria-invalid={!!newPatientErrors.firstName}
+                        />
+                        {newPatientErrors.firstName && <p className="mt-1 text-xs text-destructive">{newPatientErrors.firstName}</p>}
+                      </div>
+                      <div>
+                        <Label className="font-body text-xs">Apellido *</Label>
+                        <Input
+                          value={newPatient.lastName}
+                          onChange={(e) => setNewPatient((prev) => ({ ...prev, lastName: e.target.value }))}
+                          aria-invalid={!!newPatientErrors.lastName}
+                        />
+                        {newPatientErrors.lastName && <p className="mt-1 text-xs text-destructive">{newPatientErrors.lastName}</p>}
+                      </div>
+                      <div>
+                        <Label className="font-body text-xs">DNI *</Label>
+                        <Input
+                          value={newPatient.dni}
+                          onChange={(e) => setNewPatient((prev) => ({ ...prev, dni: e.target.value }))}
+                          aria-invalid={!!newPatientErrors.dni}
+                        />
+                        {newPatientErrors.dni && <p className="mt-1 text-xs text-destructive">{newPatientErrors.dni}</p>}
+                      </div>
+                      <div>
+                        <Label className="font-body text-xs">Fecha de nacimiento *</Label>
+                        <Input
+                          type="date"
+                          value={newPatient.birthDate}
+                          onChange={(e) => setNewPatient((prev) => ({ ...prev, birthDate: e.target.value }))}
+                          aria-invalid={!!newPatientErrors.birthDate}
+                        />
+                        {newPatientErrors.birthDate && <p className="mt-1 text-xs text-destructive">{newPatientErrors.birthDate}</p>}
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label className="font-body text-xs">Teléfono de contacto *</Label>
+                        <Input
+                          value={newPatient.phone}
+                          onChange={(e) => setNewPatient((prev) => ({ ...prev, phone: e.target.value }))}
+                          aria-invalid={!!newPatientErrors.phone}
+                        />
+                        {newPatientErrors.phone && <p className="mt-1 text-xs text-destructive">{newPatientErrors.phone}</p>}
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button className="font-body" onClick={handleCreatePatientInline} disabled={creatingPatient}>
+                        <Plus className="h-4 w-4 mr-1.5" />
+                        {creatingPatient ? 'Guardando...' : 'Crear paciente y continuar'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="relative">
                   <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre o DNI..." className="pl-9 font-body" />
@@ -373,7 +625,11 @@ export default function NewCuration() {
                     return (
                       <button
                         key={p.id}
-                        onClick={() => { setPatientId(p.id); setCaseId(active?.id ?? p.cases[0]?.id ?? null); }}
+                        onClick={() => {
+                          setPatientId(p.id);
+                          setCaseId(active?.id ?? p.cases[0]?.id ?? null);
+                          setShowNewCaseForm(false);
+                        }}
                         className={`text-left p-3 rounded-lg border transition-all ${
                           selected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border/60 hover:border-primary/40 bg-background'
                         }`}
@@ -386,29 +642,164 @@ export default function NewCuration() {
                     );
                   })}
                 </div>
+                {!patient && (
+                  <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-4 text-center">
+                    <p className="font-body text-sm text-muted-foreground">
+                      Primero seleccioná un paciente para ver o agregar sus heridas.
+                    </p>
+                  </div>
+                )}
                 {patient && (
                   <div className="space-y-2 pt-2">
                     <Label className="font-body text-sm">Caso de herida</Label>
-                    <div className="grid md:grid-cols-2 gap-2">
-                      {patient.cases.map(c => (
-                        <button
-                          key={c.id}
-                          onClick={() => setCaseId(c.id)}
-                          className={`text-left p-3 rounded-lg border transition-all ${
-                            caseId === c.id ? 'border-primary bg-primary/5' : 'border-border/60 hover:border-primary/40'
-                          }`}
+                    {visibleCases.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-4 space-y-3">
+                        <p className="font-body text-sm text-muted-foreground">Este paciente no tiene heridas registradas.</p>
+                        <Button
+                          className="font-body"
+                          onClick={() => {
+                            setShowNewCaseForm(true);
+                            setNewCaseErrors({});
+                          }}
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="font-body text-sm font-medium">{c.woundType}</div>
-                            <Badge variant="outline" className="font-body text-[10px] uppercase">{c.status}</Badge>
-                          </div>
-                          <div className="font-body text-xs text-muted-foreground mt-0.5">{c.anatomicalLocation}</div>
-                          <div className="font-body text-[11px] text-muted-foreground mt-1">
-                            Última evolución: {c.evolutions[0]?.date ?? '—'} · Próx. control: {c.evolutions[0]?.nextControl ?? '—'}
+                          <Plus className="h-4 w-4 mr-1.5" />
+                          Registrar nueva herida
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="grid md:grid-cols-2 gap-2">
+                        {visibleCases.map(c => (
+                          <button
+                            key={c.id}
+                            onClick={() => setCaseId(c.id)}
+                            className={`text-left p-3 rounded-lg border transition-all ${
+                              caseId === c.id ? 'border-primary bg-primary/5' : 'border-border/60 hover:border-primary/40'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="font-body text-sm font-medium">{c.woundType}</div>
+                              <Badge variant="outline" className="font-body text-[10px] uppercase">{c.status}</Badge>
+                            </div>
+                            <div className="font-body text-xs text-muted-foreground mt-0.5">{c.anatomicalLocation}</div>
+                            <div className="font-body text-[11px] text-muted-foreground mt-1">
+                              Última evolución: {c.evolutions[0]?.date ?? '—'} · Próx. control: {c.evolutions[0]?.nextControl ?? '—'}
+                            </div>
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => {
+                            setShowNewCaseForm(true);
+                            setNewCaseErrors({});
+                          }}
+                          className="text-left p-3 rounded-lg border-2 border-dashed border-primary/40 hover:border-primary transition-all bg-primary/5 min-h-[112px]"
+                        >
+                          <div className="h-full flex items-center justify-center gap-2 text-primary font-body font-medium">
+                            <Plus className="h-4 w-4" />
+                            Registrar nueva herida
                           </div>
                         </button>
-                      ))}
-                    </div>
+                      </div>
+                    )}
+
+                    {showNewCaseForm && (
+                      <div className="rounded-lg border border-primary/25 bg-primary/5 p-4 space-y-3 transition-all duration-200">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-body text-sm font-medium">Nueva herida para {patient.firstName} {patient.lastName}</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={() => {
+                              setShowNewCaseForm(false);
+                              resetNewCaseForm();
+                            }}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-3">
+                          <div>
+                            <Label className="font-body text-xs">Tipo de herida *</Label>
+                            <Select value={newCase.woundType} onValueChange={(v) => setNewCase((prev) => ({ ...prev, woundType: v }))}>
+                              <SelectTrigger aria-invalid={!!newCaseErrors.woundType}><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                              <SelectContent>
+                                {['Úlcera por presión', 'Pie diabético', 'Úlcera venosa', 'Herida quirúrgica', 'Quemadura', 'Otro'].map((opt) => (
+                                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {newCaseErrors.woundType && <p className="mt-1 text-xs text-destructive">{newCaseErrors.woundType}</p>}
+                          </div>
+                          <div>
+                            <Label className="font-body text-xs">Ubicación anatómica *</Label>
+                            <Input
+                              value={newCase.anatomicalLocation}
+                              onChange={(e) => setNewCase((prev) => ({ ...prev, anatomicalLocation: e.target.value }))}
+                              placeholder="Ej: Pierna derecha, zona tibial"
+                              aria-invalid={!!newCaseErrors.anatomicalLocation}
+                            />
+                            {newCaseErrors.anatomicalLocation && <p className="mt-1 text-xs text-destructive">{newCaseErrors.anatomicalLocation}</p>}
+                          </div>
+                          <div>
+                            <Label className="font-body text-xs">Lateralidad</Label>
+                            <Select value={newCase.laterality} onValueChange={(v) => setNewCase((prev) => ({ ...prev, laterality: v }))}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="izquierdo">Izquierdo</SelectItem>
+                                <SelectItem value="derecho">Derecho</SelectItem>
+                                <SelectItem value="bilateral">Bilateral</SelectItem>
+                                <SelectItem value="na">N/A</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="font-body text-xs">Fecha de aparición *</Label>
+                            <Input
+                              type="date"
+                              value={newCase.startDate}
+                              onChange={(e) => setNewCase((prev) => ({ ...prev, startDate: e.target.value }))}
+                              aria-invalid={!!newCaseErrors.startDate}
+                            />
+                            {newCaseErrors.startDate && <p className="mt-1 text-xs text-destructive">{newCaseErrors.startDate}</p>}
+                          </div>
+                          <div>
+                            <Label className="font-body text-xs">Estado inicial *</Label>
+                            <Select value={newCase.status} onValueChange={(v) => setNewCase((prev) => ({ ...prev, status: v as WoundCase['status'] }))}>
+                              <SelectTrigger aria-invalid={!!newCaseErrors.status}><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="critico">Crítico</SelectItem>
+                                <SelectItem value="activo">Activo</SelectItem>
+                                <SelectItem value="en_mejoria">En mejoría</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {newCaseErrors.status && <p className="mt-1 text-xs text-destructive">{newCaseErrors.status}</p>}
+                          </div>
+                          <div className="md:col-span-2">
+                            <Label className="font-body text-xs">Notas iniciales (opcional)</Label>
+                            <Textarea
+                              rows={2}
+                              value={newCase.notes}
+                              onChange={(e) => setNewCase((prev) => ({ ...prev, notes: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setShowNewCaseForm(false);
+                              resetNewCaseForm();
+                            }}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button onClick={handleCreateCaseInline} disabled={creatingCase}>
+                            <Plus className="h-4 w-4 mr-1.5" />
+                            {creatingCase ? 'Guardando...' : 'Crear herida y continuar'}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
