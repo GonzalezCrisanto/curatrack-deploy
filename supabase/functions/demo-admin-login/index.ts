@@ -10,13 +10,11 @@ const corsHeaders = {
 };
 
 const DEFAULT_SPONSOR_SLUG = "demo";
-// admin-demo@curatrack.app is the existing lab/sponsor demo account (kept for compatibility).
-// superadmin-demo@curatrack.app is used exclusively for the platform admin kind.
 const ADMIN_DEMO_EMAIL = "superadmin-demo@curatrack.app";
 const SPONSOR_DEMO_EMAILS: Record<string, string> = {
   convatec: "sponsor-convatec@curatrack.app",
   bbraun: "sponsor-bbraun@curatrack.app",
-  demo: "admin-demo@curatrack.app",
+  demo: "sponsor-demo@curatrack.app",
 };
 
 function randomPassword() {
