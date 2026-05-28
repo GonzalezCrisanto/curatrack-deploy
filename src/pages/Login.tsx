@@ -87,9 +87,8 @@ export default function Login() {
     try {
       if (target && kind !== 'admin') await setSponsorBySlug(target.slug, false);
 
-      const fnName = kind === 'pro' ? 'demo-login' : 'demo-admin-login';
+      const fnName = kind === 'pro' ? 'demo-login' : kind === 'sponsor' ? 'demo-sponsor-login' : 'demo-admin-login';
       const body: Record<string, string> = { sponsor_slug: target?.slug ?? sponsor?.slug ?? 'demo' };
-      if (kind === 'admin') body.kind = 'admin';
 
       const { data, error } = await supabase.functions.invoke(fnName, { body });
       if (error || !data?.ok) throw new Error(error?.message || data?.message || 'No se pudo preparar la cuenta demo');
