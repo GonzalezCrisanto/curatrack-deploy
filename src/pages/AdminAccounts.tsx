@@ -7,7 +7,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, Search, ShieldCheck, Briefcase, UserCog } from 'lucide-react';
+import { Users, Search, ShieldCheck, Briefcase, UserCog, Trash2 } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
 
 interface ProfileRow {
@@ -40,6 +44,8 @@ export default function AdminAccounts() {
   const [labByUser, setLabByUser] = useState<Record<string, string>>({});
   const [search, setSearch] = useState('');
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<ProfileRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -99,6 +105,22 @@ export default function AdminAccounts() {
     } catch (e) {
       toast({ title: 'Error al actualizar rol', description: (e as Error).message, variant: 'destructive' });
     } finally { setSavingId(null); }
+  };
+
+  const deleteAccount = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { user_id: confirmDelete.user_id },
+      });
+      if (error || !data?.ok) throw new Error(error?.message ?? data?.message ?? 'Error al eliminar');
+      toast({ title: 'Cuenta eliminada', description: `${confirmDelete.first_name} ${confirmDelete.last_name}` });
+      setConfirmDelete(null);
+      await load();
+    } catch (e) {
+      toast({ title: 'Error al eliminar cuenta', description: (e as Error).message, variant: 'destructive' });
+    } finally { setDeleting(false); }
   };
 
   const setLab = async (uid: string, labId: string) => {
@@ -187,12 +209,44 @@ export default function AdminAccounts() {
                     <p>{s?.patient_count ?? 0} pacientes</p>
                     <p>{s?.order_count ?? 0} pedidos</p>
                   </div>
+
+                  <Button
+                    variant="ghost" size="icon"
+                    className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    disabled={savingId === p.user_id}
+                    onClick={() => setConfirmDelete(p)}
+                    title="Eliminar cuenta"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </Card>
               );
             })}
           </div>
         )}
       </div>
+      <AlertDialog open={!!confirmDelete} onOpenChange={open => { if (!open) setConfirmDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar cuenta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará permanentemente la cuenta de{' '}
+              <strong>{confirmDelete?.first_name} {confirmDelete?.last_name}</strong>.
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={deleteAccount}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Eliminando...' : 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
