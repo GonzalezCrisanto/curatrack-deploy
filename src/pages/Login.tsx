@@ -45,20 +45,16 @@ export default function Login() {
   const appName = sponsor?.app_name ?? 'Plataforma';
   const footer = sponsor?.legal_footer ?? sponsor?.powered_by_label ?? '';
 
-  // Demo cards: in locked mode show only the matching sponsor; otherwise show all available.
+  // Demo cards: locked mode shows the matching sponsor; internal mode shows only 'demo'.
+  // Other lab experiences are accessible via /login?sponsor=<slug> or from Settings.
   const demoSponsors = useMemo<Sponsor[]>(() => {
     if (!sponsors?.length) return [];
     if (sponsorParam) {
       const found = sponsors.find(s => s.slug.toLowerCase() === sponsorParam.toLowerCase());
       return found ? [found] : [];
     }
-    // Internal mode: order Convatec, B. Braun, Demo first if present
-    const priority = ['convatec', 'bbraun', 'demo'];
-    return [...sponsors].sort((a, b) => {
-      const ai = priority.indexOf(a.slug);
-      const bi = priority.indexOf(b.slug);
-      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-    });
+    const demo = sponsors.find(s => s.slug === 'demo');
+    return demo ? [demo] : [];
   }, [sponsors, sponsorParam]);
 
 
@@ -84,18 +80,18 @@ export default function Login() {
     }
   };
 
-  const handleDemoLogin = async (target?: Sponsor, kind: 'pro' | 'sponsor' = 'pro') => {
-    const key = `${target?.slug ?? 'default'}:${kind}`;
+  const handleDemoLogin = async (target?: Sponsor, kind: 'pro' | 'sponsor' | 'admin' = 'pro') => {
+    const key = kind === 'admin' ? 'admin' : `${target?.slug ?? 'default'}:${kind}`;
     setLoading(true);
     setLoadingKey(key);
     try {
-      // Switch sponsor context first so the post-login UI is correctly themed.
-      if (target) await setSponsorBySlug(target.slug, false);
+      if (target && kind !== 'admin') await setSponsorBySlug(target.slug, false);
 
-      const fnName = kind === 'sponsor' ? 'demo-admin-login' : 'demo-login';
-      const { data, error } = await supabase.functions.invoke(fnName, {
-        body: { sponsor_slug: target?.slug ?? sponsor?.slug ?? 'demo' },
-      });
+      const fnName = kind === 'pro' ? 'demo-login' : 'demo-admin-login';
+      const body: Record<string, string> = { sponsor_slug: target?.slug ?? sponsor?.slug ?? 'demo' };
+      if (kind === 'admin') body.kind = 'admin';
+
+      const { data, error } = await supabase.functions.invoke(fnName, { body });
       if (error || !data?.ok) throw new Error(error?.message || data?.message || 'No se pudo preparar la cuenta demo');
       if (!data.access_token || !data.refresh_token) throw new Error('Sesión demo inválida');
       const { error: setErr } = await supabase.auth.setSession({
@@ -104,12 +100,11 @@ export default function Login() {
       });
       if (setErr) throw new Error(setErr.message || 'No se pudo iniciar sesión con la cuenta demo');
 
-      // Persist sponsor link to user_sponsor after login (so it survives refresh).
-      if (target) await setSponsorBySlug(target.slug, true);
+      if (target && kind !== 'admin') await setSponsorBySlug(target.slug, true);
 
       toast({
-        title: kind === 'sponsor' ? 'Sesión laboratorio iniciada' : 'Sesión profesional iniciada',
-        description: target ? `Demo de ${target.sponsor_name}` : 'Cuenta de prueba activada.',
+        title: kind === 'admin' ? 'Sesión admin iniciada' : kind === 'sponsor' ? 'Sesión laboratorio iniciada' : 'Sesión profesional iniciada',
+        description: kind === 'admin' ? 'Acceso total a la plataforma.' : target ? `Demo de ${target.sponsor_name}` : 'Cuenta de prueba activada.',
       });
       if (kind === 'sponsor') navigate('/panel-sponsor');
       else await redirectByRole(navigate);
@@ -234,7 +229,7 @@ export default function Login() {
             ) : (
               <form onSubmit={handleLogin} className="space-y-5">
                 {/* Demo cards by sponsor */}
-                {demoSponsors.length > 0 && (
+                {(demoSponsors.length > 0 || !isSponsorLocked) && (
                   <div className="space-y-2.5">
                     {demoSponsors.map((sp) => {
                       const proKey = `${sp.slug}:pro`;
@@ -280,10 +275,33 @@ export default function Login() {
                         </div>
                       );
                     })}
+                    {/* Admin demo card — internal mode only */}
+                    {!isSponsorLocked && (
+                      <div
+                        className="rounded-lg border border-border/60 p-3 bg-card hover:border-primary/40 transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5 mb-2.5">
+                          <div className="h-7 w-7 rounded-md flex items-center justify-center bg-slate-700 shrink-0">
+                            <ShieldCheck className="h-4 w-4 text-white" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-display font-bold text-sm leading-tight">Administrador</div>
+                            <div className="font-body text-[10px] uppercase tracking-wider text-muted-foreground">Acceso total · todos los módulos</div>
+                          </div>
+                        </div>
+                        <Button type="button" size="sm" disabled={loading}
+                          onClick={() => handleDemoLogin(undefined, 'admin')}
+                          className="w-full font-body gap-1.5 text-xs bg-slate-700 hover:bg-slate-800 text-white">
+                          <ShieldCheck className="h-3.5 w-3.5" />
+                          {loadingKey === 'admin' ? '...' : 'Admin'}
+                        </Button>
+                      </div>
+                    )}
+
                     <p className="text-[11px] text-center text-muted-foreground font-body pt-1">
                       {isSponsorLocked
                         ? 'Acceso instantáneo a la demo personalizada de este laboratorio.'
-                        : 'Cada tarjeta abre la app con la identidad y catálogo del laboratorio.'}
+                        : 'Cambiá de laboratorio desde Configuración una vez dentro.'}
                     </p>
                   </div>
                 )}

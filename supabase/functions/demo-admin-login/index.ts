@@ -10,6 +10,7 @@ const corsHeaders = {
 };
 
 const DEFAULT_SPONSOR_SLUG = "demo";
+const ADMIN_DEMO_EMAIL = "admin-demo@curatrack.app";
 const SPONSOR_DEMO_EMAILS: Record<string, string> = {
   convatec: "sponsor-convatec@curatrack.app",
   bbraun: "sponsor-bbraun@curatrack.app",
@@ -29,15 +30,19 @@ Deno.serve(async (req) => {
 
   try {
     let sponsorSlug = DEFAULT_SPONSOR_SLUG;
+    let kind = "sponsor"; // 'sponsor' | 'admin'
     try {
       const body = await req.json();
       if (typeof body?.sponsor_slug === "string" && body.sponsor_slug.trim()) {
         sponsorSlug = body.sponsor_slug.trim().toLowerCase();
       }
+      if (body?.kind === "admin") kind = "admin";
     } catch {
       // Optional body; keep default.
     }
-    const DEMO_ADMIN_EMAIL = SPONSOR_DEMO_EMAILS[sponsorSlug] ?? SPONSOR_DEMO_EMAILS.demo;
+    const DEMO_ADMIN_EMAIL = kind === "admin"
+      ? ADMIN_DEMO_EMAIL
+      : (SPONSOR_DEMO_EMAILS[sponsorSlug] ?? SPONSOR_DEMO_EMAILS.demo);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -71,11 +76,11 @@ Deno.serve(async (req) => {
         password,
         email_confirm: true,
         user_metadata: {
-          first_name: "Sponsor",
+          first_name: kind === "admin" ? "Admin" : "Sponsor",
           last_name: "Demo",
           role: "admin",
-          institution: "CuraTrack Sponsor",
-          license: "SPONSOR-0001",
+          institution: kind === "admin" ? "CuraTrack" : "CuraTrack Sponsor",
+          license: kind === "admin" ? "ADMIN-0001" : "SPONSOR-0001",
         },
       });
       if (createErr) {
@@ -109,44 +114,45 @@ Deno.serve(async (req) => {
           .eq("user_id", existingId);
       }
 
-      // Demo laboratorio must be sponsor-only (single source of truth for ACL).
-      await admin
-        .from("user_roles")
-        .delete()
-        .eq("user_id", existingId);
+      // Single source of truth for ACL: delete then insert to avoid stale rows.
+      await admin.from("user_roles").delete().eq("user_id", existingId);
       await admin.from("user_roles").insert({
         user_id: existingId,
-        role: "sponsor",
+        role: kind === "admin" ? "admin" : "sponsor",
       });
 
-      const { data: targetSponsor } = await admin
-        .from("sponsors")
-        .select("id, lab_id, sponsor_name")
-        .eq("slug", sponsorSlug)
-        .maybeSingle();
-      if (targetSponsor?.id) {
-        await admin
-          .from("user_sponsor")
-          .upsert(
-            { user_id: existingId, sponsor_id: targetSponsor.id },
-            { onConflict: "user_id" },
-          );
-        if (targetSponsor.lab_id) {
+      // For sponsor kind: link to the target sponsor and lab.
+      // For admin kind: no sponsor link needed (admin sees all).
+      if (kind !== "admin") {
+        const { data: targetSponsor } = await admin
+          .from("sponsors")
+          .select("id, lab_id, sponsor_name")
+          .eq("slug", sponsorSlug)
+          .maybeSingle();
+        if (targetSponsor?.id) {
           await admin
-            .from("user_lab_sponsors")
-            .update({ is_active: false })
-            .eq("user_id", existingId);
-          await admin
-            .from("user_lab_sponsors")
+            .from("user_sponsor")
             .upsert(
-              { user_id: existingId, lab_id: targetSponsor.lab_id, is_active: true },
-              { onConflict: "user_id,lab_id" },
+              { user_id: existingId, sponsor_id: targetSponsor.id },
+              { onConflict: "user_id" },
             );
+          if (targetSponsor.lab_id) {
+            await admin
+              .from("user_lab_sponsors")
+              .update({ is_active: false })
+              .eq("user_id", existingId);
+            await admin
+              .from("user_lab_sponsors")
+              .upsert(
+                { user_id: existingId, lab_id: targetSponsor.lab_id, is_active: true },
+                { onConflict: "user_id,lab_id" },
+              );
+          }
+          await admin
+            .from("profiles")
+            .update({ institution: targetSponsor.sponsor_name ?? "CuraTrack Sponsor" })
+            .eq("user_id", existingId);
         }
-        await admin
-          .from("profiles")
-          .update({ institution: targetSponsor.sponsor_name ?? "CuraTrack Sponsor" })
-          .eq("user_id", existingId);
       }
     }
 
