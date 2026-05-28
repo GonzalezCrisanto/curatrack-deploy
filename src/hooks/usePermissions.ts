@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { LEGACY_ROLE_TO_SYSTEM_ROLE, ROLE_PERMISSIONS, type PermissionSection, type SystemRole } from '@/config/permissions';
+export type { PermissionSection } from '@/config/permissions';
 import { useAppRole } from '@/hooks/useAppRole';
 
 export function usePermissions() {
