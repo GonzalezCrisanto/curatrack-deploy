@@ -159,11 +159,13 @@ export function SponsorProvider({ children }: { children: ReactNode }) {
     const { data: sess } = await supabase.auth.getSession();
     const uid = sess.session?.user?.id;
 
+    const ANON_COLUMNS = 'id, slug, sponsor_name, app_name, logo_url, primary_color, secondary_color, accent_color, sponsor_label, catalog_name, powered_by_label, legal_footer, sales_contact_label, lab_id, is_active, created_at, updated_at';
+
     let list: Sponsor[] = [];
     if (!uid) {
       const { data } = await supabase
         .from('sponsors')
-        .select('*')
+        .select(ANON_COLUMNS)
         .eq('is_active', true)
         .order('sponsor_name');
       list = (data ?? []) as unknown as Sponsor[];

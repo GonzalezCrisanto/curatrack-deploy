@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Claude Code local config (personal overrides, not shared)
+.claude/settings.local.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
