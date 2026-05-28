@@ -11,16 +11,16 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, Mail, Sparkles, ShieldCheck, Check, Activity, Briefcase, Stethoscope } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { getUserAppRole } from '@/lib/appRole';
 
 
 async function redirectByRole(navigate: (p: string) => void, fallback = '/dashboard') {
   const { data: sess } = await supabase.auth.getSession();
   const uid = sess.session?.user?.id;
   if (!uid) { navigate(fallback); return; }
-  const { data } = await supabase.from('user_roles').select('role').eq('user_id', uid);
-  const roles = (data ?? []).map((r: any) => r.role as string);
-  if (roles.includes('admin')) navigate('/dashboard');
-  else if (roles.includes('sponsor')) navigate('/sponsor');
+  const role = await getUserAppRole(uid);
+  if (role === 'sponsor') navigate('/panel-sponsor');
+  else if (role === 'admin') navigate('/admin/products');
   else navigate('/dashboard');
 }
 
@@ -80,6 +80,7 @@ export default function Login() {
     setLoading(false);
     if (!result.ok) {
       toast({ title: 'No se pudo iniciar sesión con Google', description: result.message, variant: 'destructive' });
+      return;
     }
   };
 
@@ -110,7 +111,7 @@ export default function Login() {
         title: kind === 'sponsor' ? 'Sesión laboratorio iniciada' : 'Sesión profesional iniciada',
         description: target ? `Demo de ${target.sponsor_name}` : 'Cuenta de prueba activada.',
       });
-      if (kind === 'sponsor') navigate('/sponsor');
+      if (kind === 'sponsor') navigate('/panel-sponsor');
       else await redirectByRole(navigate);
     } catch (err) {
       toast({ title: 'No se pudo iniciar la demo', description: (err as Error).message, variant: 'destructive' });

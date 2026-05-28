@@ -109,23 +109,15 @@ Deno.serve(async (req) => {
           .eq("user_id", existingId);
       }
 
-      const { data: existingSponsorRole } = await admin
-        .from("user_roles")
-        .select("id")
-        .eq("user_id", existingId)
-        .eq("role", "sponsor")
-        .maybeSingle();
-      if (!existingSponsorRole) {
-        await admin.from("user_roles").insert({
-          user_id: existingId,
-          role: "sponsor",
-        });
-      }
+      // Demo laboratorio must be sponsor-only (single source of truth for ACL).
       await admin
         .from("user_roles")
         .delete()
-        .eq("user_id", existingId)
-        .eq("role", "admin");
+        .eq("user_id", existingId);
+      await admin.from("user_roles").insert({
+        user_id: existingId,
+        role: "sponsor",
+      });
 
       const { data: targetSponsor } = await admin
         .from("sponsors")

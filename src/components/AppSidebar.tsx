@@ -71,7 +71,7 @@ const adminItems: SidebarItem[] = [
 ];
 
 const sponsorCommercialItems: SidebarItem[] = [
-  { title: 'Panel Sponsor', url: '/sponsor', icon: Briefcase, section: 'panel-sponsor' },
+  { title: 'Panel Sponsor', url: '/panel-sponsor', icon: Briefcase, section: 'panel-sponsor' },
   { title: 'Estadísticas', url: '/statistics', icon: BarChart3, section: 'estadisticas' },
   { title: 'Reportes', url: '/reports', icon: FileText, section: 'reportes' },
 ];
@@ -91,12 +91,12 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const { currentUser } = useApp();
   const { sponsor } = useSponsor();
-  const { role, can } = usePermissions();
+  const { role, can, ready } = usePermissions();
   const navigate = useNavigate();
   const location = useLocation();
   const isAdmin = role === 'ADMIN';
   const isSponsor = role === 'SPONSOR';
-  const isProfessional = role === 'CLINICIAN' || (!role && !!currentUser);
+  const isProfessional = role === 'CLINICIAN';
 
   const filterByPermission = (items: SidebarItem[]) => items.filter((item) => can(item.section));
 
@@ -184,7 +184,26 @@ export function AppSidebar() {
   const sponsorProducts = filterByPermission(sponsorProductsItems);
   const sponsorAccount = filterByPermission(sponsorAccountItems);
 
-  const homePath = isSponsor ? '/sponsor' : '/dashboard';
+  const homePath = isSponsor ? '/panel-sponsor' : '/dashboard';
+
+  if (currentUser && !ready) {
+    return (
+      <Sidebar collapsible="icon">
+        <SidebarHeader className="border-b border-sidebar-border/60">
+          <div className="flex items-center gap-2 px-2 py-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
+              <Activity className="h-4 w-4 text-primary" />
+            </div>
+            {!collapsed && (
+              <div className="leading-tight">
+                <p className="font-display text-sm font-semibold tracking-tight">CuraTrack</p>
+              </div>
+            )}
+          </div>
+        </SidebarHeader>
+      </Sidebar>
+    );
+  }
 
   return (
     <Sidebar collapsible="icon">

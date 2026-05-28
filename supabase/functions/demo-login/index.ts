@@ -131,15 +131,12 @@ Deno.serve(async (req) => {
           .eq("user_id", existingId);
       }
 
-      const { data: profRole } = await admin
+      // Demo profesional must be professional-only (single source of truth for ACL).
+      await admin
         .from("user_roles")
-        .select("id")
-        .eq("user_id", existingId)
-        .eq("role", "professional")
-        .maybeSingle();
-      if (!profRole) {
-        await admin.from("user_roles").insert({ user_id: existingId, role: "professional" });
-      }
+        .delete()
+        .eq("user_id", existingId);
+      await admin.from("user_roles").insert({ user_id: existingId, role: "professional" });
 
       const { count: patientCount } = await admin
         .from("patients")

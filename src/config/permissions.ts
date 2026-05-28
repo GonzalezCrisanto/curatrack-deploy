@@ -1,4 +1,4 @@
-import type { AppRole } from '@/hooks/useAppRole';
+import type { AppRole } from '@/lib/appRole';
 
 export type SystemRole = 'CLINICIAN' | 'SPONSOR' | 'ADMIN';
 

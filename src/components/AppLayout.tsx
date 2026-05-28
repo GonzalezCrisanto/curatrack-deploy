@@ -37,7 +37,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       title: 'Bienvenido a CuraTrack',
       description: `Estás viendo el panel comercial de ${sponsor.sponsor_name}.`,
       action: (
-        <ToastAction altText="Abrir panel sponsor" onClick={() => navigate('/sponsor')}>
+        <ToastAction altText="Abrir panel sponsor" onClick={() => navigate('/panel-sponsor')}>
           Empezar
         </ToastAction>
       ),
@@ -72,7 +72,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 <Menu className="h-4 w-4" />
               </SidebarTrigger>
               <button
-                onClick={() => navigate(role === 'sponsor' ? '/sponsor' : '/dashboard')}
+                onClick={() => navigate(role === 'sponsor' ? '/panel-sponsor' : '/dashboard')}
                 className="flex items-center gap-2 rounded-md px-1 py-1 hover:bg-accent/40 transition-colors"
               >
                 <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">

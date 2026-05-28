@@ -29,7 +29,7 @@ export default function Landing() {
   // If a logged-in user lands on "/", send them to their role home.
   useEffect(() => {
     if (!authReady || !isLoggedIn || !roleReady) return;
-    navigate(role === 'sponsor' ? '/sponsor' : '/dashboard', { replace: true });
+    navigate(role === 'sponsor' ? '/panel-sponsor' : '/dashboard', { replace: true });
   }, [authReady, isLoggedIn, roleReady, role, navigate]);
 
   const appName = sponsor?.app_name ?? 'CuraTrack';

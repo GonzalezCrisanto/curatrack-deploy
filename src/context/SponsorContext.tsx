@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { resolveAppRoleFromRows } from '@/lib/appRole';
 
 export type Sponsor = {
   id: string;
@@ -171,10 +172,9 @@ export function SponsorProvider({ children }: { children: ReactNode }) {
         .from('user_roles')
         .select('role')
         .eq('user_id', uid);
-      const roles = (roleRows ?? []).map((r: any) => r.role as string);
-      const isSponsorOnly = roles.includes('sponsor') && !roles.includes('admin');
+      const role = resolveAppRoleFromRows((roleRows ?? []).map((r: any) => r.role as string));
 
-      if (isSponsorOnly) {
+      if (role === 'sponsor') {
         const { data: mapped } = await supabase
           .from('user_sponsor')
           .select('sponsor_id, sponsors(*)')

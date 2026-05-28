@@ -76,6 +76,7 @@ const App = () => (
                 <Route path="/pacientes" element={<ProtectedRoute requiredPermission="pacientes"><Patients /></ProtectedRoute>} />
                 <Route path="/pacientes/:patientId" element={<ProtectedRoute requiredPermission="pacientes"><PatientDetail /></ProtectedRoute>} />
                 <Route path="/casos-heridas" element={<ProtectedRoute requiredPermission="casos-heridas"><Cases /></ProtectedRoute>} />
+                <Route path="/casos-heridas/:caseId" element={<ProtectedRoute requiredPermission="casos-heridas"><Cases /></ProtectedRoute>} />
                 <Route path="/nueva-curacion" element={<ProtectedRoute requiredPermission="nueva-curacion"><NewCuration /></ProtectedRoute>} />
                 <Route path="/asistente-clinico" element={<ProtectedRoute requiredPermission="asistente-clinico"><Assistant /></ProtectedRoute>} />
                 <Route path="/panel-sponsor" element={<ProtectedRoute requiredPermission="panel-sponsor"><SponsorPanel /></ProtectedRoute>} />

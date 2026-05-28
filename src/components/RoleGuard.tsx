@@ -25,13 +25,13 @@ export function RoleGuard({ allow, children }: Props) {
   }
   if (!isLoggedIn) return <Navigate to="/login" replace state={{ from: location }} />;
   if (role && !allow.includes(role)) {
-    const home = role === 'sponsor' ? '/sponsor' : '/dashboard';
+    const home = role === 'sponsor' ? '/panel-sponsor' : '/dashboard';
     return <Navigate to={home} replace />;
   }
   return <>{children}</>;
 }
 
 export function homeForRole(role: AppRole | null): string {
-  if (role === 'sponsor') return '/sponsor';
+  if (role === 'sponsor') return '/panel-sponsor';
   return '/dashboard';
 }
