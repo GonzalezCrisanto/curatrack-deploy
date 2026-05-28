@@ -199,7 +199,7 @@ export function SponsorProvider({ children }: { children: ReactNode }) {
               .eq('is_active', true)
               .limit(1)
               .maybeSingle();
-            list = sponsorByLab ? [sponsorByLab as Sponsor] : [];
+            list = sponsorByLab ? [sponsorByLab as unknown as Sponsor] : [];
           } else {
             list = [];
           }
