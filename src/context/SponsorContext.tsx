@@ -165,7 +165,7 @@ export function SponsorProvider({ children }: { children: ReactNode }) {
         .select('*')
         .eq('is_active', true)
         .order('sponsor_name');
-      list = (data ?? []) as Sponsor[];
+      list = (data ?? []) as unknown as Sponsor[];
     } else {
       const { data: roleRows } = await supabase
         .from('user_roles')
