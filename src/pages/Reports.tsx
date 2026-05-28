@@ -9,7 +9,6 @@ import {
   FileText, ShieldCheck, Briefcase, Users, Activity, ShoppingBag, TrendingUp,
   DollarSign, Target, Lightbulb, Download, Copy, Printer, Building2,
 } from 'lucide-react';
-import { useApp } from '@/context/AppContext';
 import { useSponsor } from '@/context/SponsorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -32,7 +31,6 @@ function fmtPrice(v: number | null | undefined, c = 'ARS') {
 
 export default function Reports() {
   const { sponsor } = useSponsor();
-  const { patients } = useApp();
   const { toast } = useToast();
   const [period, setPeriod] = useState<Period>('30');
   const [loading, setLoading] = useState(true);
@@ -44,17 +42,14 @@ export default function Reports() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const cutoff = period === 'all' ? null : new Date(Date.now() - parseInt(period, 10) * 86400000).toISOString();
-      let q = supabase.from('supply_orders').select('id,order_number,status,created_at,sent_at,institution,general_wound_type,estimated_total,currency').order('created_at', { ascending: false });
-      if (sponsor?.lab_id) q = q.eq('lab_id', sponsor.lab_id);
-      if (cutoff) q = q.gte('created_at', cutoff);
-      const { data: ords } = await q;
+      const periodDays = period === 'all' ? null : parseInt(period, 10);
+      const { data: ords } = await supabase.rpc('get_sponsor_orders_anon' as never, { p_period_days: periodDays } as never);
       if (cancelled) return;
       setOrders(ords ?? []);
 
       if ((ords ?? []).length > 0) {
         const ids = (ords ?? []).map(o => o.id);
-        const { data: its } = await supabase.from('supply_order_items').select('order_id,product_name,quantity').in('order_id', ids);
+        const { data: its } = await supabase.rpc('get_sponsor_order_items_anon' as never, { p_order_ids: ids } as never);
         if (!cancelled) setItems(its ?? []);
       } else {
         setItems([]);
@@ -73,8 +68,8 @@ export default function Reports() {
   }, [sponsor?.lab_id, period]);
 
   const stats = useMemo(() => {
-    const activeCases = patients.flatMap(p => p.cases).filter(c => c.status !== 'resuelto').length;
-    const evolutions = patients.flatMap(p => p.cases.flatMap(c => c.evolutions)).length;
+    const activeCases = orders.filter(o => o.status === 'enviado' || o.status === 'aprobado').length;
+    const evolutions = items.reduce((s, it) => s + (it.quantity || 0), 0);
     const pending = orders.filter(o => o.status === 'borrador').length;
     const sent = orders.filter(o => o.status === 'enviado').length;
     const confirmed = orders.filter(o => o.status === 'aprobado').length;
@@ -88,11 +83,12 @@ export default function Reports() {
     const requested = Math.max(orders.length, Math.round(addedToCart * 0.7));
 
     return {
-      patients: patients.length, activeCases, evolutions,
+      institutions: new Set(orders.map(o => o.institution).filter(Boolean)).size,
+      activeCases, evolutions,
       total: orders.length, pending, sent, confirmed, totalQty, totalValue,
       recommended, viewed, addedToCart, requested,
     };
-  }, [patients, orders, items]);
+  }, [orders, items]);
 
   const topProducts = useMemo(() => {
     const map = new Map<string, { recos: number; requests: number }>();
@@ -125,9 +121,9 @@ export default function Reports() {
     periodLabel: PERIOD_LABEL[period],
     generatedAt: new Date().toLocaleString('es-AR'),
     kpis: [
-      { label: 'Pacientes impactados', value: stats.patients, hint: 'Anonimizados' },
-      { label: 'Casos activos', value: stats.activeCases },
-      { label: 'Curaciones registradas', value: stats.evolutions },
+      { label: 'Instituciones activas', value: stats.institutions, hint: 'Agregado' },
+      { label: 'Solicitudes activas', value: stats.activeCases },
+      { label: 'Unidades solicitadas', value: stats.evolutions },
       { label: 'Productos sponsor', value: productsCount, hint: 'En catálogo' },
       { label: 'Solicitudes generadas', value: stats.total },
       { label: 'Solicitudes enviadas', value: stats.sent },
@@ -249,9 +245,9 @@ export default function Reports() {
               <h2 className="heading-display text-sm uppercase tracking-wider text-muted-foreground">KPIs principales</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                  { i: Users, l: 'Pacientes impactados', v: stats.patients, h: 'Anonimizados' },
-                  { i: Activity, l: 'Casos activos', v: stats.activeCases },
-                  { i: FileText, l: 'Curaciones registradas', v: stats.evolutions },
+                  { i: Users, l: 'Instituciones activas', v: stats.institutions, h: 'Agregado' },
+                  { i: Activity, l: 'Solicitudes activas', v: stats.activeCases },
+                  { i: FileText, l: 'Unidades solicitadas', v: stats.evolutions },
                   { i: ShoppingBag, l: 'Productos sponsor', v: productsCount, h: 'En catálogo' },
                   { i: Briefcase, l: 'Solicitudes generadas', v: stats.total },
                   { i: TrendingUp, l: 'Solicitudes enviadas', v: stats.sent },
@@ -410,7 +406,7 @@ export default function Reports() {
             <div className="font-body text-xs text-muted-foreground leading-relaxed">
               <strong className="text-foreground">Nota de privacidad.</strong> Este reporte se genera con datos agregados y anonimizados.
               No incluye nombres, DNI, contacto, dirección, fotos ni historia clínica de pacientes.
-              La información expuesta se limita a tipo de herida, institución, profesional, categoría de producto y métricas de adopción del programa sponsor.
+              La información expuesta se limita a tipo de herida agregado, institución y categoría de producto del sponsor.
             </div>
           </div>
 

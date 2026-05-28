@@ -22,6 +22,8 @@ import {
 import { Link } from 'react-router-dom';
 import { OrderStatus } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
+import { usePermissions } from '@/hooks/usePermissions';
+import SponsorOrders from '@/pages/SponsorOrders';
 
 interface OrderRow {
   id: string;
@@ -85,6 +87,7 @@ const PERIOD_OPTIONS = [
 ];
 
 export default function Orders() {
+  const { isSponsorRole } = usePermissions();
   const { toast } = useToast();
   const { sponsor } = useSponsor();
   const [loading, setLoading] = useState(true);
@@ -202,6 +205,10 @@ export default function Orders() {
   }, [orders, itemsByOrder]);
 
   const sponsorName = sponsor?.sponsor_name ?? 'Laboratorio sponsor';
+
+  if (isSponsorRole) {
+    return <SponsorOrders />;
+  }
 
   return (
     <AppLayout>

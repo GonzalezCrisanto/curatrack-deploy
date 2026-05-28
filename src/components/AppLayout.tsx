@@ -1,11 +1,11 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { useApp } from '@/context/AppContext';
 import { useSponsor } from '@/context/SponsorContext';
 import { useAppRole } from '@/hooks/useAppRole';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Activity, LogOut, Menu, Settings, ShoppingCart } from 'lucide-react';
+import { Activity, LogOut, Menu, Settings, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { CartButton, CartDrawer } from '@/components/marketplace/CartDrawer';
@@ -17,16 +17,37 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { currentUser, currentUserName, logout } = useApp();
-  const { sponsor } = useSponsor();
+  const { sponsor, resetBrandingToDefault } = useSponsor();
   const { role } = useAppRole();
+  const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
+  useEffect(() => {
+    if (role !== 'sponsor' || !currentUser?.id || !sponsor) return;
+    const key = `sponsor-first-login:${currentUser.id}`;
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, '1');
+    toast({
+      title: 'Bienvenido a CuraTrack',
+      description: `Estás viendo el panel comercial de ${sponsor.sponsor_name}.`,
+      action: (
+        <ToastAction altText="Abrir panel sponsor" onClick={() => navigate('/sponsor')}>
+          Empezar
+        </ToastAction>
+      ),
+    });
+  }, [role, currentUser?.id, sponsor?.id]);
+
+  const handleLogout = async () => {
+    await logout();
+    resetBrandingToDefault();
+    navigate('/login');
   };
 
   const initials = currentUser
@@ -38,6 +59,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       ? 'Administrativo/a'
       : 'Enfermería';
   const isProfessional = role === 'professional';
+  const showSponsorSubtle = isProfessional && !!sponsor;
 
   return (
     <SidebarProvider>
@@ -58,7 +80,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 </span>
                 <div className="leading-tight text-left">
                   <p className="font-display text-sm font-semibold tracking-tight">CuraTrack</p>
-                  {sponsor && isProfessional && (
+                  {showSponsorSubtle && (
                     <p className="font-body text-[10px] text-muted-foreground">
                       para programa {sponsor.sponsor_name}
                     </p>
@@ -67,10 +89,17 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               </button>
             </div>
             <div className="flex items-center gap-2">
-              <div className="relative">
-                <CartButton />
-                <span className="sr-only">Solicitudes</span>
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="relative">
+                    <CartButton
+                      onClick={() => navigate('/orders')}
+                      ariaLabel="Solicitudes de reposición pendientes"
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>Solicitudes de reposición pendientes</TooltipContent>
+              </Tooltip>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="h-9 px-1.5 gap-2">
@@ -88,7 +117,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate('/orders')}>
-                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    <Package className="mr-2 h-4 w-4" />
                     Solicitudes
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/settings')}>

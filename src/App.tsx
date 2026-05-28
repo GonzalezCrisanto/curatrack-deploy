@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/context/AppContext";
 import { CartProvider } from "@/context/CartContext";
 import { SponsorProvider } from "@/context/SponsorContext";
-import { RoleGuard } from "@/components/RoleGuard";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -32,11 +32,6 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Allowed role groups
-const CLINICAL = ['professional', 'admin'] as const;
-const SPONSOR_OR_ADMIN = ['sponsor', 'admin'] as const;
-const ALL = ['professional', 'sponsor', 'admin'] as const;
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -52,30 +47,44 @@ const App = () => (
                 <Route path="/register" element={<Register />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
 
-                {/* Clinical (professional + admin) */}
-                <Route path="/dashboard" element={<RoleGuard allow={[...CLINICAL]}><Dashboard /></RoleGuard>} />
-                <Route path="/patients" element={<RoleGuard allow={[...CLINICAL]}><Patients /></RoleGuard>} />
-                <Route path="/patients/:patientId" element={<RoleGuard allow={[...CLINICAL]}><PatientDetail /></RoleGuard>} />
-                <Route path="/patients/:patientId/cases/:caseId" element={<RoleGuard allow={[...CLINICAL]}><CaseDetail /></RoleGuard>} />
-                <Route path="/cases" element={<RoleGuard allow={[...CLINICAL]}><Cases /></RoleGuard>} />
-                <Route path="/curation/new" element={<RoleGuard allow={[...CLINICAL]}><NewCuration /></RoleGuard>} />
-                <Route path="/agenda" element={<RoleGuard allow={[...CLINICAL]}><Agenda /></RoleGuard>} />
-                <Route path="/assistant" element={<RoleGuard allow={[...CLINICAL]}><Assistant /></RoleGuard>} />
+                {/* Clinical */}
+                <Route path="/dashboard" element={<ProtectedRoute requiredPermission="dashboard"><Dashboard /></ProtectedRoute>} />
+                <Route path="/patients" element={<ProtectedRoute requiredPermission="pacientes"><Patients /></ProtectedRoute>} />
+                <Route path="/patients/:patientId" element={<ProtectedRoute requiredPermission="pacientes"><PatientDetail /></ProtectedRoute>} />
+                <Route path="/patients/:patientId/cases/:caseId" element={<ProtectedRoute requiredPermission="casos-heridas"><CaseDetail /></ProtectedRoute>} />
+                <Route path="/cases" element={<ProtectedRoute requiredPermission="casos-heridas"><Cases /></ProtectedRoute>} />
+                <Route path="/curation/new" element={<ProtectedRoute requiredPermission="nueva-curacion"><NewCuration /></ProtectedRoute>} />
+                <Route path="/agenda" element={<ProtectedRoute requiredPermission="agenda"><Agenda /></ProtectedRoute>} />
+                <Route path="/assistant" element={<ProtectedRoute requiredPermission="asistente-clinico"><Assistant /></ProtectedRoute>} />
 
-                {/* Sponsor + admin */}
-                <Route path="/sponsor" element={<RoleGuard allow={[...SPONSOR_OR_ADMIN]}><SponsorPanel /></RoleGuard>} />
-                <Route path="/reports" element={<RoleGuard allow={[...SPONSOR_OR_ADMIN]}><Reports /></RoleGuard>} />
-                <Route path="/statistics" element={<RoleGuard allow={[...SPONSOR_OR_ADMIN]}><Statistics /></RoleGuard>} />
+                {/* Sponsor */}
+                <Route path="/sponsor" element={<ProtectedRoute requiredPermission="panel-sponsor"><SponsorPanel /></ProtectedRoute>} />
+                <Route path="/reports" element={<ProtectedRoute requiredPermission="reportes"><Reports /></ProtectedRoute>} />
+                <Route path="/statistics" element={<ProtectedRoute requiredPermission="estadisticas"><Statistics /></ProtectedRoute>} />
 
-                {/* Shared (all signed-in) */}
-                <Route path="/marketplace" element={<RoleGuard allow={[...ALL]}><Marketplace /></RoleGuard>} />
-                <Route path="/orders" element={<RoleGuard allow={[...ALL]}><Orders /></RoleGuard>} />
-                <Route path="/settings" element={<RoleGuard allow={[...ALL]}><Settings /></RoleGuard>} />
+                {/* Shared authenticated routes */}
+                <Route path="/marketplace" element={<ProtectedRoute requiredAnyOf={['catalogo-clinico', 'catalogo-productos']}><Marketplace /></ProtectedRoute>} />
+                <Route path="/orders" element={<ProtectedRoute requiredAnyOf={['solicitudes-reposicion', 'pedidos']}><Orders /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
                 {/* Admin only */}
-                <Route path="/admin/products" element={<RoleGuard allow={['admin']}><AdminProducts /></RoleGuard>} />
-                <Route path="/admin/orders" element={<RoleGuard allow={['admin']}><AdminOrders /></RoleGuard>} />
-                <Route path="/admin/accounts" element={<RoleGuard allow={['admin']}><AdminAccounts /></RoleGuard>} />
+                <Route path="/admin/products" element={<ProtectedRoute requiredPermission="admin-productos"><AdminProducts /></ProtectedRoute>} />
+                <Route path="/admin/orders" element={<ProtectedRoute requiredPermission="admin-pedidos"><AdminOrders /></ProtectedRoute>} />
+                <Route path="/admin/accounts" element={<ProtectedRoute requiredPermission="admin-cuentas"><AdminAccounts /></ProtectedRoute>} />
+
+                {/* Alias routes in Spanish */}
+                <Route path="/pacientes" element={<ProtectedRoute requiredPermission="pacientes"><Patients /></ProtectedRoute>} />
+                <Route path="/pacientes/:patientId" element={<ProtectedRoute requiredPermission="pacientes"><PatientDetail /></ProtectedRoute>} />
+                <Route path="/casos-heridas" element={<ProtectedRoute requiredPermission="casos-heridas"><Cases /></ProtectedRoute>} />
+                <Route path="/nueva-curacion" element={<ProtectedRoute requiredPermission="nueva-curacion"><NewCuration /></ProtectedRoute>} />
+                <Route path="/asistente-clinico" element={<ProtectedRoute requiredPermission="asistente-clinico"><Assistant /></ProtectedRoute>} />
+                <Route path="/panel-sponsor" element={<ProtectedRoute requiredPermission="panel-sponsor"><SponsorPanel /></ProtectedRoute>} />
+                <Route path="/estadisticas" element={<ProtectedRoute requiredPermission="estadisticas"><Statistics /></ProtectedRoute>} />
+                <Route path="/reportes" element={<ProtectedRoute requiredPermission="reportes"><Reports /></ProtectedRoute>} />
+                <Route path="/catalogo-productos" element={<ProtectedRoute requiredPermission="catalogo-productos"><AdminProducts /></ProtectedRoute>} />
+                <Route path="/pedidos" element={<ProtectedRoute requiredPermission="pedidos"><Orders /></ProtectedRoute>} />
+                <Route path="/configuracion" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/cuentas" element={<ProtectedRoute requiredPermission="admin-cuentas"><AdminAccounts /></ProtectedRoute>} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>

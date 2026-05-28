@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Plus, Minus, ShoppingCart, ImageOff, AlertCircle } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingCart, ImageOff, AlertCircle, Package } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { CheckoutDialog } from './CheckoutDialog';
 
@@ -158,17 +158,24 @@ export function CartDrawer() {
   );
 }
 
-export function CartButton() {
+export function CartButton({
+  onClick,
+  ariaLabel = 'Solicitudes de reposición pendientes',
+}: {
+  onClick?: () => void;
+  ariaLabel?: string;
+}) {
   const { setOpen, itemCount } = useCart();
+  const handleClick = onClick ?? (() => setOpen(true));
   return (
     <Button
       variant="ghost"
       size="icon"
       className="relative h-9 w-9"
-      onClick={() => setOpen(true)}
-      aria-label="Abrir carrito"
+      onClick={handleClick}
+      aria-label={ariaLabel}
     >
-      <ShoppingCart className="h-4 w-4" />
+      <Package className="h-4 w-4" />
       {itemCount > 0 && (
         <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
           {itemCount > 99 ? '99+' : itemCount}

@@ -81,12 +81,13 @@ function statusChipClasses(status?: string) {
 export default function Dashboard() {
   const { patients, currentUserName, patientsLoading } = useApp();
   const { sponsor } = useSponsor();
-  const { role } = useAppRole();
+  const { role, ready: roleReady } = useAppRole();
   const navigate = useNavigate();
   const patientSearchRef = useRef<HTMLInputElement | null>(null);
   const [orderCount, setOrderCount] = useState({ total: 0, pending: 0, sent: 0 });
   const [recommendedProducts, setRecommendedProducts] = useState<Array<{ name: string; category?: string }>>([]);
   const [showAllOpportunities, setShowAllOpportunities] = useState(false);
+  const [showAllAlerts, setShowAllAlerts] = useState(false);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date();
@@ -191,48 +192,62 @@ export default function Dashboard() {
       severity: 'destructive' | 'warning' | 'info';
       icon: typeof AlertTriangle;
       to?: string;
+      patientName?: string;
+      message?: string;
     }> = [];
     casesWithPatient.forEach((c) => {
       const caseDetail = `/patients/${c.patientId}/cases/${c.caseId}`;
       const patientDisplayName = c.patientName?.trim() || 'Paciente sin identificar';
       if (c.caseStatus === 'critico') {
+        const message = `${c.woundType || 'Herida'} en estado crítico`;
         list.push({
           type: 'critical',
-          label: `${patientDisplayName}: ${c.woundType || 'Herida'} en estado crítico`,
+          label: `${patientDisplayName}: ${message}`,
           severity: 'destructive',
           icon: AlertTriangle,
           to: caseDetail,
+          patientName: patientDisplayName,
+          message,
         });
       }
       if (c.evolutions.some((e) => e.nextControl && e.nextControl < today)) {
+        const message = 'control vencido';
         list.push({
           type: 'overdue',
-          label: `${patientDisplayName}: control vencido`,
+          label: `${patientDisplayName}: ${message}`,
           severity: 'warning',
           icon: Clock,
           to: caseDetail,
+          patientName: patientDisplayName,
+          message,
         });
       }
       const last = c.evolutions.map(e => e.date).sort().slice(-1)[0];
       if (last && c.caseStatus !== 'resuelto') {
         const days = (Date.now() - new Date(last + 'T12:00:00').getTime()) / 86400000;
         if (days > 14) {
+          const message = 'sin evolución en 14+ días';
           list.push({
             type: 'no-evo',
-            label: `${patientDisplayName}: sin evolución en 14+ días`,
+            label: `${patientDisplayName}: ${message}`,
             severity: 'warning',
             icon: AlertCircle,
             to: caseDetail,
+            patientName: patientDisplayName,
+            message,
           });
         }
       }
       if (Number(c.pain ?? 0) >= 7) {
+        const message = 'dolor elevado (≥7)';
         list.push({
           type: 'pain',
-          label: `${patientDisplayName}: dolor elevado (≥7)`,
+          label: `${patientDisplayName}: ${message}`,
           severity: 'warning',
           icon: Activity,
           to: caseDetail,
+          patientName: patientDisplayName,
+          message,
         });
       }
     });
@@ -241,6 +256,23 @@ export default function Dashboard() {
     }
     return list.slice(0, 6);
   }, [casesWithPatient, today]);
+
+  const orderedAlerts = useMemo(() => {
+    const rank = (severity: 'destructive' | 'warning' | 'info') => {
+      if (severity === 'destructive') return 0;
+      if (severity === 'warning') return 1;
+      return 2;
+    };
+    return [...alerts].sort((a, b) => rank(a.severity) - rank(b.severity));
+  }, [alerts]);
+
+  const visibleAlerts = useMemo(() => {
+    if (showAllAlerts || orderedAlerts.length <= 5) return orderedAlerts;
+    const criticalFirst = orderedAlerts.filter((a) => a.severity === 'destructive');
+    const others = orderedAlerts.filter((a) => a.severity !== 'destructive');
+    const keepOthers = Math.max(0, 5 - criticalFirst.length);
+    return [...criticalFirst, ...others.slice(0, keepOthers)];
+  }, [orderedAlerts, showAllAlerts]);
 
   const alertCaseCount = new Set(alerts.filter(a => a.to).map(a => a.to)).size;
   const criticalAlerts = alerts.filter((a) => a.type === 'critical' && a.to).slice(0, 3);
@@ -355,6 +387,24 @@ export default function Dashboard() {
 
   const sponsorName = sponsor?.sponsor_name ?? 'Programa clínico';
   const showCommercialPanels = role === 'admin' || role === 'sponsor';
+  const dashboardSubtitle = role === 'professional' ? 'Panel clínico' : 'Cabina de control clínico-comercial';
+  const showSponsorBadgeInHeader = role !== 'professional';
+
+  if (!roleReady) {
+    return (
+      <AppLayout>
+        <div className="space-y-4">
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 w-full rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="h-80 w-full rounded-xl" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   const controlsByDate = useMemo(() => {
     const map = new Map<string, {
@@ -621,14 +671,16 @@ export default function Dashboard() {
         <div className="animate-fade-in max-w-7xl mx-auto h-full flex flex-col gap-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <Badge variant="outline" className="font-body text-[10px] uppercase tracking-wider border-primary/30 text-primary bg-primary/5 mb-2">
-                Programa sponsor: {sponsorName}
-              </Badge>
+              {showSponsorBadgeInHeader && (
+                <Badge variant="outline" className="font-body text-[10px] uppercase tracking-wider border-primary/30 text-primary bg-primary/5 mb-2">
+                  Programa sponsor: {sponsorName}
+                </Badge>
+              )}
               <h1 className="heading-display text-2xl md:text-3xl">
                 {getGreeting()}, {currentUserName || 'profesional'}
               </h1>
               <p className="font-body text-sm text-muted-foreground mt-1 capitalize">
-                {todayLabel()} · Cabina de control clínico-comercial
+                {todayLabel()} · {dashboardSubtitle}
               </p>
             </div>
             <div className="flex flex-wrap gap-2 items-center">
@@ -858,28 +910,78 @@ export default function Dashboard() {
               </p>
             </CardHeader>
             <CardContent className="p-5 pt-0 space-y-2">
-              {alerts.map((a, i) => {
-                const colorMap = {
-                  destructive: 'bg-destructive/10 text-destructive border-destructive/30',
-                  warning: 'bg-warning/10 text-warning border-warning/30',
-                  info: 'bg-success/10 text-success border-success/30',
-                } as const;
-                const alertClasses = `w-full text-left flex items-start gap-2.5 p-2.5 rounded-lg border ${colorMap[a.severity]} ${a.to ? 'hover:shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1' : ''}`;
+              {visibleAlerts.map((a, i) => {
+                const isCritical = a.severity === 'destructive';
+                const isWarning = a.severity === 'warning';
+                const role = isCritical ? 'alert' : 'status';
+                const boxClasses = isCritical
+                  ? 'border-l-4 border-l-destructive bg-destructive/10 border-destructive/30 text-destructive'
+                  : isWarning
+                    ? 'border-l-[3px] border-l-warning bg-warning/10 border-warning/30 text-warning'
+                    : 'border-l-[3px] border-l-info bg-info/10 border-info/30 text-info';
+                const iconSize = isCritical ? 'h-5 w-5' : 'h-4 w-4';
+                const iconColor = isCritical
+                  ? 'text-destructive'
+                  : isWarning
+                    ? 'text-warning'
+                    : 'text-info';
+                const IconComp = isCritical ? AlertTriangle : isWarning ? Clock : AlertCircle;
+
+                const alertBody = (
+                  <div className={`w-full text-left flex items-start gap-2.5 p-2.5 rounded-lg border ${boxClasses}`}>
+                    <IconComp className={`${iconSize} shrink-0 mt-0.5 ${iconColor}`} />
+                    <div className="font-body text-xs leading-relaxed">
+                      {a.patientName ? (
+                        <>
+                          <span className={isCritical ? 'font-semibold text-foreground' : 'font-normal text-foreground'}>
+                            {a.patientName}
+                          </span>
+                          {': '}
+                          <span>{a.message ?? a.label}</span>
+                        </>
+                      ) : (
+                        <span>{a.label}</span>
+                      )}
+                    </div>
+                  </div>
+                );
+
                 if (!a.to) {
                   return (
-                    <div key={i} className={alertClasses}>
-                      <a.icon className="h-4 w-4 shrink-0 mt-0.5" />
-                      <div className="font-body text-xs leading-relaxed">{a.label}</div>
+                    <div key={i} role={role}>
+                      {alertBody}
                     </div>
                   );
                 }
+
                 return (
-                  <button key={i} onClick={() => navigate(a.to!)} className={alertClasses}>
-                    <a.icon className="h-4 w-4 shrink-0 mt-0.5" />
-                    <div className="font-body text-xs leading-relaxed">{a.label}</div>
-                  </button>
+                  <div key={i} role={role}>
+                    <button
+                      onClick={() => navigate(a.to!)}
+                      className="w-full rounded-lg transition hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                      aria-label={`Alerta ${isCritical ? 'crítica' : isWarning ? 'de advertencia' : 'informativa'}: ${a.label}`}
+                    >
+                      {alertBody}
+                    </button>
+                  </div>
                 );
               })}
+              {orderedAlerts.length > 5 && !showAllAlerts && (
+                <button
+                  onClick={() => setShowAllAlerts(true)}
+                  className="font-body text-xs text-primary underline underline-offset-2"
+                >
+                  Ver todas las alertas ({orderedAlerts.length})
+                </button>
+              )}
+              {orderedAlerts.length > 5 && showAllAlerts && (
+                <button
+                  onClick={() => setShowAllAlerts(false)}
+                  className="font-body text-xs text-primary underline underline-offset-2"
+                >
+                  Ver menos alertas
+                </button>
+              )}
             </CardContent>
           </Card>
 

@@ -75,7 +75,8 @@ export function exportSponsorReportPdf(sponsor: Sponsor, data: SponsorReportData
   .opp .badge { background: ${primary}; color: white; border-radius: 99px; min-width: 26px; text-align: center; font-size: 11px; padding: 2px 8px; font-weight: 700; }
   .opp .body small { color: #888; display: block; }
   .privacy { margin-top: 26px; padding: 10px 12px; border-radius: 6px; background: #f5f8fc; border: 1px solid #e1e8f1; font-size: 10.5px; color: #555; }
-  .footer { margin-top: 22px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #eef1f5; padding-top: 10px; }
+  .footer { margin-top: 22px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #eef1f5; padding-top: 10px; display:flex; align-items:center; justify-content:center; gap:10px; }
+  .footer-logo { height: 18px; max-width: 80px; object-fit: contain; opacity: 0.8; }
   .pill { display: inline-block; font-size: 10px; padding: 1px 8px; border-radius: 99px; background: #eef3fb; color: ${primary}; font-weight: 600; }
 </style></head>
 <body>
@@ -164,7 +165,8 @@ export function exportSponsorReportPdf(sponsor: Sponsor, data: SponsorReportData
   </div>
 
   <div class="footer">
-    ${sponsor.legal_footer ?? `${sponsor.app_name} — Documento generado para el programa ${sponsor.sponsor_name}`}
+    ${sponsor.logo_url ? `<img class="footer-logo" src="${sponsor.logo_url}" alt="${sponsor.sponsor_name}"/>` : ''}
+    <span>${sponsor.legal_footer ?? `${sponsor.app_name} — Documento generado para el programa ${sponsor.sponsor_name}`}</span>
   </div>
   <script>window.onload = () => window.print();</script>
 </body></html>`;

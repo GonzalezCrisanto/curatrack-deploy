@@ -13,6 +13,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Package, Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { useSponsor } from '@/context/SponsorContext';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface ProductForm {
   name: string;
@@ -52,6 +54,8 @@ function formFromProduct(p: LabProduct): ProductForm {
 }
 
 export default function AdminProducts() {
+  const { sponsor } = useSponsor();
+  const { isSponsorRole } = usePermissions();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<LabProduct[]>([]);
@@ -65,15 +69,21 @@ export default function AdminProducts() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      // Load all products (admin sees all, including inactive)
-      const { data: prods } = await supabase.from('lab_products').select('*').order('name');
+      let q = supabase.from('lab_products').select('*').order('name');
+      if (isSponsorRole && sponsor?.lab_id) {
+        q = q.eq('lab_id', sponsor.lab_id);
+      }
+      const { data: prods } = await q;
       setProducts((prods ?? []) as LabProduct[]);
-      // Get the lab ID
-      const { data: labs } = await supabase.from('labs').select('id').eq('is_active', true).limit(1);
-      if (labs?.[0]) setLabId(labs[0].id);
+      if (isSponsorRole && sponsor?.lab_id) {
+        setLabId(sponsor.lab_id);
+      } else {
+        const { data: labs } = await supabase.from('labs').select('id').eq('is_active', true).limit(1);
+        if (labs?.[0]) setLabId(labs[0].id);
+      }
       setLoading(false);
     })();
-  }, []);
+  }, [isSponsorRole, sponsor?.lab_id]);
 
   const filtered = products.filter(p => {
     if (!search) return true;
@@ -82,6 +92,10 @@ export default function AdminProducts() {
   });
 
   const openNew = () => {
+    if (isSponsorRole && !labId) {
+      toast({ title: 'No se encontró laboratorio activo', variant: 'destructive' });
+      return;
+    }
     setEditingId(null);
     setForm(emptyForm);
     setDialogOpen(true);
@@ -117,7 +131,11 @@ export default function AdminProducts() {
 
     if (editingId) {
       const { lab_id: _l, ...updatable } = payload;
-      const { error } = await supabase.from('lab_products').update(updatable).eq('id', editingId);
+      let q = supabase.from('lab_products').update(updatable).eq('id', editingId);
+      if (isSponsorRole && sponsor?.lab_id) {
+        q = q.eq('lab_id', sponsor.lab_id);
+      }
+      const { error } = await q;
       if (error) {
         toast({ title: 'Error al guardar', description: error.message, variant: 'destructive' });
       } else {
@@ -126,6 +144,11 @@ export default function AdminProducts() {
         setDialogOpen(false);
       }
     } else {
+      if (!payload.lab_id) {
+        toast({ title: 'No se pudo identificar el laboratorio', variant: 'destructive' });
+        setSaving(false);
+        return;
+      }
       const { data, error } = await supabase.from('lab_products').insert(payload).select().single();
       if (error) {
         toast({ title: 'Error al crear', description: error.message, variant: 'destructive' });
@@ -139,6 +162,20 @@ export default function AdminProducts() {
   };
 
   const handleDelete = async (p: LabProduct) => {
+    if (isSponsorRole) {
+      const { error } = await supabase
+        .from('lab_products')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('id', p.id)
+        .eq('lab_id', sponsor?.lab_id ?? '');
+      if (error) {
+        toast({ title: 'Error al archivar', description: error.message, variant: 'destructive' });
+      } else {
+        setProducts(prev => prev.map(x => (x.id === p.id ? { ...x, is_active: false } : x)));
+        toast({ title: 'Producto archivado' });
+      }
+      return;
+    }
     if (!confirm(`¿Eliminar "${p.name}"?`)) return;
     const { error } = await supabase.from('lab_products').delete().eq('id', p.id);
     if (error) {
@@ -159,10 +196,12 @@ export default function AdminProducts() {
           <div>
             <h1 className="font-heading text-2xl md:text-3xl font-bold flex items-center gap-2">
               <Package className="h-7 w-7 text-primary" />
-              Gestión de productos
+              {isSponsorRole ? 'Catálogo de productos del sponsor' : 'Gestión de productos'}
             </h1>
             <p className="text-sm text-muted-foreground font-body mt-1">
-              Administrá el catálogo de insumos del marketplace.
+              {isSponsorRole
+                ? 'Administrá exclusivamente los productos de tu laboratorio.'
+                : 'Administrá el catálogo de insumos del marketplace.'}
             </p>
           </div>
           <Button onClick={openNew} className="gap-1">

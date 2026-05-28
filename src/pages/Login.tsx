@@ -92,7 +92,9 @@ export default function Login() {
       if (target) await setSponsorBySlug(target.slug, false);
 
       const fnName = kind === 'sponsor' ? 'demo-admin-login' : 'demo-login';
-      const { data, error } = await supabase.functions.invoke(fnName);
+      const { data, error } = await supabase.functions.invoke(fnName, {
+        body: { sponsor_slug: target?.slug ?? sponsor?.slug ?? 'demo' },
+      });
       if (error || !data?.ok) throw new Error(error?.message || data?.message || 'No se pudo preparar la cuenta demo');
       if (!data.access_token || !data.refresh_token) throw new Error('Sesión demo inválida');
       const { error: setErr } = await supabase.auth.setSession({
@@ -108,7 +110,7 @@ export default function Login() {
         title: kind === 'sponsor' ? 'Sesión laboratorio iniciada' : 'Sesión profesional iniciada',
         description: target ? `Demo de ${target.sponsor_name}` : 'Cuenta de prueba activada.',
       });
-      if (kind === 'sponsor') navigate('/admin/orders');
+      if (kind === 'sponsor') navigate('/sponsor');
       else await redirectByRole(navigate);
     } catch (err) {
       toast({ title: 'No se pudo iniciar la demo', description: (err as Error).message, variant: 'destructive' });

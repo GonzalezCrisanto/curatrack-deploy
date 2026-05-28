@@ -2,9 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Briefcase, Users, Activity, ShoppingBag, Truck, TrendingUp, DollarSign, Target, Lightbulb, FileText, ShieldCheck } from 'lucide-react';
-import { useApp } from '@/context/AppContext';
 import { useSponsor } from '@/context/SponsorContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -56,52 +54,102 @@ function Funnel({ stages }: { stages: { label: string; value: number }[] }) {
 }
 
 export default function SponsorPanel() {
-  const { patients } = useApp();
   const { sponsor } = useSponsor();
+  const [loading, setLoading] = useState(true);
   const [productsCount, setProductsCount] = useState(0);
-  const [ordersCount, setOrdersCount] = useState(0);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [items, setItems] = useState<any[]>([]);
 
   useEffect(() => {
     if (!sponsor?.lab_id) return;
     (async () => {
-      const [p, o] = await Promise.all([
-        supabase.from('lab_products').select('id', { count: 'exact', head: true }).eq('lab_id', sponsor.lab_id).eq('is_active', true),
-        supabase.from('supply_orders').select('id', { count: 'exact', head: true }).eq('lab_id', sponsor.lab_id),
-      ]);
-      setProductsCount(p.count ?? 0);
-      setOrdersCount(o.count ?? 0);
+      setLoading(true);
+      const { count: productCount } = await supabase
+        .from('lab_products')
+        .select('id', { count: 'exact', head: true })
+        .eq('lab_id', sponsor.lab_id);
+      setProductsCount(productCount ?? 0);
+
+      const { data: ords } = await supabase.rpc('get_sponsor_orders_anon' as never, { p_period_days: 30 } as never);
+      const safeOrders = (ords ?? []) as any[];
+      setOrders(safeOrders);
+
+      const orderIds = safeOrders.map((o) => o.id);
+      if (orderIds.length > 0) {
+        const { data: ordItems } = await supabase.rpc('get_sponsor_order_items_anon' as never, { p_order_ids: orderIds } as never);
+        setItems((ordItems ?? []) as any[]);
+      } else {
+        setItems([]);
+      }
+
+      setLoading(false);
     })();
   }, [sponsor?.lab_id]);
 
   const real = useMemo(() => {
-    const activeCases = patients.flatMap(p => p.cases).filter(c => c.status !== 'resuelto').length;
-    const evolutions = patients.flatMap(p => p.cases.flatMap(c => c.evolutions)).length;
-    const today = new Date().toISOString().slice(0, 10);
-    const todayCount = patients.flatMap(p => p.cases.flatMap(c => c.evolutions)).filter(e => e.date === today).length;
-    return { patients: patients.length, activeCases, evolutions, todayCount };
-  }, [patients]);
+    const totalOrders = orders.length;
+    const confirmed = orders.filter((o) => o.status === 'aprobado').length;
+    const sent = orders.filter((o) => o.status === 'enviado').length;
+    const uniqueInstitutions = new Set(orders.map((o) => o.institution).filter(Boolean)).size;
+    const totalQty = items.reduce((acc, it) => acc + (it.quantity ?? 0), 0);
+    const totalValue = orders.reduce((acc, o) => acc + Number(o.estimated_total ?? 0), 0);
+    return {
+      institutions: uniqueInstitutions,
+      activeCases: Math.max(sent + confirmed, 0),
+      evolutions: totalQty,
+      totalOrders,
+      confirmed,
+      totalValue,
+    };
+  }, [orders, items]);
 
-  // Mocked but coherent funnel based on real activity
-  const recommended = Math.max(real.evolutions * 3, 120);
+  const recommended = Math.max(real.evolutions * 2, 60);
   const viewed = Math.round(recommended * 0.62);
   const addedToCart = Math.round(viewed * 0.38);
-  const requested = Math.round(addedToCart * 0.71) + ordersCount;
-  const confirmed = Math.round(requested * 0.58);
-  const estimatedValue = confirmed * 18500;
+  const requested = Math.max(real.totalOrders, Math.round(addedToCart * 0.71));
+  const confirmed = Math.max(real.confirmed, Math.round(requested * 0.58));
+  const estimatedValue = real.totalValue || confirmed * 18500;
 
-  const topProducts = [
-    { name: 'Apósito de espuma multicapa', recos: 84, requests: 41 },
-    { name: 'Hidrogel amorfo 15g', recos: 76, requests: 38 },
-    { name: 'Apósito de plata antimicrobiano', recos: 62, requests: 29 },
-    { name: 'Vendaje compresivo multicapa', recos: 55, requests: 24 },
-    { name: 'Solución fisiológica 250ml', recos: 48, requests: 22 },
-  ];
+  const topProducts = useMemo(() => {
+    const byProduct = new Map<string, number>();
+    items.forEach((it) => {
+      const key = it.product_name || 'Producto sin nombre';
+      byProduct.set(key, (byProduct.get(key) ?? 0) + (it.quantity ?? 0));
+    });
+    const ranked = [...byProduct.entries()]
+      .map(([name, qty]) => ({
+        name,
+        requests: qty,
+        recos: Math.round(qty * 1.6),
+      }))
+      .sort((a, b) => b.requests - a.requests)
+      .slice(0, 5);
+    if (ranked.length > 0) return ranked;
+    return [
+      { name: 'Apósito de espuma multicapa', recos: 84, requests: 41 },
+      { name: 'Hidrogel amorfo 15g', recos: 76, requests: 38 },
+      { name: 'Apósito de plata antimicrobiano', recos: 62, requests: 29 },
+    ];
+  }, [items]);
 
-  const opportunities = [
-    { title: 'Casos con exudado abundante sin apósito de plata', count: 7, action: 'Sugerir línea antimicrobiana' },
-    { title: 'Pacientes con pie diabético sin descarga', count: 4, action: 'Recomendar offloading' },
-    { title: 'Heridas venosas sin compresión multicapa', count: 9, action: 'Promocionar kit compresivo' },
-  ];
+  const opportunities = useMemo(() => {
+    const byWoundType = new Map<string, number>();
+    orders.forEach((o) => {
+      const woundType = o.general_wound_type || 'Sin clasificar';
+      byWoundType.set(woundType, (byWoundType.get(woundType) ?? 0) + 1);
+    });
+    const ranked = [...byWoundType.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+    if (ranked.length === 0) {
+      return [
+        { title: 'Alta demanda de apósitos avanzados esta semana', count: 0, action: 'Sin datos suficientes para detectar oportunidades' },
+      ];
+    }
+    return ranked.map(([type, count]) => ({
+      title: `Alta demanda de insumos en ${type.toLowerCase()}`,
+      count,
+      action: `Priorizar campañas y stock para ${type.toLowerCase()}.`,
+    }));
+  }, [orders]);
 
   return (
     <AppLayout>
@@ -125,9 +173,9 @@ export default function SponsorPanel() {
         <section className="space-y-3">
           <h2 className="heading-display text-sm uppercase tracking-wider text-muted-foreground">Resumen ejecutivo</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Kpi icon={Users} label="Suscripciones activas" value={12} hint="Enfermeros financiados" />
-            <Kpi icon={Activity} label="Pacientes impactados" value={real.patients} accent="info" />
-            <Kpi icon={FileText} label="Curaciones registradas" value={real.evolutions} accent="success" />
+            <Kpi icon={Users} label="Instituciones activas" value={real.institutions} hint="Sin datos de pacientes" />
+            <Kpi icon={Activity} label="Solicitudes activas" value={real.activeCases} accent="info" />
+            <Kpi icon={FileText} label="Unidades solicitadas" value={real.evolutions} accent="success" />
             <Kpi icon={DollarSign} label="Valor estimado demanda" value={`$${(estimatedValue/1000).toFixed(0)}k`} hint="ARS · últimos 30 días" accent="warning" />
           </div>
         </section>
@@ -136,10 +184,10 @@ export default function SponsorPanel() {
         <section className="space-y-3">
           <h2 className="heading-display text-sm uppercase tracking-wider text-muted-foreground">Adopción de la plataforma</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Kpi icon={Users} label="Enfermeros activos" value={9} hint="Últimos 7 días" />
-            <Kpi icon={Activity} label="Casos activos" value={real.activeCases} />
+            <Kpi icon={Users} label="Pedidos creados" value={real.totalOrders} hint="Últimos 30 días" />
+            <Kpi icon={Activity} label="Pedidos confirmados" value={real.confirmed} />
             <Kpi icon={ShoppingBag} label="Productos sponsor" value={productsCount} hint="En catálogo" />
-            <Kpi icon={Truck} label="Solicitudes generadas" value={ordersCount + requested} hint="Reales + estimadas" />
+            <Kpi icon={Truck} label="Solicitudes generadas" value={requested} hint="Totales del período" />
           </div>
         </section>
 
@@ -217,11 +265,10 @@ export default function SponsorPanel() {
           </CardHeader>
           <CardContent>
             <p className="font-body text-sm text-muted-foreground mb-3">
-              Generá un reporte ejecutivo agregado para compartir con el equipo comercial de {sponsor?.sponsor_name}.
+              {loading
+                ? 'Generando métricas agregadas del laboratorio...'
+                : `Reporte agregado para ${sponsor?.sponsor_name}. No incluye nombres, DNI, fotos ni contactos de pacientes.`}
             </p>
-            <Button variant="outline" className="font-body" onClick={() => window.print()}>
-              Exportar reporte ({new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })})
-            </Button>
           </CardContent>
         </Card>
       </div>

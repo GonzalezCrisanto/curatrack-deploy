@@ -10,6 +10,7 @@ const corsHeaders = {
 };
 
 const DEMO_EMAIL = "demo@curatrack.app";
+const DEFAULT_SPONSOR_SLUG = "demo";
 
 function randomPassword() {
   const bytes = new Uint8Array(24);
@@ -23,6 +24,16 @@ Deno.serve(async (req) => {
   }
 
   try {
+    let sponsorSlug = DEFAULT_SPONSOR_SLUG;
+    try {
+      const body = await req.json();
+      if (typeof body?.sponsor_slug === "string" && body.sponsor_slug.trim()) {
+        sponsorSlug = body.sponsor_slug.trim().toLowerCase();
+      }
+    } catch {
+      // Optional body; keep default.
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -88,19 +99,46 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Force demo professional account to Laboratorio Demo sponsor.
-      const { data: demoSponsor } = await admin
+      const { data: targetSponsor } = await admin
         .from("sponsors")
-        .select("id")
-        .eq("slug", "demo")
+        .select("id, lab_id, sponsor_name")
+        .eq("slug", sponsorSlug)
         .maybeSingle();
-      if (demoSponsor?.id) {
+      if (targetSponsor?.id) {
         await admin
           .from("user_sponsor")
           .upsert(
-            { user_id: existingId, sponsor_id: demoSponsor.id },
+            { user_id: existingId, sponsor_id: targetSponsor.id },
             { onConflict: "user_id" },
           );
+
+        if (targetSponsor.lab_id) {
+          await admin
+            .from("user_lab_sponsors")
+            .update({ is_active: false })
+            .eq("user_id", existingId);
+          await admin
+            .from("user_lab_sponsors")
+            .upsert(
+              { user_id: existingId, lab_id: targetSponsor.lab_id, is_active: true },
+              { onConflict: "user_id,lab_id" },
+            );
+        }
+
+        await admin
+          .from("profiles")
+          .update({ institution: targetSponsor.sponsor_name ?? "CuraTrack Demo" })
+          .eq("user_id", existingId);
+      }
+
+      const { data: profRole } = await admin
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", existingId)
+        .eq("role", "professional")
+        .maybeSingle();
+      if (!profRole) {
+        await admin.from("user_roles").insert({ user_id: existingId, role: "professional" });
       }
 
       const { count: patientCount } = await admin
