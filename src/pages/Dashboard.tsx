@@ -390,21 +390,6 @@ export default function Dashboard() {
   const dashboardSubtitle = role === 'professional' ? 'Panel clínico' : 'Cabina de control clínico-comercial';
   const showSponsorBadgeInHeader = role !== 'professional';
 
-  if (!roleReady) {
-    return (
-      <AppLayout>
-        <div className="space-y-4">
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-24 w-full rounded-xl" />
-            ))}
-          </div>
-          <Skeleton className="h-80 w-full rounded-xl" />
-        </div>
-      </AppLayout>
-    );
-  }
 
   const controlsByDate = useMemo(() => {
     const map = new Map<string, {
@@ -480,6 +465,23 @@ export default function Dashboard() {
   useEffect(() => {
     dayRefs.current[focusedDate]?.focus();
   }, [focusedDate, calendarMonth]);
+
+  if (!roleReady) {
+    return (
+      <AppLayout>
+        <div className="space-y-4">
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 w-full rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="h-80 w-full rounded-xl" />
+        </div>
+      </AppLayout>
+    );
+  }
+
 
   if (isProfessionalView) {
     return (
