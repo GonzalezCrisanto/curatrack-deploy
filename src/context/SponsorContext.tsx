@@ -165,7 +165,7 @@ export function SponsorProvider({ children }: { children: ReactNode }) {
         .select('*')
         .eq('is_active', true)
         .order('sponsor_name');
-      list = (data ?? []) as Sponsor[];
+      list = (data ?? []) as unknown as Sponsor[];
     } else {
       const { data: roleRows } = await supabase
         .from('user_roles')
@@ -199,7 +199,7 @@ export function SponsorProvider({ children }: { children: ReactNode }) {
               .eq('is_active', true)
               .limit(1)
               .maybeSingle();
-            list = sponsorByLab ? [sponsorByLab as Sponsor] : [];
+            list = sponsorByLab ? [sponsorByLab as unknown as Sponsor] : [];
           } else {
             list = [];
           }
@@ -210,7 +210,7 @@ export function SponsorProvider({ children }: { children: ReactNode }) {
           .select('*')
           .eq('is_active', true)
           .order('sponsor_name');
-        list = (data ?? []) as Sponsor[];
+        list = (data ?? []) as unknown as Sponsor[];
       }
     }
 

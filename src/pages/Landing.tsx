@@ -304,11 +304,6 @@ export default function Landing() {
           <Button size="lg" onClick={() => navigate('/register')} className="font-body text-base px-8 py-6">
             Solicitar demo <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
-          {sponsor?.support_email && (
-            <p className="font-body text-xs text-muted-foreground mt-4">
-              Contacto: <a href={`mailto:${sponsor.support_email}`} className="text-primary underline">{sponsor.support_email}</a>
-            </p>
-          )}
         </div>
       </section>
 
