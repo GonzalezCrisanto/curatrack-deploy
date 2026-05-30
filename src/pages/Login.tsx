@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, Mail, Sparkles, ShieldCheck, Check, Activity, Briefcase, Stethoscope } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, Mail, Sparkles, ShieldCheck, Check, Stethoscope } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { getUserAppRole } from '@/lib/appRole';
@@ -202,13 +202,11 @@ export default function Login() {
             <h1 className="heading-display text-2xl">
               {forgotMode ? 'Restablecer contraseña' : 'Iniciar sesión'}
             </h1>
-            <p className="font-body text-sm text-muted-foreground mt-1">
-              {forgotMode
-                ? 'Te enviaremos un enlace a tu correo'
-                : isSponsorLocked
-                  ? `Accedé a ${appName} como profesional o como laboratorio sponsor.`
-                  : `Elegí un laboratorio para ver la experiencia white-label.`}
-            </p>
+            {forgotMode && (
+              <p className="font-body text-sm text-muted-foreground mt-1">
+                Te enviaremos un enlace a tu correo
+              </p>
+            )}
           </CardHeader>
 
           <CardContent>
@@ -227,135 +225,34 @@ export default function Login() {
               </form>
             ) : (
               <form onSubmit={handleLogin} className="space-y-5">
-                {/* Demo cards by sponsor */}
-                {(demoSponsors.length > 0 || !isSponsorLocked) && (
-                  <div className="space-y-2.5">
-                    {demoSponsors.map((sp) => {
-                      const proKey = `${sp.slug}:pro`;
-                      const spKey = `${sp.slug}:sponsor`;
-                      return (
-                        <div
-                          key={sp.id}
-                          className="rounded-lg border border-border/60 p-3 bg-card hover:border-primary/40 transition-colors"
-                          style={{
-                            background: `linear-gradient(135deg, ${sp.primary_color}0d 0%, ${sp.accent_color}0d 100%)`,
-                          }}
-                        >
-                          <div className="flex items-center gap-2.5 mb-2.5">
-                            {sp.logo_url ? (
-                              <img src={sp.logo_url} alt={sp.sponsor_name} className="h-7 w-auto object-contain" />
-                            ) : (
-                              <div className="h-7 w-7 rounded-md flex items-center justify-center shadow-sm shrink-0"
-                                style={{ background: `linear-gradient(135deg, ${sp.primary_color}, ${sp.accent_color})` }}>
-                                <Activity className="h-4 w-4 text-white" strokeWidth={2.5} />
-                              </div>
-                            )}
-                            <div className="min-w-0 flex-1">
-                              <div className="font-display font-bold text-sm leading-tight truncate">{sp.sponsor_name}</div>
-                              <div className="font-body text-[10px] uppercase tracking-wider text-muted-foreground truncate">{sp.app_name}</div>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <Button type="button" size="sm" disabled={loading}
-                              onClick={() => handleDemoLogin(sp, 'pro')}
-                              className="w-full font-body gap-1.5 text-xs"
-                              style={{ background: sp.primary_color, color: 'white' }}>
-                              <Stethoscope className="h-3.5 w-3.5" />
-                              {loadingKey === proKey ? '...' : 'Profesional'}
-                            </Button>
-                            <Button type="button" size="sm" variant="outline" disabled={loading}
-                              onClick={() => handleDemoLogin(sp, 'sponsor')}
-                              className="w-full font-body gap-1.5 text-xs border-2"
-                              style={{ borderColor: sp.primary_color, color: sp.primary_color }}>
-                              <Briefcase className="h-3.5 w-3.5" />
-                              {loadingKey === spKey ? '...' : 'Laboratorio'}
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {/* Admin demo card — internal mode only */}
-                    {!isSponsorLocked && (
-                      <div
-                        className="rounded-lg border border-border/60 p-3 bg-card hover:border-primary/40 transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5 mb-2.5">
-                          <div className="h-7 w-7 rounded-md flex items-center justify-center bg-slate-700 shrink-0">
-                            <ShieldCheck className="h-4 w-4 text-white" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="font-display font-bold text-sm leading-tight">Administrador</div>
-                            <div className="font-body text-[10px] uppercase tracking-wider text-muted-foreground">Acceso total · todos los módulos</div>
-                          </div>
-                        </div>
-                        <Button type="button" size="sm" disabled={loading}
-                          onClick={() => handleDemoLogin(undefined, 'admin')}
-                          className="w-full font-body gap-1.5 text-xs bg-slate-700 hover:bg-slate-800 text-white">
-                          <ShieldCheck className="h-3.5 w-3.5" />
-                          {loadingKey === 'admin' ? '...' : 'Admin'}
-                        </Button>
+                {/* Demo access */}
+                <div className="space-y-2.5">
+                  <div className="rounded-lg border border-border/60 p-3 bg-card hover:border-primary/40 transition-colors">
+                    <div className="flex items-center gap-2.5 mb-2.5">
+                      <div className="h-7 w-7 rounded-md flex items-center justify-center bg-primary shadow-sm shrink-0">
+                        <Stethoscope className="h-4 w-4 text-white" strokeWidth={2.5} />
                       </div>
-                    )}
-
-                    <p className="text-[11px] text-center text-muted-foreground font-body pt-1">
-                      {isSponsorLocked
-                        ? 'Acceso instantáneo a la demo personalizada de este laboratorio.'
-                        : 'Cambiá de laboratorio desde Configuración una vez dentro.'}
-                    </p>
-                  </div>
-                )}
-
-
-                <Button type="button" variant="outline" size="lg" onClick={handleGoogle} disabled={loading}
-                  className="w-full font-body gap-2 border-border">
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.75h3.57c2.08-1.92 3.28-4.74 3.28-8.07z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.75c-.99.66-2.26 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.12A6.97 6.97 0 0 1 5.46 12c0-.74.13-1.45.36-2.12V7.04H2.18A11 11 0 0 0 1 12c0 1.78.43 3.46 1.18 4.96l3.66-2.84z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.07.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.04l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
-                  </svg>
-                  Continuar con Google
-                </Button>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-                  <div className="relative flex justify-center text-xs">
-                    <span className="bg-card px-2 text-muted-foreground font-body">o con email</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-display font-bold text-sm leading-tight">Acceso demo</div>
+                        <div className="font-body text-[10px] uppercase tracking-wider text-muted-foreground">Probá la app sin crear cuenta</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button type="button" size="sm" disabled={loading}
+                        onClick={() => handleDemoLogin(undefined, 'pro')}
+                        className="w-full font-body gap-1.5 text-xs">
+                        <Stethoscope className="h-3.5 w-3.5" />
+                        {loadingKey === 'pro' ? '...' : 'Profesional'}
+                      </Button>
+                      <Button type="button" size="sm" disabled={loading}
+                        onClick={() => handleDemoLogin(undefined, 'admin')}
+                        className="w-full font-body gap-1.5 text-xs bg-slate-700 hover:bg-slate-800 text-white">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        {loadingKey === 'admin' ? '...' : 'Admin'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <Label className="font-body text-sm">Email</Label>
-                  <Input type="email" value={email} onChange={e => setEmail(e.target.value)} className="font-body" required />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="font-body text-sm">Contraseña</Label>
-                    <button type="button" onClick={() => setForgotMode(true)} className="text-xs text-primary hover:underline font-body">
-                      ¿Olvidaste tu contraseña?
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <Input type={showPass ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} className="font-body pr-10" required />
-                    <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                      {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-                <Button type="submit" className="w-full font-body" size="lg" disabled={loading}>
-                  <LogIn className="mr-2 h-4 w-4" /> {loading ? 'Ingresando...' : 'Ingresar'}
-                </Button>
-
-                <div className="relative py-1">
-                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-                  <div className="relative flex justify-center text-xs">
-                    <span className="bg-card px-2 text-muted-foreground font-body">¿No tenés cuenta?</span>
-                  </div>
-                </div>
-
-                <Button type="button" variant="outline" size="lg" onClick={() => navigate('/register')} className="w-full font-body">
-                  <UserPlus className="mr-2 h-4 w-4" /> Crear cuenta
-                </Button>
               </form>
             )}
             {footer && (
