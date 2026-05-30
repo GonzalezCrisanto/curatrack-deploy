@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Calendar } from '@/components/ui/calendar';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Activity, Users, AlertTriangle, CalendarClock, Clock, ShoppingBag,
@@ -103,6 +104,7 @@ export default function Dashboard() {
   } | null>(null);
   const [patientQuery, setPatientQuery] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [selectedAgendaDay, setSelectedAgendaDay] = useState<Date | undefined>(() => new Date());
   const isProfessionalView = role === 'professional';
 
   useEffect(() => {
@@ -484,184 +486,230 @@ export default function Dashboard() {
 
 
   if (isProfessionalView) {
+    const todayIso = toISO(new Date());
+    const todayAgenda = patients
+      .flatMap((p) =>
+        p.cases.flatMap((c) =>
+          c.evolutions
+            .filter((e) => e.nextControl === todayIso)
+            .map((e) => ({
+              key: `${p.id}-${c.id}-${e.id ?? e.date}`,
+              time: e.time || '',
+              patientId: p.id,
+              caseId: c.id,
+              patientName: `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || 'Paciente sin identificar',
+              address: p.address || '',
+              status: c.status,
+            })),
+        ),
+      )
+      .sort((a, b) => a.time.localeCompare(b.time));
+
+    const query = patientQuery.trim().toLowerCase();
+    const filteredPatients = query.length === 0
+      ? patients
+      : patients.filter((p) =>
+          `${p.firstName ?? ''} ${p.lastName ?? ''} ${p.dni ?? ''}`.toLowerCase().includes(query),
+        );
+
+    const allAppointments = patients.flatMap((p) =>
+      p.cases.flatMap((c) =>
+        c.evolutions
+          .filter((e) => !!e.nextControl)
+          .map((e) => ({
+            key: `${p.id}-${c.id}-${e.id ?? e.date}`,
+            date: e.nextControl!,
+            time: e.time || '',
+            patientId: p.id,
+            caseId: c.id,
+            patientName: `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || 'Paciente sin identificar',
+            address: p.address || '',
+            status: c.status,
+          })),
+      ),
+    );
+
+    const appointmentDates = Array.from(new Set(allAppointments.map((a) => a.date))).map((iso) =>
+      fromISO(iso),
+    );
+
+    const selectedIso = selectedAgendaDay ? toISO(selectedAgendaDay) : todayIso;
+    const selectedDayAgenda = allAppointments
+      .filter((a) => a.date === selectedIso)
+      .sort((a, b) => a.time.localeCompare(b.time));
+
     return (
       <AppLayout>
-        <div className="mx-auto w-full max-w-7xl flex-1">
-          <div className="flex h-full flex-col gap-4 md:gap-5">
-            <section className="rounded-2xl border border-border/70 bg-card p-4 md:p-6">
-              <div className="mx-auto flex max-w-3xl flex-col gap-4">
-                <Button
-                  size="lg"
-                  className="h-20 w-full text-lg md:text-xl font-semibold shadow-sm active:scale-[0.99]"
-                  style={sponsor?.primary_color ? { backgroundColor: sponsor.primary_color } : undefined}
-                  onClick={() => navigate('/curation/new')}
-                >
-                  <Plus className="mr-2 h-5 w-5" />
-                  Nueva curación
-                </Button>
+        <div className="mx-auto w-full max-w-5xl flex-1">
+          <div className="flex h-full flex-col gap-5 p-4 md:p-6">
+            <section>
+              <Button
+                size="lg"
+                className="h-20 w-full text-lg md:text-xl font-semibold shadow-sm active:scale-[0.99]"
+                style={sponsor?.primary_color ? { backgroundColor: sponsor.primary_color } : undefined}
+                onClick={() => navigate('/curation/new')}
+              >
+                <Plus className="mr-2 h-5 w-5" />
+                Nueva curación
+              </Button>
+            </section>
 
-                <div className="sticky top-0 z-20 bg-card/95 py-1 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      ref={patientSearchRef}
-                      value={patientQuery}
-                      onChange={(e) => setPatientQuery(e.target.value)}
-                      placeholder="Buscar paciente por nombre o DNI..."
-                      className="h-12 pl-10 text-base"
-                      aria-label="Buscar paciente por nombre o DNI"
-                    />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarClock className="h-5 w-5 text-primary" />
+                  Agenda de hoy
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {patientsLoading ? (
+                  <div className="space-y-2">
+                    {[...Array(3)].map((_, idx) => (
+                      <Skeleton key={idx} className="h-12 w-full rounded-lg" />
+                    ))}
                   </div>
-                  {patientQuery.trim().length > 0 && (
-                    <div className="mt-2 rounded-xl border border-border bg-background shadow-sm">
-                      {patientSuggestions.length > 0 ? (
-                        <div className="p-1">
-                          {patientSuggestions.map((p) => {
-                            const name = `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim();
-                            return (
-                              <button
-                                key={p.id}
-                                onClick={() => {
-                                  setSelectedPatientId(p.id);
-                                  setPatientQuery(name);
-                                }}
-                                className="flex min-h-11 w-full items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                              >
-                                <span className="font-body text-sm font-medium">{name || 'Paciente sin identificar'}</span>
-                                <span className="font-body text-xs text-muted-foreground">{p.dni || 'Sin DNI'}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="p-3">
-                          <p className="font-body text-sm text-muted-foreground">No encontramos resultados.</p>
-                          <Button
-                            variant="link"
-                            className="h-auto px-0 text-sm"
-                            onClick={() => navigate('/patients?new=1')}
-                          >
-                            Crear nuevo paciente
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {selectedPatient && (
-                  <Button
-                    variant="outline"
-                    className="h-12 justify-start border-primary/40 text-sm font-medium"
-                    onClick={() => navigate(`/curation/new?patientId=${selectedPatient.id}`)}
-                  >
-                    Nueva curación para {`${selectedPatient.firstName ?? ''} ${selectedPatient.lastName ?? ''}`.trim()}
-                  </Button>
-                )}
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-border/70 bg-card p-4 md:p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="heading-display text-xl">Pacientes activos hoy</h2>
-                {professionalPatientCards.length > 6 && (
-                  <Button variant="ghost" size="sm" onClick={() => navigate('/patients')}>
-                    Ver todos los pacientes ({professionalPatientCards.length})
-                  </Button>
-                )}
-              </div>
-
-              {patientsLoading ? (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {[...Array(6)].map((_, idx) => (
-                    <div key={idx} className="rounded-xl border border-border/60 p-4">
-                      <div className="flex items-center gap-3">
-                        <Skeleton className="h-14 w-14 rounded-full" />
-                        <div className="flex-1 space-y-2">
-                          <Skeleton className="h-5 w-3/5" />
-                          <Skeleton className="h-4 w-4/5" />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : professionalPatientCards.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border p-5 text-center">
-                  <p className="font-body text-base font-medium">No hay pacientes activos hoy</p>
-                  <p className="mt-1 font-body text-sm text-muted-foreground">Buscá un paciente o creá uno nuevo.</p>
-                  <Button className="mt-4" onClick={() => navigate('/patients?new=1')}>
-                    <Plus className="mr-1.5 h-4 w-4" />
-                    Nuevo paciente
-                  </Button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {professionalPatientCards.slice(0, 6).map((entry) => {
-                    const initials = entry.patientName
-                      .split(' ')
-                      .filter(Boolean)
-                      .slice(0, 2)
-                      .map((n) => n[0]?.toUpperCase() ?? '')
-                      .join('');
-                    const lastDays = daysSince(entry.lastEvolutionDate);
-                    return (
-                      <button
-                        key={`${entry.patientId}-${entry.caseId}`}
-                        onClick={() => navigate(`/patients/${entry.patientId}/cases/${entry.caseId}`)}
-                        className="group min-h-44 rounded-xl border border-border/70 bg-background p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-base font-semibold text-primary">
-                            {initials || 'P'}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-xl font-semibold leading-tight">{entry.patientName}</p>
-                            <p className="mt-1 truncate text-sm text-muted-foreground">{entry.diagnosis}</p>
-                            <Badge variant="outline" className={`mt-2 text-xs ${statusChipClasses(entry.status)}`}>
-                              {statusLabel(entry.status)}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
-                          <span>
-                            {lastDays == null ? 'Sin curaciones previas' : `Última curación: hace ${lastDays} ${lastDays === 1 ? 'día' : 'días'}`}
+                ) : todayAgenda.length === 0 ? (
+                  <p className="font-body text-sm text-muted-foreground">Sin turnos para hoy.</p>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {todayAgenda.map((a) => (
+                      <li key={a.key}>
+                        <button
+                          onClick={() => navigate(`/patients/${a.patientId}/cases/${a.caseId}`)}
+                          className="flex min-h-12 w-full items-center gap-3 py-2 text-left hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-2"
+                        >
+                          <span className="w-14 shrink-0 font-mono text-sm font-semibold text-primary">
+                            {a.time || '--:--'}
                           </span>
-                          <span className="font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">Abrir</span>
-                        </div>
-                      </button>
-                    );
-                  })}
+                          <span className="flex-1 truncate text-sm font-medium">{a.patientName}</span>
+                          <span className="hidden truncate text-xs text-muted-foreground sm:inline">{a.address || 'Sin domicilio'}</span>
+                          <Badge variant="outline" className={`text-xs ${statusChipClasses(a.status)}`}>
+                            {statusLabel(a.status)}
+                          </Badge>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Pacientes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="relative mb-3">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    ref={patientSearchRef}
+                    value={patientQuery}
+                    onChange={(e) => setPatientQuery(e.target.value)}
+                    placeholder="Buscar por nombre o DNI..."
+                    className="h-11 pl-10 text-base"
+                    aria-label="Buscar paciente por nombre o DNI"
+                  />
                 </div>
-              )}
-            </section>
 
-            {criticalAlerts.length > 0 && (
-              <section className="space-y-2">
-                {criticalAlerts.map((a, idx) => (
-                  <button
-                    key={`${a.type}-${idx}`}
-                    onClick={() => navigate(a.to!)}
-                    className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <AlertTriangle className="h-4 w-4 shrink-0" />
-                    <span className="flex-1 truncate">{a.label}</span>
-                    <span className="font-medium underline underline-offset-2">Atender ahora</span>
-                  </button>
-                ))}
-              </section>
-            )}
+                {patientsLoading ? (
+                  <div className="space-y-2">
+                    {[...Array(4)].map((_, idx) => (
+                      <Skeleton key={idx} className="h-12 w-full rounded-lg" />
+                    ))}
+                  </div>
+                ) : filteredPatients.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border p-4 text-center">
+                    <p className="font-body text-sm text-muted-foreground">
+                      {patients.length === 0 ? 'Todavía no hay pacientes.' : 'No encontramos resultados.'}
+                    </p>
+                    <Button
+                      variant="link"
+                      className="mt-1 h-auto px-0 text-sm"
+                      onClick={() => navigate('/patients?new=1')}
+                    >
+                      Crear nuevo paciente
+                    </Button>
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {filteredPatients.map((p) => {
+                      const name = `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || 'Paciente sin identificar';
+                      return (
+                        <li key={p.id}>
+                          <button
+                            onClick={() => navigate(`/patients/${p.id}`)}
+                            className="flex min-h-12 w-full flex-col gap-1 py-2 px-2 text-left rounded-md hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-row sm:items-center sm:gap-3"
+                          >
+                            <span className="flex-1 truncate text-sm font-medium">{name}</span>
+                            <span className="flex-1 truncate text-sm text-muted-foreground">
+                              {p.address || 'Sin domicilio'}
+                            </span>
+                            <span className="truncate text-sm text-muted-foreground">{p.phone || 'Sin teléfono'}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarClock className="h-5 w-5 text-primary" />
+                  Calendario de turnos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-[auto_1fr]">
+                  <Calendar
+                    mode="single"
+                    selected={selectedAgendaDay}
+                    onSelect={setSelectedAgendaDay}
+                    modifiers={{ hasAppointments: appointmentDates }}
+                    modifiersClassNames={{
+                      hasAppointments: 'bg-primary/15 text-primary font-semibold rounded-md',
+                    }}
+                    className="rounded-lg border border-border/50 p-3"
+                  />
+                  <div className="min-w-0">
+                    <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+                      {selectedAgendaDay
+                        ? `Turnos del ${selectedAgendaDay.getDate()} de ${SPANISH_MONTHS[selectedAgendaDay.getMonth()]}`
+                        : 'Seleccioná un día'}
+                    </h3>
+                    {selectedDayAgenda.length === 0 ? (
+                      <p className="font-body text-sm text-muted-foreground">Sin turnos para este día.</p>
+                    ) : (
+                      <ul className="divide-y divide-border">
+                        {selectedDayAgenda.map((a) => (
+                          <li key={a.key}>
+                            <button
+                              onClick={() => navigate(`/patients/${a.patientId}/cases/${a.caseId}`)}
+                              className="flex min-h-12 w-full items-center gap-3 py-2 text-left hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-2"
+                            >
+                              <span className="w-14 shrink-0 font-mono text-sm font-semibold text-primary">
+                                {a.time || '--:--'}
+                              </span>
+                              <span className="flex-1 truncate text-sm font-medium">{a.patientName}</span>
+                              <span className="hidden truncate text-xs text-muted-foreground sm:inline">{a.address || 'Sin domicilio'}</span>
+                              <Badge variant="outline" className={`text-xs ${statusChipClasses(a.status)}`}>
+                                {statusLabel(a.status)}
+                              </Badge>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 shadow-lg backdrop-blur md:hidden">
-          <Button
-            className="h-12 w-full text-base font-semibold active:scale-[0.99]"
-            style={sponsor?.primary_color ? { backgroundColor: sponsor.primary_color } : undefined}
-            onClick={() => navigate('/curation/new')}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Nueva curación
-          </Button>
         </div>
       </AppLayout>
     );
