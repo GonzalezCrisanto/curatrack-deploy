@@ -28,7 +28,6 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { formatNextControl, getNextControlTime } from '@/lib/appointments';
 
 import ReactMarkdown from 'react-markdown';
 import { marked } from 'marked';
@@ -611,19 +610,13 @@ export default function CaseDetail() {
     { icon: Stethoscope, label: 'Tipo de herida', value: woundCase.woundType },
     { icon: FileText, label: 'Ubicación', value: woundCase.anatomicalLocation },
     { icon: Clock, label: 'Inicio', value: woundCase.startDate },
-    { icon: Ruler, label: 'Tamaño', value: woundCase.size },
-    { icon: FileText, label: 'Profundidad', value: woundCase.depth },
-    { icon: Droplets, label: 'Exudado', value: woundCase.exudate },
-    { icon: ShieldAlert, label: 'Infección', value: woundCase.infection },
-    { icon: Thermometer, label: 'Dolor', value: woundCase.pain },
-    { icon: Pill, label: 'Tratamiento', value: woundCase.treatment },
   ];
 
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
-        <Button variant="outline" onClick={() => navigate(`/patients/${patient.id}`)} className="font-body text-sm border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Volver al paciente
+        <Button variant="outline" onClick={() => navigate('/dashboard')} className="font-body text-sm border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Dashboard
         </Button>
 
         {/* Case Header */}
@@ -902,7 +895,7 @@ export default function CaseDetail() {
                       {/* AI summary moved to case header — no per-evolution button */}
                       {ev.nextControl && (
                         <div className="flex items-center gap-1 text-xs font-body text-muted-foreground">
-                          <Clock className="h-3.5 w-3.5" /> Próximo control: {formatNextControl(ev.nextControl, getNextControlTime(ev))}
+                          <Clock className="h-3.5 w-3.5" /> Próximo control: {ev.nextControl}
                         </div>
                       )}
 

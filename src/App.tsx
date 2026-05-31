@@ -12,7 +12,6 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
-import Patients from "./pages/Patients";
 import NewPatient from "./pages/NewPatient";
 import PatientDetail from "./pages/PatientDetail";
 import CaseDetail from "./pages/CaseDetail";
@@ -74,7 +73,6 @@ const App = () => (
                 <Route path="/admin/accounts" element={<ProtectedRoute requiredPermission="admin-cuentas"><AdminAccounts /></ProtectedRoute>} />
 
                 {/* Alias routes in Spanish */}
-                <Route path="/pacientes" element={<ProtectedRoute requiredPermission="pacientes"><Patients /></ProtectedRoute>} />
                 <Route path="/pacientes/:patientId" element={<ProtectedRoute requiredPermission="pacientes"><PatientDetail /></ProtectedRoute>} />
                 <Route path="/casos-heridas" element={<ProtectedRoute requiredPermission="casos-heridas"><Cases /></ProtectedRoute>} />
                 <Route path="/casos-heridas/:caseId" element={<ProtectedRoute requiredPermission="casos-heridas"><Cases /></ProtectedRoute>} />

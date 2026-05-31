@@ -13,8 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import {
-  ArrowLeft, Plus, Edit, Trash2, ChevronRight, User, Phone, Mail, MapPin, CalendarClock, CalendarDays,
-  FileDown, ShieldAlert, BadgeCheck, UserCog, FileDown as FileDownIcon, Share2, Crown, Users as UsersIcon,
+  ArrowLeft, Plus, Edit, Trash2, ChevronRight, Phone, Mail, CalendarClock, CalendarDays,
+  FileDown, ShieldAlert, BadgeCheck, UserCog, FileDown as FileDownIcon, Users as UsersIcon,
   Droplets, Thermometer, Package, CheckCircle2, Camera, Upload, X,
 } from 'lucide-react';
 import { exportPatientPdf } from '@/lib/exportPdf';
@@ -30,9 +30,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { SharePatientDialog } from '@/components/SharePatientDialog';
 import { PatientConsentCard } from '@/components/PatientConsentCard';
 import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 import { formatPatientAge } from '@/lib/age';
-import { getNextControlTime } from '@/lib/appointments';
 
 const RequiredMark = () => (
   <span className="text-destructive ml-0.5" aria-label="campo obligatorio">*</span>
@@ -144,7 +144,7 @@ export default function PatientDetail() {
         .filter(e => e.nextControl === apptDate)
         .map(e => ({
           patientName: p.id === patientId ? 'Este paciente' : `${p.lastName}, ${p.firstName}`,
-          time: getNextControlTime(e),
+          time: e.time || '',
           woundType: c.woundType,
           isCurrent: p.id === patientId,
         }))
@@ -179,15 +179,13 @@ export default function PatientDetail() {
     <AppLayout>
       <div className="p-8 text-center font-body text-muted-foreground space-y-3">
         <p>No tenés acceso a este paciente o no existe.</p>
-        <Button variant="outline" onClick={() => navigate(-1)} className="font-body border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Volver atrás
+        <Button variant="outline" onClick={() => navigate('/dashboard')} className="font-body border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Dashboard
         </Button>
       </div>
     </AppLayout>
   );
 
-  // Phase 1: every patient belongs to the current user (no sharing yet)
-  const isOwner = true;
   const sharedCount = 0;
 
   const openNewCase = () => {
@@ -387,7 +385,6 @@ export default function PatientDetail() {
       healingFrequency: '',
       observations: '',
       nextControl: apptDate,
-      nextControlTime: apptTime,
       photos: [],
     };
     addEvolution(patient.id, apptCaseId, newEvo);
@@ -399,53 +396,59 @@ export default function PatientDetail() {
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <Button variant="outline" onClick={() => navigate('/dashboard')} className="font-body text-sm border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Volver al dashboard
+            <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Dashboard
           </Button>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="font-body"
-              onClick={() => setShareDialogOpen(true)}
-            >
-              <Share2 className="mr-2 h-4 w-4" />
-              Compartir
-              {sharedCount > 0 && (
-                <Badge variant="secondary" className="ml-2 font-body text-[10px] py-0 px-1.5">
-                  {sharedCount}
-                </Badge>
-              )}
-            </Button>
             <Button variant="outline" size="sm" className="font-body" onClick={() => exportPatientPdf(patient)}>
               <FileDown className="mr-2 h-4 w-4" /> Exportar Historia Clínica
             </Button>
           </div>
         </div>
 
-        {/* Patient info */}
+        {/* Patient header (name + pill) */}
+        <div className="flex items-center gap-3">
+          <div className="min-w-0">
+            <h1 className="heading-display text-2xl truncate">{patient.lastName}, {patient.firstName}</h1>
+          </div>
+          {/* owner badge removed as requested */}
+        </div>
+
+        {/* Patient info (card) */}
         <Card className="border-border/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="heading-display text-xl flex items-center gap-2 flex-wrap">
-              <User className="h-5 w-5 text-primary" />
-              <span>{patient.lastName}, {patient.firstName}</span>
-              {isOwner && (
-                <Badge className="font-body text-[10px] uppercase tracking-wide bg-primary/10 text-primary border-primary/30 ml-2">
-                  <Crown className="h-2.5 w-2.5 mr-1" /> Tu paciente
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 pb-4">
-            {/* Datos personales */}
+          <CardContent className="space-y-4 pt-6 pb-4">
             <div>
-              <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Datos personales</p>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2">
-                <InfoRow icon={<User className="h-3.5 w-3.5" />} label="Edad / Sexo" value={`${formatPatientAge(patient)} · ${patient.gender}`} />
-                <InfoRow icon={<User className="h-3.5 w-3.5" />} label="DNI / Documento" value={patient.dni} />
-                <InfoRow icon={<Phone className="h-3.5 w-3.5" />} label="Teléfono" value={patient.phone} />
-                {patient.email && <InfoRow icon={<Mail className="h-3.5 w-3.5" />} label="Email" value={patient.email} />}
-                <InfoRow icon={<MapPin className="h-3.5 w-3.5" />} label="Domicilio" value={patient.address} />
-                <InfoRow icon={<CalendarDays className="h-3.5 w-3.5" />} label="Fecha de ingreso" value={patient.admissionDate || '—'} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                <div className="flex items-start">
+                  <div className="min-w-0">
+                    <p className="font-body text-lg font-semibold truncate" title={patient.address}>{patient.address || '—'}</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <div className="min-w-0">
+                    <p className="font-body text-lg font-semibold truncate" title={patient.phone}>{patient.phone || '—'}</p>
+                  </div>
+                </div>
+              </div>
+              <Separator className="my-4" />
+
+              {/* Secondary personal data */}
+              <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                <div>
+                  <p className="font-body text-[11px] uppercase tracking-wide">Edad</p>
+                  <p className="font-body">{formatPatientAge(patient)}</p>
+                </div>
+                <div>
+                  <p className="font-body text-[11px] uppercase tracking-wide">DNI / Documento</p>
+                  <p className="font-body">{patient.dni || '—'}</p>
+                </div>
+                <div>
+                  <p className="font-body text-[11px] uppercase tracking-wide">Email</p>
+                  <p className="font-body">{patient.email || '—'}</p>
+                </div>
+                <div>
+                  <p className="font-body text-[11px] uppercase tracking-wide">Fecha de ingreso</p>
+                  <p className="font-body">{patient.admissionDate || '—'}</p>
+                </div>
               </div>
             </div>
 
@@ -506,6 +509,72 @@ export default function PatientDetail() {
         {/* Consentimiento informado */}
         <PatientConsentCard patientId={patient.id} patientName={`${patient.firstName} ${patient.lastName}`} patientDni={patient.dni} />
 
+        {/* Casos / Heridas */}
+        <div className="flex items-center justify-between">
+          <h2 className="heading-display text-xl">Casos / Heridas</h2>
+          <Button onClick={openNewCase} className="font-body" size="sm">
+            <Plus className="mr-2 h-4 w-4" /> Nueva Herida
+          </Button>
+        </div>
+
+        <div className="grid gap-3">
+          {patient.cases.map(c => (
+            <Card
+              key={c.id}
+              className="border-border/50 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => navigate(`/patients/${patient.id}/cases/${c.id}`)}
+            >
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <h3 className="font-body text-sm font-semibold">{c.woundType}</h3>
+                    <Badge className={`font-body text-xs ${statusBadgeClass[c.status]}`}>
+                      {c.status === 'resuelto' ? 'CERRADA ✅' : getStatusLabel(c.status)}
+                    </Badge>
+                  </div>
+                  <p className="font-body text-xs text-muted-foreground">{c.anatomicalLocation}</p>
+                  <div className="flex items-center gap-3 mt-2 text-xs font-body text-muted-foreground">
+                    <span>Inicio: {c.startDate}</span>
+                    <span>Tamaño: {c.size}</span>
+                    <span>{c.evolutions.length} evoluciones</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 ml-4 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => openEditCase(c, e)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={e => e.stopPropagation()}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent onClick={e => e.stopPropagation()}>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="heading-display">¿Eliminar caso?</AlertDialogTitle>
+                        <AlertDialogDescription className="font-body">Se eliminarán todas las evoluciones y fotos de este caso.</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteCase(patient.id, c.id)} className="font-body bg-destructive text-destructive-foreground hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          {patient.cases.length === 0 && (
+            <div className="text-center py-12 border border-dashed border-border rounded-lg">
+              <p className="font-body text-muted-foreground">No hay casos registrados</p>
+              <Button variant="outline" className="font-body mt-3" onClick={openNewCase}>
+                <Plus className="mr-2 h-4 w-4" /> Crear primer caso
+              </Button>
+            </div>
+          )}
+        </div>
+
         {/* Calendario de Turnos del Paciente — un color por herida */}
         {(() => {
           const today = new Date();
@@ -550,7 +619,7 @@ export default function PatientDetail() {
                 .filter(e => e.nextControl && e.nextControl.trim() !== '' && new Date(e.nextControl + 'T12:00:00') >= today)
                 .map(e => ({
                   date: new Date(e.nextControl + 'T12:00:00'),
-                  time: getNextControlTime(e),
+                  time: e.time || '',
                   patientName: `${p.lastName}, ${p.firstName}`,
                   woundType: c.woundType,
                 }))
@@ -714,10 +783,7 @@ export default function PatientDetail() {
             // Default time: first 15-min slot from 09:00 not colliding with any appointment that day.
             const takenThatDay = new Set<string>();
             patients.forEach(p => p.cases.forEach(c => c.evolutions.forEach(e => {
-              if (e.nextControl === defaultDate) {
-                const controlTime = getNextControlTime(e);
-                if (controlTime) takenThatDay.add(controlTime);
-              }
+              if (e.nextControl === defaultDate && e.time) takenThatDay.add(e.time);
             })));
             setApptTime(pickAvailableTime(takenThatDay));
 
@@ -872,71 +938,7 @@ export default function PatientDetail() {
           );
         })()}
 
-        {/* Cases */}
-        <div className="flex items-center justify-between">
-          <h2 className="heading-display text-xl">Casos / Heridas</h2>
-          <Button onClick={openNewCase} className="font-body" size="sm">
-            <Plus className="mr-2 h-4 w-4" /> Nueva Herida
-          </Button>
-        </div>
-
-        <div className="grid gap-3">
-          {patient.cases.map(c => (
-            <Card
-              key={c.id}
-              className="border-border/50 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => navigate(`/patients/${patient.id}/cases/${c.id}`)}
-            >
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <h3 className="font-body text-sm font-semibold">{c.woundType}</h3>
-                    <Badge className={`font-body text-xs ${statusBadgeClass[c.status]}`}>
-                      {c.status === 'resuelto' ? 'CERRADA ✅' : getStatusLabel(c.status)}
-                    </Badge>
-                  </div>
-                  <p className="font-body text-xs text-muted-foreground">{c.anatomicalLocation}</p>
-                  <div className="flex items-center gap-3 mt-2 text-xs font-body text-muted-foreground">
-                    <span>Inicio: {c.startDate}</span>
-                    <span>Tamaño: {c.size}</span>
-                    <span>{c.evolutions.length} evoluciones</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 ml-4 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => openEditCase(c, e)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={e => e.stopPropagation()}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent onClick={e => e.stopPropagation()}>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="heading-display">¿Eliminar caso?</AlertDialogTitle>
-                        <AlertDialogDescription className="font-body">Se eliminarán todas las evoluciones y fotos de este caso.</AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteCase(patient.id, c.id)} className="font-body bg-destructive text-destructive-foreground hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          {patient.cases.length === 0 && (
-            <div className="text-center py-12 border border-dashed border-border rounded-lg">
-              <p className="font-body text-muted-foreground">No hay casos registrados</p>
-              <Button variant="outline" className="font-body mt-3" onClick={openNewCase}>
-                <Plus className="mr-2 h-4 w-4" /> Crear primer caso
-              </Button>
-            </div>
-          )}
-        </div>
+        
 
         {/* Case Form Dialog */}
         {/* New Appointment Dialog */}
@@ -970,10 +972,7 @@ export default function PatientDetail() {
                       setApptDate(newDate);
                       const takenThatDay = new Set<string>();
                       patients.forEach(p => p.cases.forEach(c => c.evolutions.forEach(ev => {
-                        if (ev.nextControl === newDate) {
-                          const controlTime = getNextControlTime(ev);
-                          if (controlTime) takenThatDay.add(controlTime);
-                        }
+                        if (ev.nextControl === newDate && ev.time) takenThatDay.add(ev.time);
                       })));
                       setApptTime(pickAvailableTime(takenThatDay));
                     }}

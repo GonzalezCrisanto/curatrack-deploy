@@ -3,7 +3,6 @@ import { useApp } from '@/context/AppContext';
 import { useSponsor } from '@/context/SponsorContext';
 import { useAppRole } from '@/hooks/useAppRole';
 import { supabase } from '@/integrations/supabase/client';
-import { getNextControlTime, formatNextControl } from '@/lib/appointments';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import AppLayout from '@/components/AppLayout';
@@ -401,7 +400,7 @@ export default function Dashboard() {
   const conv = orderCount.total > 0 ? Math.round((orderCount.total / recsThisWeek) * 100) : 0;
 
   const kpis = [
-    { k: 'Pacientes', v: patients.length, icon: Users, color: 'text-info', bg: 'bg-info/10', border: 'border-l-info', sub: 'Total en seguimiento' },
+    { k: 'Pacientes', v: patients.length, icon: Users, color: 'text-info', bg: 'bg-info/10', border: 'border-l-info', sub: 'Total en seguimiento', to: '/dashboard' },
     { k: 'Casos de heridas', v: activeCases.length, icon: Activity, color: 'text-warning', bg: 'bg-warning/10', border: 'border-l-warning', sub: `${criticalCases.length} críticos`, to: '/cases' },
     { k: 'Próximos controles', v: upcomingControls, icon: Clock, color: 'text-success', bg: 'bg-success/10', border: 'border-l-success', sub: `${overdueControls} vencidos`, to: '/agenda' },
     { k: 'Heridas con alerta', v: alertCaseCount, icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10', border: 'border-l-destructive', sub: 'Casos con riesgo clínico', to: '/cases' },
@@ -516,7 +515,7 @@ export default function Dashboard() {
             .filter((e) => e.nextControl === todayIso)
             .map((e) => ({
               key: `${p.id}-${c.id}-${e.id ?? e.date}`,
-              time: getNextControlTime(e),
+              time: e.time || '',
               patientId: p.id,
               caseId: c.id,
               patientName: `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || 'Paciente sin identificar',
@@ -548,7 +547,7 @@ export default function Dashboard() {
           .map((e) => ({
             key: `${p.id}-${c.id}-${e.id ?? e.date}`,
             date: e.nextControl!,
-            time: getNextControlTime(e),
+            time: e.time || '',
             patientId: p.id,
             caseId: c.id,
             patientName: `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || 'Paciente sin identificar',
@@ -885,10 +884,9 @@ export default function Dashboard() {
                     healingFrequency: '',
                     observations: '',
                     nextControl: turnoDate,
-                    nextControlTime: turnoTime,
                     photos: [],
                   });
-                  toast({ title: 'Turno guardado', description: `${turnoSelectedPatient!.name} — ${formatNextControl(turnoDate, turnoTime)}` });
+                  toast({ title: 'Turno guardado', description: `${turnoSelectedPatient!.name} — ${turnoDate}` });
                   setNewTurnoOpen(false);
                   setTurnoDate('');
                   setTurnoTime('');
@@ -1026,7 +1024,7 @@ export default function Dashboard() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-body text-sm font-medium truncate">
-                            {getNextControlTime(a.evo) || 'Sin horario'} · {a.woundType || 'Curación'}
+                            {a.evo.time || 'Sin horario'} · {a.woundType || 'Curación'}
                           </div>
                           <div className="font-body text-xs text-muted-foreground truncate">
                             {a.patientName} · {a.evo.professional || 'Profesional asignado'}

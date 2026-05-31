@@ -68,7 +68,7 @@ export default function NewPatient() {
       return;
     }
     addPatient({ ...form, id: `p${Date.now()}`, cases: [] } as Patient);
-    navigate('/patients');
+    navigate('/dashboard');
   };
 
   return (
@@ -305,7 +305,7 @@ export default function NewPatient() {
             {Object.keys(errors).length > 0 && (
               <span className="font-body text-xs text-destructive">Revisá los campos marcados</span>
             )}
-            <Button variant="outline" onClick={() => navigate('/patients')} className="font-body">Cancelar</Button>
+            <Button variant="outline" onClick={() => navigate('/dashboard')} className="font-body">Cancelar</Button>
             <Button onClick={handleSave} className="font-body">Crear paciente</Button>
           </div>
         </div>
