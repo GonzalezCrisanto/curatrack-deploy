@@ -71,14 +71,9 @@ export default function Patients() {
     setSearchParams(next, { replace: true });
   };
 
-  const openNew = () => {
-    setEditing(null);
-    setDialogOpen(true);
-  };
-
   useEffect(() => {
     if (searchParams.get('new') !== '1') return;
-    openNew();
+    navigate('/patients/new');
     const next = new URLSearchParams(searchParams);
     next.delete('new');
     setSearchParams(next, { replace: true });
@@ -117,7 +112,7 @@ export default function Patients() {
               </Badge>
             )}
           </div>
-          <Button onClick={openNew} className="font-body">
+          <Button onClick={() => navigate('/patients/new')} className="font-body">
             <Plus className="mr-2 h-4 w-4" /> Nuevo Paciente
           </Button>
         </div>
@@ -196,9 +191,9 @@ export default function Patients() {
                         variant="outline"
                         className="font-body h-8 hidden sm:inline-flex border-primary/40 text-primary hover:bg-primary/5"
                         onClick={handleNewEvo}
-                        title="Nueva evolución"
+                        title="Nueva curación"
                       >
-                        <Plus className="mr-1 h-3.5 w-3.5" /> Nueva evolución
+                        <Plus className="mr-1 h-3.5 w-3.5" /> Nueva curación
                       </Button>
                     )}
                     {firstActiveCase && (
@@ -207,35 +202,11 @@ export default function Patients() {
                         variant="outline"
                         className="h-8 w-8 sm:hidden border-primary/40 text-primary"
                         onClick={handleNewEvo}
-                        title="Nueva evolución"
+                        title="Nueva curación"
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
                     )}
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => openEdit(p, e)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={e => e.stopPropagation()}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent onClick={e => e.stopPropagation()}>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle className="heading-display">¿Eliminar paciente?</AlertDialogTitle>
-                          <AlertDialogDescription className="font-body">
-                            Se eliminará a {p.firstName} {p.lastName} y todos sus casos. Esta acción no se puede deshacer.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deletePatient(p.id)} className="font-body bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Eliminar
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </CardContent>

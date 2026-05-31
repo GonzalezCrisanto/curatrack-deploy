@@ -527,8 +527,15 @@ export default function Dashboard() {
       .sort((a, b) => a.time.localeCompare(b.time));
 
     const query = patientQuery.trim().toLowerCase();
+    const recentPatients = [...patients]
+      .sort((a, b) => {
+        const latestEvo = (p: typeof a) =>
+          p.cases.flatMap(c => c.evolutions).map(e => e.date).sort().at(-1) ?? '';
+        return latestEvo(b).localeCompare(latestEvo(a));
+      })
+      .slice(0, 5);
     const filteredPatients = query.length === 0
-      ? patients
+      ? recentPatients
       : patients.filter((p) =>
           `${p.firstName ?? ''} ${p.lastName ?? ''} ${p.dni ?? ''}`.toLowerCase().includes(query),
         );

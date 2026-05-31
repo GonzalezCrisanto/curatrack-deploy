@@ -77,10 +77,10 @@ export default function NewPatient() {
         <div>
           <Button
             variant="outline"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(-1)}
             className="font-body text-sm border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" /> Volver al dashboard
+            <ArrowLeft className="mr-2 h-4 w-4" /> Volver
           </Button>
         </div>
 
