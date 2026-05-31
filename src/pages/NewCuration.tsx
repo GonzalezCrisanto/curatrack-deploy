@@ -16,7 +16,7 @@ import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import {
-  ChevronLeft, ChevronRight, Search, User, Activity, Camera, Package, Sparkles,
+  ChevronLeft, ChevronRight, Search, User, Activity, Camera, Package,
   CheckCircle2, ShoppingBag, Save, Copy, ArrowLeft, AlertCircle, Pill, Plus, X, FileText, UserPlus,
 } from 'lucide-react';
 import type { Patient, WoundCase } from '@/data/demoData';
@@ -52,8 +52,7 @@ const STEPS = [
   { n: 2, label: 'Evaluación', icon: Activity },
   { n: 3, label: 'Fotos', icon: Camera },
   { n: 4, label: 'Insumos', icon: Package },
-  { n: 5, label: 'Recomendaciones', icon: Sparkles },
-  { n: 6, label: 'Resumen', icon: CheckCircle2 },
+  { n: 5, label: 'Resumen', icon: CheckCircle2 },
 ];
 
 function newId() { return Math.random().toString(36).slice(2, 10); }
@@ -77,6 +76,9 @@ export default function NewCuration() {
   const [params] = useSearchParams();
 
   const [step, setStep] = useState(1);
+  const [stepAttempted, setStepAttempted] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [patientId, setPatientId] = useState<string | null>(params.get('patientId'));
   const [caseId, setCaseId] = useState<string | null>(params.get('caseId'));
@@ -153,6 +155,8 @@ export default function NewCuration() {
     return () => { cancelled = true; };
   }, [sponsor?.lab_id]);
 
+  useEffect(() => { setStepAttempted(false); }, [step]);
+
   const patient: Patient | undefined = useMemo(
     () => patients.find(p => p.id === patientId), [patients, patientId]);
   const wcase: WoundCase | undefined = useMemo(
@@ -173,36 +177,6 @@ export default function NewCuration() {
     return active.length > 0 ? active : patient.cases;
   }, [patient]);
 
-  // --- Recommendations: derive from wound type + exudate + sponsor catalog ---
-  const recommendations = useMemo(() => {
-    const recs: Array<{ category: string; reason: string; sponsor?: LabProduct }> = [];
-    if (!wcase) return recs;
-    const wt = (wcase.woundType || '').toLowerCase();
-    const heavyExudate = evo.exudate === 'abundante' || evo.exudate === 'moderado';
-    const matchSponsor = (cat: string) =>
-      sponsorProducts.find(p =>
-        (p.category ?? '').toLowerCase().includes(cat.toLowerCase()) ||
-        (p.wound_types ?? []).some(w => w.toLowerCase().includes(wt)),
-      );
-
-    if (heavyExudate) {
-      const sp = matchSponsor('apósito') ?? matchSponsor('absorbente') ?? sponsorProducts[0];
-      recs.push({ category: 'Apósito absorbente', reason: 'Para heridas con exudado moderado/abundante.', sponsor: sp });
-    }
-    if (evo.infection === 'sospecha' || evo.infection === 'si') {
-      const sp = matchSponsor('antimicrobiano') ?? matchSponsor('plata') ?? matchSponsor('apósito');
-      recs.push({ category: 'Apósito antimicrobiano', reason: 'Por sospecha de infección local.', sponsor: sp });
-    }
-    if (wt.includes('venosa') || wt.includes('presión') || wt.includes('presion')) {
-      const sp = matchSponsor('venda') ?? matchSponsor('compresión') ?? matchSponsor('compresion');
-      recs.push({ category: 'Vendaje compresivo', reason: 'Adecuado para úlceras con componente vascular.', sponsor: sp });
-    }
-    {
-      const sp = matchSponsor('limpieza') ?? matchSponsor('solución') ?? matchSponsor('solucion');
-      recs.push({ category: 'Solución de limpieza', reason: 'Estándar de irrigación previo a cada curación.', sponsor: sp });
-    }
-    return recs;
-  }, [wcase, evo.exudate, evo.infection, sponsorProducts]);
 
   // --- Helpers ---
   const addSupplyFromProduct = (p: LabProduct) => {
@@ -471,11 +445,20 @@ export default function NewCuration() {
     toast({ title: 'Resumen copiado' });
   };
 
-  const canNext = () => {
-    if (step === 1) return !!wcase;
-    if (step === 2) return !!evo.date && !!evo.time;
+  const isStepValid = (n: number) => {
+    if (n === 1) return !!wcase;
+    if (n === 2) return !!evo.date && !!evo.time;
     return true;
   };
+
+  const isStepReachable = (n: number) => {
+    for (let i = 1; i < n; i++) {
+      if (!isStepValid(i)) return false;
+    }
+    return true;
+  };
+
+  const canNext = () => isStepValid(step);
 
   return (
     <AppLayout>
@@ -489,27 +472,13 @@ export default function NewCuration() {
               </Badge>
               <h1 className="heading-display text-2xl md:text-3xl">Nueva curación</h1>
               <p className="font-body text-sm text-muted-foreground mt-1">
-                Flujo guiado: paciente → evaluación → fotos → insumos → recomendaciones → resumen.
+                Flujo guiado: paciente → evaluación → fotos → insumos → resumen.
               </p>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" className="font-body" onClick={() => navigate(-1)}>
                 <ArrowLeft className="h-4 w-4 mr-1" /> Volver
               </Button>
-              {step === 1 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="font-body border-primary/40 text-primary hover:bg-primary/5"
-                  onClick={() => {
-                    setShowNewPatientForm((prev) => !prev);
-                    setNewPatientErrors({});
-                  }}
-                >
-                  <UserPlus className="h-4 w-4 mr-1.5" />
-                  Nuevo paciente
-                </Button>
-              )}
             </div>
           </div>
 
@@ -518,23 +487,27 @@ export default function NewCuration() {
             <CardContent className="p-3">
               <div className="flex items-center gap-1 overflow-x-auto">
                 {STEPS.map((s, i) => {
-                  const active = step === s.n, done = step > s.n;
+                  const active = step === s.n;
+                  const done = step > s.n;
+                  const reachable = isStepReachable(s.n);
                   return (
                     <div key={s.n} className="flex items-center gap-1 min-w-fit">
                       <button
                         type="button"
+                        disabled={!reachable}
                         onClick={() => setStep(s.n)}
-                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md font-body text-xs transition-colors ${
+                        className={`flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-md font-body text-sm transition-colors ${
                           active ? 'bg-primary text-primary-foreground' :
-                          done ? 'text-primary hover:bg-primary/10' :
-                          'text-muted-foreground hover:bg-muted'
+                          done && reachable ? 'text-primary hover:bg-primary/10' :
+                          reachable ? 'text-muted-foreground hover:bg-muted' :
+                          'text-muted-foreground/40 cursor-not-allowed'
                         }`}
                       >
-                        <s.icon className="h-3.5 w-3.5" />
+                        <s.icon className="h-4 w-4" />
                         <span className="hidden sm:inline">{s.n}. {s.label}</span>
                         <span className="sm:hidden">{s.n}</span>
                       </button>
-                      {i < STEPS.length - 1 && <ChevronRight className="h-3 w-3 text-muted-foreground/50" />}
+                      {i < STEPS.length - 1 && <ChevronRight className="h-4 w-4 text-muted-foreground/50" />}
                     </div>
                   );
                 })}
@@ -559,7 +532,7 @@ export default function NewCuration() {
                     </div>
                     <div className="grid md:grid-cols-2 gap-3">
                       <div>
-                        <Label className="font-body text-xs">Nombre *</Label>
+                        <Label className="font-body text-sm">Nombre *</Label>
                         <Input
                           value={newPatient.firstName}
                           onChange={(e) => setNewPatient((prev) => ({ ...prev, firstName: e.target.value }))}
@@ -568,7 +541,7 @@ export default function NewCuration() {
                         {newPatientErrors.firstName && <p className="mt-1 text-xs text-destructive">{newPatientErrors.firstName}</p>}
                       </div>
                       <div>
-                        <Label className="font-body text-xs">Apellido *</Label>
+                        <Label className="font-body text-sm">Apellido *</Label>
                         <Input
                           value={newPatient.lastName}
                           onChange={(e) => setNewPatient((prev) => ({ ...prev, lastName: e.target.value }))}
@@ -577,7 +550,7 @@ export default function NewCuration() {
                         {newPatientErrors.lastName && <p className="mt-1 text-xs text-destructive">{newPatientErrors.lastName}</p>}
                       </div>
                       <div>
-                        <Label className="font-body text-xs">DNI *</Label>
+                        <Label className="font-body text-sm">DNI *</Label>
                         <Input
                           value={newPatient.dni}
                           onChange={(e) => setNewPatient((prev) => ({ ...prev, dni: e.target.value }))}
@@ -586,7 +559,7 @@ export default function NewCuration() {
                         {newPatientErrors.dni && <p className="mt-1 text-xs text-destructive">{newPatientErrors.dni}</p>}
                       </div>
                       <div>
-                        <Label className="font-body text-xs">Fecha de nacimiento *</Label>
+                        <Label className="font-body text-sm">Fecha de nacimiento *</Label>
                         <Input
                           type="date"
                           value={newPatient.birthDate}
@@ -596,7 +569,7 @@ export default function NewCuration() {
                         {newPatientErrors.birthDate && <p className="mt-1 text-xs text-destructive">{newPatientErrors.birthDate}</p>}
                       </div>
                       <div className="md:col-span-2">
-                        <Label className="font-body text-xs">Teléfono de contacto *</Label>
+                        <Label className="font-body text-sm">Teléfono de contacto *</Label>
                         <Input
                           value={newPatient.phone}
                           onChange={(e) => setNewPatient((prev) => ({ ...prev, phone: e.target.value }))}
@@ -618,7 +591,7 @@ export default function NewCuration() {
                   <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre o DNI..." className="pl-9 font-body" />
                 </div>
-                <div className="grid md:grid-cols-2 gap-3 max-h-96 overflow-auto">
+                <div className={`grid md:grid-cols-2 gap-3 max-h-96 overflow-auto rounded-lg transition-colors ${stepAttempted && !patientId ? 'ring-2 ring-destructive ring-offset-2' : ''}`}>
                   {filteredPatients.map(p => {
                     const active = p.cases.find(c => c.status !== 'resuelto');
                     const selected = patientId === p.id;
@@ -635,8 +608,8 @@ export default function NewCuration() {
                         }`}
                       >
                         <div className="font-body font-medium text-sm">{p.firstName} {p.lastName}</div>
-                        <div className="font-body text-xs text-muted-foreground mt-0.5">
-                          {p.cases.length} caso(s) · {active ? active.woundType : 'Sin casos activos'}
+                        <div className="font-body text-sm text-muted-foreground mt-0.5">
+                          {p.cases.length} herida(s)
                         </div>
                       </button>
                     );
@@ -650,7 +623,7 @@ export default function NewCuration() {
                   </div>
                 )}
                 {patient && (
-                  <div className="space-y-2 pt-2">
+                  <div className={`space-y-2 pt-2 rounded-lg transition-colors ${stepAttempted && !caseId ? 'ring-2 ring-destructive ring-offset-2 p-2' : ''}`}>
                     <Label className="font-body text-sm">Caso de herida</Label>
                     {visibleCases.length === 0 ? (
                       <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-4 space-y-3">
@@ -680,7 +653,7 @@ export default function NewCuration() {
                               <div className="font-body text-sm font-medium">{c.woundType}</div>
                               <Badge variant="outline" className="font-body text-[10px] uppercase">{c.status}</Badge>
                             </div>
-                            <div className="font-body text-xs text-muted-foreground mt-0.5">{c.anatomicalLocation}</div>
+                            <div className="font-body text-sm text-muted-foreground mt-0.5">{c.anatomicalLocation}</div>
                             <div className="font-body text-[11px] text-muted-foreground mt-1">
                               Última evolución: {c.evolutions[0]?.date ?? '—'} · Próx. control: {c.evolutions[0]?.nextControl ?? '—'}
                             </div>
@@ -719,7 +692,7 @@ export default function NewCuration() {
                         </div>
                         <div className="grid md:grid-cols-2 gap-3">
                           <div>
-                            <Label className="font-body text-xs">Tipo de herida *</Label>
+                            <Label className="font-body text-sm">Tipo de herida *</Label>
                             <Select value={newCase.woundType} onValueChange={(v) => setNewCase((prev) => ({ ...prev, woundType: v }))}>
                               <SelectTrigger aria-invalid={!!newCaseErrors.woundType}><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                               <SelectContent>
@@ -731,7 +704,7 @@ export default function NewCuration() {
                             {newCaseErrors.woundType && <p className="mt-1 text-xs text-destructive">{newCaseErrors.woundType}</p>}
                           </div>
                           <div>
-                            <Label className="font-body text-xs">Ubicación anatómica *</Label>
+                            <Label className="font-body text-sm">Ubicación anatómica *</Label>
                             <Input
                               value={newCase.anatomicalLocation}
                               onChange={(e) => setNewCase((prev) => ({ ...prev, anatomicalLocation: e.target.value }))}
@@ -741,7 +714,7 @@ export default function NewCuration() {
                             {newCaseErrors.anatomicalLocation && <p className="mt-1 text-xs text-destructive">{newCaseErrors.anatomicalLocation}</p>}
                           </div>
                           <div>
-                            <Label className="font-body text-xs">Lateralidad</Label>
+                            <Label className="font-body text-sm">Lateralidad</Label>
                             <Select value={newCase.laterality} onValueChange={(v) => setNewCase((prev) => ({ ...prev, laterality: v }))}>
                               <SelectTrigger><SelectValue /></SelectTrigger>
                               <SelectContent>
@@ -753,7 +726,7 @@ export default function NewCuration() {
                             </Select>
                           </div>
                           <div>
-                            <Label className="font-body text-xs">Fecha de aparición *</Label>
+                            <Label className="font-body text-sm">Fecha de aparición *</Label>
                             <Input
                               type="date"
                               value={newCase.startDate}
@@ -763,7 +736,7 @@ export default function NewCuration() {
                             {newCaseErrors.startDate && <p className="mt-1 text-xs text-destructive">{newCaseErrors.startDate}</p>}
                           </div>
                           <div>
-                            <Label className="font-body text-xs">Estado inicial *</Label>
+                            <Label className="font-body text-sm">Estado inicial *</Label>
                             <Select value={newCase.status} onValueChange={(v) => setNewCase((prev) => ({ ...prev, status: v as WoundCase['status'] }))}>
                               <SelectTrigger aria-invalid={!!newCaseErrors.status}><SelectValue /></SelectTrigger>
                               <SelectContent>
@@ -775,7 +748,7 @@ export default function NewCuration() {
                             {newCaseErrors.status && <p className="mt-1 text-xs text-destructive">{newCaseErrors.status}</p>}
                           </div>
                           <div className="md:col-span-2">
-                            <Label className="font-body text-xs">Notas iniciales (opcional)</Label>
+                            <Label className="font-body text-sm">Notas iniciales (opcional)</Label>
                             <Textarea
                               rows={2}
                               value={newCase.notes}
@@ -813,14 +786,30 @@ export default function NewCuration() {
                 <CardTitle className="heading-display text-lg flex items-center gap-2"><Activity className="h-5 w-5 text-primary" /> Evaluación clínica</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  <div><Label className="font-body text-xs">Fecha</Label><Input type="date" value={evo.date} onChange={e => setEvo({ ...evo, date: e.target.value })} /></div>
-                  <div><Label className="font-body text-xs">Hora</Label><Input type="time" value={evo.time} onChange={e => setEvo({ ...evo, time: e.target.value })} /></div>
-                  <div><Label className="font-body text-xs">Profesional</Label><Input value={evo.professional} onChange={e => setEvo({ ...evo, professional: e.target.value })} /></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="font-body text-sm">Fecha</Label>
+                    <Input
+                      type="date"
+                      value={evo.date}
+                      onChange={e => setEvo({ ...evo, date: e.target.value })}
+                      className={stepAttempted && !evo.date ? 'border-destructive ring-1 ring-destructive' : ''}
+                    />
+                  </div>
+                  <div>
+                    <Label className="font-body text-sm">Hora</Label>
+                    <Input
+                      type="time"
+                      value={evo.time}
+                      onChange={e => setEvo({ ...evo, time: e.target.value })}
+                      className={stepAttempted && !evo.time ? 'border-destructive ring-1 ring-destructive' : ''}
+                    />
+                  </div>
+                  <div><Label className="font-body text-sm">Profesional</Label><Input value={evo.professional} onChange={e => setEvo({ ...evo, professional: e.target.value })} /></div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="font-body text-xs">Dolor (EVA): <span className="font-semibold text-foreground">{evo.pain}/10</span></Label>
+                  <Label className="font-body text-sm">Dolor (EVA): <span className="font-semibold text-foreground">{evo.pain}/10</span></Label>
                   <Slider value={[evo.pain]} onValueChange={([v]) => setEvo({ ...evo, pain: v })} min={0} max={10} step={1} />
                 </div>
 
@@ -834,28 +823,28 @@ export default function NewCuration() {
                     { k: 'perilesional', label: 'Perilesional', opts: ['sana','eritematosa','macerada','seca'] },
                   ].map((f) => (
                     <div key={f.k}>
-                      <Label className="font-body text-xs">{f.label}</Label>
+                      <Label className="font-body text-sm">{f.label}</Label>
                       <Select value={(evo as any)[f.k]} onValueChange={v => setEvo({ ...evo, [f.k]: v } as any)}>
-                        <SelectTrigger className="font-body text-sm"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="font-body text-base"><SelectValue /></SelectTrigger>
                         <SelectContent>{f.opts.map(o => <SelectItem key={o} value={o} className="capitalize">{o}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
                   ))}
-                  <div><Label className="font-body text-xs">Tamaño</Label><Input placeholder="ej. 5 x 3 cm" value={evo.size} onChange={e => setEvo({ ...evo, size: e.target.value })} /></div>
-                  <div><Label className="font-body text-xs">Profundidad</Label><Input placeholder="ej. superficial" value={evo.depth} onChange={e => setEvo({ ...evo, depth: e.target.value })} /></div>
+                  <div><Label className="font-body text-sm">Tamaño</Label><Input placeholder="ej. 5 x 3 cm" value={evo.size} onChange={e => setEvo({ ...evo, size: e.target.value })} /></div>
+                  <div><Label className="font-body text-sm">Profundidad</Label><Input placeholder="ej. superficial" value={evo.depth} onChange={e => setEvo({ ...evo, depth: e.target.value })} /></div>
                 </div>
 
-                <div><Label className="font-body text-xs">Procedimiento realizado</Label>
+                <div><Label className="font-body text-sm">Procedimiento realizado</Label>
                   <Textarea rows={2} value={evo.procedure} onChange={e => setEvo({ ...evo, procedure: e.target.value })} placeholder="Limpieza, desbridamiento, apósito aplicado..." />
                 </div>
-                <div><Label className="font-body text-xs">Observaciones</Label>
+                <div><Label className="font-body text-sm">Observaciones</Label>
                   <Textarea rows={2} value={evo.observations} onChange={e => setEvo({ ...evo, observations: e.target.value })} />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label className="font-body text-xs">Frecuencia de curación</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div><Label className="font-body text-sm">Frecuencia de curación</Label>
                     <Input value={evo.healingFrequency} onChange={e => setEvo({ ...evo, healingFrequency: e.target.value })} />
                   </div>
-                  <div><Label className="font-body text-xs">Próximo control</Label>
+                  <div><Label className="font-body text-sm">Próximo control</Label>
                     <Input type="date" value={evo.nextControl} onChange={e => setEvo({ ...evo, nextControl: e.target.value })} />
                   </div>
                 </div>
@@ -872,18 +861,37 @@ export default function NewCuration() {
               <CardContent className="space-y-3">
                 <div className="p-4 rounded-lg bg-warning/10 border border-warning/30 flex gap-2.5">
                   <AlertCircle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-                  <div className="font-body text-xs leading-relaxed">
+                  <div className="font-body text-sm leading-relaxed">
                     Las fotografías clínicas se gestionan desde el detalle del caso para preservar consentimiento, firma y trazabilidad. Vas a poder cargarlas inmediatamente después de guardar esta evolución.
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="aspect-video rounded-lg border-2 border-dashed border-border/60 flex items-center justify-center text-muted-foreground font-body text-xs">
-                    Foto antes (placeholder)
-                  </div>
-                  <div className="aspect-video rounded-lg border-2 border-dashed border-border/60 flex items-center justify-center text-muted-foreground font-body text-xs">
-                    Foto después (placeholder)
-                  </div>
-                </div>
+                <label className="block cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={e => {
+                      const file = e.target.files?.[0] ?? null;
+                      setPhotoFile(file);
+                      setPhotoPreview(file ? URL.createObjectURL(file) : null);
+                    }}
+                  />
+                  {photoPreview ? (
+                    <div className="relative rounded-lg overflow-hidden border border-border/60">
+                      <img src={photoPreview} alt="Vista previa" className="w-full max-h-72 object-cover" />
+                      <div className="absolute bottom-2 right-2">
+                        <span className="font-body text-sm bg-background/90 rounded-md px-2 py-1 border border-border/60">
+                          Cambiar foto
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="aspect-video rounded-lg border-2 border-dashed border-border/60 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary/50 hover:bg-primary/5 transition-colors">
+                      <Camera className="h-8 w-8" />
+                      <span className="font-body text-sm">Adjuntar foto</span>
+                    </div>
+                  )}
+                </label>
               </CardContent>
             </Card>
           )}
@@ -893,14 +901,14 @@ export default function NewCuration() {
             <Card className="border-border/60">
               <CardHeader>
                 <CardTitle className="heading-display text-lg flex items-center gap-2"><Package className="h-5 w-5 text-primary" /> Insumos utilizados</CardTitle>
-                <p className="font-body text-xs text-muted-foreground mt-0.5">
+                <p className="font-body text-sm text-muted-foreground mt-0.5">
                   Marcá los insumos usados en esta curación y cuáles necesitan reposición.
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Sponsor product picker */}
                 <div className="space-y-2">
-                  <Label className="font-body text-xs">Catálogo {sponsor?.sponsor_name ?? 'sponsor'}</Label>
+                  <Label className="font-body text-sm">Catálogo {sponsor?.sponsor_name ?? 'sponsor'}</Label>
                   <div className="relative">
                     <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input value={productQuery} onChange={e => setProductQuery(e.target.value)} placeholder="Buscar producto sponsor..." className="pl-9 font-body" />
@@ -923,7 +931,7 @@ export default function NewCuration() {
                         </button>
                       ))}
                     {sponsorProducts.length === 0 && (
-                      <div className="p-3 font-body text-xs text-muted-foreground text-center">
+                      <div className="p-3 font-body text-sm text-muted-foreground text-center">
                         No hay productos sponsor disponibles. Agregá insumos genéricos.
                       </div>
                     )}
@@ -932,10 +940,10 @@ export default function NewCuration() {
 
                 {/* Generic categories */}
                 <div className="space-y-2">
-                  <Label className="font-body text-xs">Agregar por categoría genérica</Label>
+                  <Label className="font-body text-sm">Agregar por categoría genérica</Label>
                   <div className="flex flex-wrap gap-1.5">
                     {SUPPLY_CATEGORIES.map(c => (
-                      <Button key={c} type="button" variant="outline" size="sm" className="font-body text-xs h-7"
+                      <Button key={c} type="button" variant="outline" size="sm" className="font-body text-sm h-7"
                         onClick={() => addSupplyGeneric(c)}>
                         <Plus className="h-3 w-3 mr-1" /> {c}
                       </Button>
@@ -967,7 +975,7 @@ export default function NewCuration() {
                         <div className="col-span-4 md:col-span-2">
                           <Input value={s.unit} onChange={e => updateSupply(s.id, { unit: e.target.value })} className="h-8 text-sm" placeholder="u" />
                         </div>
-                        <label className="col-span-4 md:col-span-2 flex items-center gap-1.5 font-body text-xs cursor-pointer">
+                        <label className="col-span-4 md:col-span-2 flex items-center gap-1.5 font-body text-sm cursor-pointer">
                           <Checkbox checked={s.restock} onCheckedChange={(v) => updateSupply(s.id, { restock: v === true })} />
                           Reponer
                         </label>
@@ -983,57 +991,8 @@ export default function NewCuration() {
           )}
 
           {/* Step 5 */}
+          {/* Step 5 */}
           {step === 5 && (
-            <Card className="border-border/60">
-              <CardHeader>
-                <CardTitle className="heading-display text-lg flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Recomendaciones para próxima curación</CardTitle>
-                <p className="font-body text-xs text-muted-foreground mt-0.5">
-                  Sugerencia de apoyo según tipo de herida y datos cargados. Validá siempre con criterio profesional.
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {recommendations.length === 0 ? (
-                  <div className="font-body text-sm text-muted-foreground text-center py-6">
-                    Sin recomendaciones automáticas para esta evaluación.
-                  </div>
-                ) : recommendations.map((r, i) => (
-                  <div key={i} className="p-3 rounded-lg border border-border/60 bg-accent/20 flex items-start gap-3">
-                    <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <div className="font-body text-sm font-medium">{r.category}</div>
-                        {r.sponsor ? (
-                          <Badge variant="outline" className="font-body text-[10px] uppercase border-primary/40 text-primary bg-primary/5">
-                            Producto sponsor
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="font-body text-[10px] uppercase">Recomendación genérica</Badge>
-                        )}
-                      </div>
-                      <div className="font-body text-xs text-muted-foreground mt-0.5">{r.reason}</div>
-                      {r.sponsor && (
-                        <div className="font-body text-xs mt-1">
-                          Sugerido: <span className="font-medium">{r.sponsor.name}</span>
-                          {r.sponsor.presentation && <span className="text-muted-foreground"> · {r.sponsor.presentation}</span>}
-                        </div>
-                      )}
-                    </div>
-                    {r.sponsor && (
-                      <Button size="sm" variant="outline" className="font-body text-xs" onClick={() => addSupplyFromProduct(r.sponsor!)}>
-                        <Plus className="h-3 w-3 mr-1" /> Agregar
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                <div className="text-[11px] text-muted-foreground font-body italic">
-                  Estas recomendaciones son orientativas y no constituyen diagnóstico médico.
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 6 */}
-          {step === 6 && (
             <Card className="border-border/60">
               <CardHeader>
                 <CardTitle className="heading-display text-lg flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-success" /> Resumen final</CardTitle>
@@ -1043,20 +1002,20 @@ export default function NewCuration() {
                   <div className="p-3 rounded-lg border border-border/60 bg-background">
                     <div className="font-body text-[10px] uppercase text-muted-foreground tracking-wide">Paciente / Caso</div>
                     <div className="font-body text-sm font-medium mt-1">{patient ? `${patient.firstName} ${patient.lastName}` : '—'}</div>
-                    <div className="font-body text-xs text-muted-foreground">{wcase?.woundType} · {wcase?.anatomicalLocation}</div>
+                    <div className="font-body text-sm text-muted-foreground">{wcase?.woundType} · {wcase?.anatomicalLocation}</div>
                   </div>
                   <div className="p-3 rounded-lg border border-border/60 bg-background">
                     <div className="font-body text-[10px] uppercase text-muted-foreground tracking-wide">Evolución</div>
                     <div className="font-body text-sm mt-1">{evo.date} {evo.time} · {evo.professional}</div>
-                    <div className="font-body text-xs text-muted-foreground">EVA {evo.pain}/10 · Exudado {evo.exudate} · Inf. {evo.infection}</div>
+                    <div className="font-body text-sm text-muted-foreground">EVA {evo.pain}/10 · Exudado {evo.exudate} · Inf. {evo.infection}</div>
                   </div>
                 </div>
                 {supplies.length > 0 && (
                   <div>
-                    <div className="font-body text-xs font-medium mb-2">Insumos utilizados</div>
+                    <div className="font-body text-sm font-medium mb-2">Insumos utilizados</div>
                     <div className="space-y-1">
                       {supplies.map(s => (
-                        <div key={s.id} className="flex items-center justify-between p-2 rounded-md bg-muted/40 font-body text-xs">
+                        <div key={s.id} className="flex items-center justify-between p-2 rounded-md bg-muted/40 font-body text-sm">
                           <span>{s.productName} <span className="text-muted-foreground">· {s.category}</span></span>
                           <span className="flex items-center gap-2">
                             x{s.quantity}{s.unit}
@@ -1073,13 +1032,13 @@ export default function NewCuration() {
                       <ShoppingBag className="h-4 w-4 text-primary" />
                       {restockItems.length} producto(s) marcados para reposición
                     </div>
-                    <div className="font-body text-xs text-muted-foreground mt-1">
+                    <div className="font-body text-sm text-muted-foreground mt-1">
                       Se generará una solicitud al laboratorio sponsor con esos insumos.
                     </div>
                   </div>
                 )}
                 {evo.nextControl && (
-                  <div className="font-body text-xs text-muted-foreground">
+                  <div className="font-body text-sm text-muted-foreground">
                     Próximo control: <span className="font-medium text-foreground">{evo.nextControl}</span>
                   </div>
                 )}
@@ -1104,14 +1063,30 @@ export default function NewCuration() {
           )}
 
           {/* Nav controls */}
-          <div className="flex items-center justify-between gap-2">
-            <Button variant="outline" size="sm" className="font-body" disabled={step === 1} onClick={() => setStep(s => Math.max(1, s - 1))}>
-              <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
-            </Button>
-            <div className="font-body text-xs text-muted-foreground">Paso {step} de {STEPS.length}</div>
-            <Button size="sm" className="font-body" disabled={step === STEPS.length || !canNext()} onClick={() => setStep(s => Math.min(STEPS.length, s + 1))}>
-              Siguiente <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
+          <div className="space-y-2">
+            {stepAttempted && !canNext() && (
+              <p className="font-body text-sm text-destructive text-center">
+                {step === 1 && !patientId && 'Seleccioná un paciente para continuar.'}
+                {step === 1 && patientId && !caseId && 'Seleccioná un caso de herida para continuar.'}
+                {step === 2 && (!evo.date || !evo.time) && 'La fecha y la hora de la evolución son obligatorias.'}
+              </p>
+            )}
+            <div className="flex items-center justify-between gap-2">
+              <Button variant="outline" className="font-body" disabled={step === 1} onClick={() => setStep(s => Math.max(1, s - 1))}>
+                <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+              </Button>
+              <div className="font-body text-sm text-muted-foreground">Paso {step} de {STEPS.length}</div>
+              <Button
+                className="font-body"
+                disabled={step === STEPS.length}
+                onClick={() => {
+                  if (!canNext()) { setStepAttempted(true); return; }
+                  setStep(s => Math.min(STEPS.length, s + 1));
+                }}
+              >
+                Siguiente <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
