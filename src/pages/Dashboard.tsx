@@ -4,6 +4,7 @@ import { useSponsor } from '@/context/SponsorContext';
 import { useAppRole } from '@/hooks/useAppRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -83,10 +84,11 @@ function statusChipClasses(status?: string) {
 }
 
 export default function Dashboard() {
-  const { patients, currentUserName, patientsLoading } = useApp();
+  const { patients, currentUserName, patientsLoading, addEvolution } = useApp();
   const { sponsor } = useSponsor();
   const { role, ready: roleReady } = useAppRole();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const patientSearchRef = useRef<HTMLInputElement | null>(null);
   const [orderCount, setOrderCount] = useState({ total: 0, pending: 0, sent: 0 });
   const [recommendedProducts, setRecommendedProducts] = useState<Array<{ name: string; category?: string }>>([]);
@@ -764,12 +766,36 @@ export default function Dashboard() {
                 </div>
                 <div className="space-y-1.5">
                   <Label className="font-body text-sm">Hora</Label>
-                  <Input
-                    type="time"
-                    value={turnoTime}
-                    onChange={e => setTurnoTime(e.target.value)}
-                    className="font-body"
-                  />
+                  <div className="flex gap-1 items-center">
+                    <input
+                      type="number"
+                      min={0}
+                      max={23}
+                      placeholder="hh"
+                      value={turnoTime ? parseInt(turnoTime.split(':')[0], 10) : ''}
+                      onChange={e => {
+                        const mins = turnoTime ? (turnoTime.split(':')[1] ?? '00') : '00';
+                        if (e.target.value === '') { setTurnoTime(''); return; }
+                        const h = Math.min(23, Math.max(0, parseInt(e.target.value, 10)));
+                        setTurnoTime(`${String(h).padStart(2, '0')}:${mins}`);
+                      }}
+                      className="font-body h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    />
+                    <span className="text-muted-foreground font-body">:</span>
+                    <select
+                      value={turnoTime ? (turnoTime.split(':')[1] ?? '00') : ''}
+                      onChange={e => {
+                        const hrs = turnoTime ? (turnoTime.split(':')[0] ?? '00') : '00';
+                        setTurnoTime(e.target.value ? `${hrs}:${e.target.value}` : '');
+                      }}
+                      className="font-body h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="">mm</option>
+                      {['00', '15', '30', '45'].map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -787,15 +813,17 @@ export default function Dashboard() {
                     </button>
                   </div>
                 ) : (
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      value={turnoPatientQuery}
-                      onChange={e => setTurnoPatientQuery(e.target.value)}
-                      placeholder="Buscar por nombre o DNI..."
-                      className="font-body pl-9"
-                      autoFocus
-                    />
+                  <>
+                    <div className="relative">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={turnoPatientQuery}
+                        onChange={e => setTurnoPatientQuery(e.target.value)}
+                        placeholder="Buscar por nombre o DNI..."
+                        className="font-body pl-9"
+                        autoFocus
+                      />
+                    </div>
                     {turnoPatientSuggestions.length > 0 && (
                       <ul className="mt-1 w-full rounded-md border border-border bg-background max-h-40 overflow-y-auto">
                         {turnoPatientSuggestions.map(p => {
@@ -815,7 +843,7 @@ export default function Dashboard() {
                         })}
                       </ul>
                     )}
-                  </div>
+                  </>
                 )}
               </div>
             </div>
@@ -826,10 +854,37 @@ export default function Dashboard() {
               </Button>
               <Button
                 className="font-body"
-                disabled={!turnoDate || !turnoSelectedPatient}
+                disabled={
+                  !turnoDate ||
+                  !turnoSelectedPatient ||
+                  !patients.find(p => p.id === turnoSelectedPatient?.id)?.cases.length
+                }
                 onClick={() => {
+                  const patient = patients.find(p => p.id === turnoSelectedPatient!.id);
+                  const targetCase =
+                    patient?.cases.find(
+                      c => c.status === 'activo' || c.status === 'critico' || c.status === 'en_mejoria',
+                    ) ?? patient?.cases[0];
+                  if (!targetCase) return;
+                  addEvolution(turnoSelectedPatient!.id, targetCase.id, {
+                    id: `evo-${Date.now()}`,
+                    date: turnoDate,
+                    time: turnoTime,
+                    professional: currentUserName || '',
+                    description: 'Turno programado',
+                    procedure: '',
+                    materials: '',
+                    healingFrequency: '',
+                    observations: '',
+                    nextControl: turnoDate,
+                    photos: [],
+                  });
+                  toast({ title: 'Turno guardado', description: `${turnoSelectedPatient!.name} — ${turnoDate}` });
                   setNewTurnoOpen(false);
-                  navigate(`/patients/${turnoSelectedPatient!.id}`);
+                  setTurnoDate('');
+                  setTurnoTime('');
+                  setTurnoPatientQuery('');
+                  setTurnoSelectedPatient(null);
                 }}
               >
                 Confirmar
