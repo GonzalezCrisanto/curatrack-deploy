@@ -50,7 +50,6 @@ const App = () => (
 
                 {/* Clinical */}
                 <Route path="/dashboard" element={<ProtectedRoute requiredPermission="dashboard"><Dashboard /></ProtectedRoute>} />
-                <Route path="/patients" element={<ProtectedRoute requiredPermission="pacientes"><Patients /></ProtectedRoute>} />
                 <Route path="/patients/new" element={<ProtectedRoute requiredPermission="pacientes"><NewPatient /></ProtectedRoute>} />
                 <Route path="/patients/:patientId" element={<ProtectedRoute requiredPermission="pacientes"><PatientDetail /></ProtectedRoute>} />
                 <Route path="/patients/:patientId/cases/:caseId" element={<ProtectedRoute requiredPermission="casos-heridas"><CaseDetail /></ProtectedRoute>} />

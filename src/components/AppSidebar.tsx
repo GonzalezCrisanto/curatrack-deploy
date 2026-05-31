@@ -37,15 +37,6 @@ type SidebarItem = {
 
 const clinicalItems: SidebarItem[] = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard, section: 'dashboard' },
-/*   {
-    title: 'Pacientes',
-    url: '/patients',
-    icon: Users,
-    section: 'pacientes',
-    children: [
-      { title: 'Nuevo paciente', url: '/patients?new=1' },
-    ],
-  }, */
  // { title: 'Casos de heridas', url: '/cases', icon: Activity, section: 'casos-heridas' },
   { title: 'Nueva curación', url: '/curation/new', icon: PlusCircle, section: 'nueva-curacion' },
   { title: 'Nuevo paciente', url: '/patients/new', icon: PlusCircle, section: 'nueva-curacion' },

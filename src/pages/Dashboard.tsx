@@ -400,7 +400,7 @@ export default function Dashboard() {
   const conv = orderCount.total > 0 ? Math.round((orderCount.total / recsThisWeek) * 100) : 0;
 
   const kpis = [
-    { k: 'Pacientes', v: patients.length, icon: Users, color: 'text-info', bg: 'bg-info/10', border: 'border-l-info', sub: 'Total en seguimiento', to: '/patients' },
+    { k: 'Pacientes', v: patients.length, icon: Users, color: 'text-info', bg: 'bg-info/10', border: 'border-l-info', sub: 'Total en seguimiento' },
     { k: 'Casos de heridas', v: activeCases.length, icon: Activity, color: 'text-warning', bg: 'bg-warning/10', border: 'border-l-warning', sub: `${criticalCases.length} críticos`, to: '/cases' },
     { k: 'Próximos controles', v: upcomingControls, icon: Clock, color: 'text-success', bg: 'bg-success/10', border: 'border-l-success', sub: `${overdueControls} vencidos`, to: '/agenda' },
     { k: 'Heridas con alerta', v: alertCaseCount, icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10', border: 'border-l-destructive', sub: 'Casos con riesgo clínico', to: '/cases' },
@@ -671,7 +671,7 @@ export default function Dashboard() {
                     <Button
                       variant="link"
                       className="mt-1 h-auto px-0 text-sm"
-                      onClick={() => navigate('/patients?new=1')}
+                      onClick={() => navigate('/patients/new')}
                     >
                       Crear nuevo paciente
                     </Button>
