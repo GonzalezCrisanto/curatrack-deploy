@@ -19,7 +19,7 @@ import {
   ChevronLeft, ChevronRight, Search, User, Activity, Camera, Package,
   CheckCircle2, ShoppingBag, Save, Copy, ArrowLeft, AlertCircle, Pill, Plus, X, FileText, UserPlus,
 } from 'lucide-react';
-import type { Patient, WoundCase } from '@/data/demoData';
+import type { Evolution, Patient, WoundCase } from '@/data/demoData';
 
 type SupplyLine = {
   id: string;
@@ -69,7 +69,7 @@ function ageFromBirthDate(birthDate: string) {
 }
 
 export default function NewCuration() {
-  const { patients, currentUser, currentUserName, addPatient, addCase } = useApp();
+  const { patients, currentUser, currentUserName, addPatient, addCase, addEvolution } = useApp();
   const { sponsor } = useSponsor();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -343,7 +343,7 @@ export default function NewCuration() {
 
   // --- Save ---
   const saveEvolution = async (alsoCreateOrder: boolean) => {
-    if (!wcase || !currentUser) {
+    if (!patient || !wcase || !currentUser) {
       toast({ title: 'Faltan datos', description: 'Seleccioná paciente y caso.', variant: 'destructive' });
       return null;
     }
@@ -377,6 +377,20 @@ export default function NewCuration() {
         next_control: evo.nextControl || null,
       }).select('id').single();
       if (evoErr) throw evoErr;
+
+      const savedEvolution: Evolution = {
+        id: evoRow.id,
+        date: evo.date,
+        time: evo.time || '',
+        professional: evo.professional || '',
+        description,
+        procedure: evo.procedure || '',
+        materials: materialsList || '',
+        healingFrequency: evo.healingFrequency || '',
+        observations: evo.observations || '',
+        nextControl: evo.nextControl || '',
+        photos: [],
+      };
 
       let orderNumber: string | null = null;
       if (alsoCreateOrder && restockItems.length > 0) {
@@ -420,9 +434,13 @@ export default function NewCuration() {
         orderNumber = orderRow.order_number;
       }
 
+      addEvolution(patient.id, wcase.id, savedEvolution);
+
       toast({
         title: 'Curación guardada',
-        description: orderNumber ? `Solicitud generada: ${orderNumber}` : 'Evolución registrada correctamente.',
+        description: orderNumber
+          ? `Solicitud generada: ${orderNumber}.${evo.nextControl ? ` Turno generado para ${evo.nextControl}.` : ''}`
+          : `Evolución registrada correctamente.${evo.nextControl ? ` Turno generado para ${evo.nextControl}.` : ''}`,
       });
       return { ok: true, orderNumber };
     } catch (e: any) {
@@ -440,7 +458,7 @@ export default function NewCuration() {
       evo.procedure && `Procedimiento: ${evo.procedure}`,
       supplies.length ? `Insumos: ${supplies.map(s => `${s.productName} x${s.quantity}`).join(', ')}` : null,
       restockItems.length ? `Reposición: ${restockItems.map(s => s.productName).join(', ')}` : null,
-      evo.nextControl && `Próximo control: ${evo.nextControl}`,
+      evo.nextControl && `Turno en calendario: ${evo.nextControl}`,
     ].filter(Boolean).join('\n');
     navigator.clipboard.writeText(lines);
     toast({ title: 'Resumen copiado' });
@@ -846,7 +864,7 @@ export default function NewCuration() {
                   <div><Label className="font-body text-sm">Frecuencia de curación</Label>
                     <Input value={evo.healingFrequency} onChange={e => setEvo({ ...evo, healingFrequency: e.target.value })} />
                   </div>
-                  <div><Label className="font-body text-sm">Próximo control</Label>
+                  <div><Label className="font-body text-sm">Turno / próximo control</Label>
                     <Input type="date" value={evo.nextControl} onChange={e => setEvo({ ...evo, nextControl: e.target.value })} />
                   </div>
                 </div>
@@ -1041,7 +1059,7 @@ export default function NewCuration() {
                 )}
                 {evo.nextControl && (
                   <div className="font-body text-sm text-muted-foreground">
-                    Próximo control: <span className="font-medium text-foreground">{evo.nextControl}</span>
+                    Turno en calendario: <span className="font-medium text-foreground">{evo.nextControl}</span>
                   </div>
                 )}
 
