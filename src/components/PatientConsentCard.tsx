@@ -43,6 +43,7 @@ interface ConsentRow {
   signer_dni: string | null;
   signer_relationship: string | null;
   signed_at: string | null;
+  signature_url: string | null;
 }
 
 const statusConfig: Record<string, { label: string; icon: React.ReactNode; variant: 'default' | 'destructive' | 'outline' | 'secondary' }> = {
@@ -60,15 +61,14 @@ export function PatientConsentCard({ patientId, patientName, patientDni }: Patie
 
   // Form state
   const [acceptsDigital, setAcceptsDigital] = useState(false);
-  const [acceptsPhotos, setAcceptsPhotos] = useState(false);
-  const [acceptsTracking, setAcceptsTracking] = useState(false);
-  const [acceptsReports, setAcceptsReports] = useState(false);
   const [signerName, setSignerName] = useState('');
   const [signerDni, setSignerDni] = useState('');
   const [signerRelationship, setSignerRelationship] = useState('paciente');
   const [signerRelOther, setSignerRelOther] = useState('');
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [savedSignatureUrl, setSavedSignatureUrl] = useState<string | null>(null);
+  const [sigViewOpen, setSigViewOpen] = useState(false);
 
   const loadConsent = useCallback(async () => {
     setLoading(true);
@@ -78,7 +78,16 @@ export function PatientConsentCard({ patientId, patientName, patientDni }: Patie
       .eq('patient_id', patientId)
       .order('created_at', { ascending: false })
       .limit(1);
-    setConsent((data && data.length > 0 ? data[0] : null) as ConsentRow | null);
+    const row = (data && data.length > 0 ? data[0] : null) as ConsentRow | null;
+    setConsent(row);
+    if (row?.signature_url) {
+      const { data: urlData } = await supabase.storage
+        .from('signatures')
+        .createSignedUrl(row.signature_url, 3600);
+      setSavedSignatureUrl(urlData?.signedUrl ?? null);
+    } else {
+      setSavedSignatureUrl(null);
+    }
     setLoading(false);
   }, [patientId]);
 
@@ -86,14 +95,11 @@ export function PatientConsentCard({ patientId, patientName, patientDni }: Patie
 
   const openDialog = () => {
     setAcceptsDigital(false);
-    setAcceptsPhotos(false);
-    setAcceptsTracking(false);
-    setAcceptsReports(false);
     setSignerName(patientName);
     setSignerDni(patientDni || '');
     setSignerRelationship('paciente');
     setSignerRelOther('');
-    setSignatureDataUrl(null);
+    setSignatureDataUrl(savedSignatureUrl);
     setDialogOpen(true);
   };
 
@@ -117,9 +123,7 @@ export function PatientConsentCard({ patientId, patientName, patientDni }: Patie
       const { error: upErr } = await supabase.storage.from('signatures').upload(path, blob, { contentType: 'image/png' });
       if (!upErr) sigPath = path;
 
-      const anyAccepted = acceptsDigital || acceptsPhotos || acceptsTracking || acceptsReports;
-      const allAccepted = acceptsDigital && acceptsPhotos && acceptsTracking && acceptsReports;
-      const status = !anyAccepted ? 'rejected' : allAccepted ? 'accepted' : 'partial';
+      const status = acceptsDigital ? 'accepted' : 'rejected';
 
       const now = new Date().toISOString();
       const { error } = await supabase.from('patient_consents').insert({
@@ -127,9 +131,9 @@ export function PatientConsentCard({ patientId, patientName, patientDni }: Patie
         user_id: currentUser.id,
         consent_version: 'v1.0',
         accepts_digital_record: acceptsDigital,
-        accepts_clinical_photos: acceptsPhotos,
-        accepts_wound_tracking: acceptsTracking,
-        accepts_digital_reports: acceptsReports,
+        accepts_clinical_photos: acceptsDigital,
+        accepts_wound_tracking: acceptsDigital,
+        accepts_digital_reports: acceptsDigital,
         status,
         signer_full_name: signerName,
         signer_dni: signerDni,
@@ -176,24 +180,37 @@ export function PatientConsentCard({ patientId, patientName, patientDni }: Patie
             <div className="text-xs font-body space-y-1">
               <p><span className="text-muted-foreground">Firmante:</span> {consent.signer_full_name} — DNI {consent.signer_dni}</p>
               <p><span className="text-muted-foreground">Vínculo:</span> {consent.signer_relationship}</p>
-              <p><span className="text-muted-foreground">Versión:</span> {consent.consent_version}</p>
               {consent.signed_at && <p><span className="text-muted-foreground">Fecha:</span> {new Date(consent.signed_at).toLocaleString('es-AR')}</p>}
-              <div className="flex flex-wrap gap-1 pt-1">
-                {consent.accepts_digital_record && <Badge variant="outline" className="text-[10px]">Registro digital</Badge>}
-                {consent.accepts_clinical_photos && <Badge variant="outline" className="text-[10px]">Fotos clínicas</Badge>}
-                {consent.accepts_wound_tracking && <Badge variant="outline" className="text-[10px]">Seguimiento</Badge>}
-                {consent.accepts_digital_reports && <Badge variant="outline" className="text-[10px]">Comprobantes</Badge>}
-              </div>
             </div>
           ) : (
             <p className="text-xs font-body text-muted-foreground italic">No hay consentimiento informado registrado para este paciente.</p>
           )}
-          <Button variant="outline" size="sm" className="font-body w-full" onClick={openDialog}>
-            <FileText className="h-4 w-4 mr-1" />
-            {consent ? 'Actualizar consentimiento informado' : 'Registrar consentimiento informado'}
-          </Button>
+          <div className="flex justify-center gap-2">
+            <Button variant="outline" size="sm" className="font-body flex-1" onClick={openDialog}>
+              <FileText className="h-4 w-4 mr-1" />
+              {consent ? 'Actualizar consentimiento informado' : 'Registrar consentimiento informado'}
+            </Button>
+            {consent && (
+              <Button variant="outline" size="sm" className="font-body flex-1" onClick={() => setSigViewOpen(true)}>
+                Ver firma
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
+
+      <Dialog open={sigViewOpen} onOpenChange={setSigViewOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="heading-display text-lg">Firma registrada</DialogTitle>
+          </DialogHeader>
+          {savedSignatureUrl ? (
+            <img src={savedSignatureUrl} alt="Firma del consentimiento" className="w-full rounded-lg border border-border/60 bg-muted/20" />
+          ) : (
+            <p className="font-body text-sm text-muted-foreground text-center py-6">Sin firma registrada</p>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -203,28 +220,12 @@ export function PatientConsentCard({ patientId, patientName, patientDni }: Patie
 
           <div className="space-y-4">
             <p className="font-body text-xs text-muted-foreground leading-relaxed">
-              Autorizo el registro digital de mis datos personales y clínicos en la plataforma, incluyendo información relacionada con mi atención, evolución de heridas, materiales utilizados, observaciones profesionales y documentación asociada. Entiendo que esta información será utilizada para seguimiento clínico y gestión de la atención.
+              Autorizo el registro digital de mis datos personales y clínicos en la plataforma, incluyendo fotografías, evolución de heridas y documentación asociada, para fines de seguimiento clínico.
             </p>
 
-            <Separator />
-
-            <div className="space-y-3">
-              <div className="flex items-start gap-2">
-                <Checkbox id="cd-digital" checked={acceptsDigital} onCheckedChange={(v) => setAcceptsDigital(!!v)} />
-                <Label htmlFor="cd-digital" className="font-body text-xs cursor-pointer leading-tight">Acepta el registro digital de datos clínicos.</Label>
-              </div>
-              <div className="flex items-start gap-2">
-                <Checkbox id="cd-photos" checked={acceptsPhotos} onCheckedChange={(v) => setAcceptsPhotos(!!v)} />
-                <Label htmlFor="cd-photos" className="font-body text-xs cursor-pointer leading-tight">Acepta la carga y almacenamiento de fotografías clínicas.</Label>
-              </div>
-              <div className="flex items-start gap-2">
-                <Checkbox id="cd-tracking" checked={acceptsTracking} onCheckedChange={(v) => setAcceptsTracking(!!v)} />
-                <Label htmlFor="cd-tracking" className="font-body text-xs cursor-pointer leading-tight">Acepta que la información sea utilizada para seguimiento de la evolución de heridas.</Label>
-              </div>
-              <div className="flex items-start gap-2">
-                <Checkbox id="cd-reports" checked={acceptsReports} onCheckedChange={(v) => setAcceptsReports(!!v)} />
-                <Label htmlFor="cd-reports" className="font-body text-xs cursor-pointer leading-tight">Acepta recibir o generar comprobantes digitales de atención.</Label>
-              </div>
+            <div className="flex items-start gap-2">
+              <Checkbox id="cd-digital" checked={acceptsDigital} onCheckedChange={(v) => setAcceptsDigital(!!v)} />
+              <Label htmlFor="cd-digital" className="font-body text-xs cursor-pointer leading-tight">Acepto los términos del consentimiento informado</Label>
             </div>
 
             <Separator />
