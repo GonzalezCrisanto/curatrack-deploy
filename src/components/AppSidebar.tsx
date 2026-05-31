@@ -37,7 +37,7 @@ type SidebarItem = {
 
 const clinicalItems: SidebarItem[] = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard, section: 'dashboard' },
-  {
+/*   {
     title: 'Pacientes',
     url: '/patients',
     icon: Users,
@@ -45,10 +45,13 @@ const clinicalItems: SidebarItem[] = [
     children: [
       { title: 'Nuevo paciente', url: '/patients?new=1' },
     ],
-  },
-  { title: 'Casos de heridas', url: '/cases', icon: Activity, section: 'casos-heridas' },
+  }, */
+ // { title: 'Casos de heridas', url: '/cases', icon: Activity, section: 'casos-heridas' },
   { title: 'Nueva curación', url: '/curation/new', icon: PlusCircle, section: 'nueva-curacion' },
-  { title: 'Agenda', url: '/agenda', icon: Calendar, section: 'agenda' },
+  {title: 'Nuevo paciente', url: '/patients?new=1' , icon: PlusCircle, section: 'nueva-curacion' },
+ 
+
+  //{ title: 'Agenda', url: '/agenda', icon: Calendar, section: 'agenda' },
 ];
 
 const commercialItems: SidebarItem[] = [
@@ -59,7 +62,7 @@ const commercialItems: SidebarItem[] = [
 
 const insightsItems: SidebarItem[] = [
   { title: 'Estadísticas', url: '/statistics', icon: BarChart3, section: 'estadisticas' },
-  { title: 'Asistente clínico', url: '/assistant', icon: Sparkles, section: 'asistente-clinico' },
+ 
   { title: 'Reportes', url: '/reports', icon: FileText, section: 'reportes' },
   { title: 'Configuración', url: '/settings', icon: Settings, section: 'configuracion' },
 ];
@@ -176,7 +179,7 @@ export function AppSidebar() {
     { title: 'Solicitudes de reposición', url: '/orders', icon: Truck, section: 'solicitudes-reposicion' },
   ]);
   const profPlatform = filterByPermission([
-    { title: 'Asistente clínico', url: '/assistant', icon: Sparkles, section: 'asistente-clinico' },
+    //{ title: 'Asistente clínico', url: '/assistant', icon: Sparkles, section: 'asistente-clinico' },
     { title: 'Configuración', url: '/settings', icon: Settings, section: 'configuracion' },
   ]);
 

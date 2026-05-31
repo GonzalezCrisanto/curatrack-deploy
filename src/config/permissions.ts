@@ -7,6 +7,7 @@ export type PermissionSection =
   | 'pacientes'
   | 'casos-heridas'
   | 'nueva-curacion'
+  | 'nueva-herida'
   | 'agenda'
   | 'catalogo-clinico'
   | 'solicitudes-reposicion'
@@ -26,6 +27,7 @@ const CLINICIAN_PERMISSIONS: readonly PermissionSection[] = [
   'dashboard',
   'pacientes',
   'casos-heridas',
+  'nueva-herida',
   'nueva-curacion',
   'agenda',
   'catalogo-clinico',
