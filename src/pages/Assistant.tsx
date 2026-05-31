@@ -307,7 +307,8 @@ Sé breve, claro y accionable. Usá listas con bullets o numeradas. No uses bloq
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-5xl mx-auto">
+      <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
+        <div className="space-y-6 max-w-5xl mx-auto">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="heading-display text-3xl text-foreground flex items-center gap-3">
@@ -454,6 +455,7 @@ Sé breve, claro y accionable. Usá listas con bullets o numeradas. No uses bloq
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
     </AppLayout>
   );

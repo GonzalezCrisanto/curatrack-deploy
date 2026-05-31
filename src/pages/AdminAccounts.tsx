@@ -143,7 +143,8 @@ export default function AdminAccounts() {
 
   return (
     <AppLayout>
-      <div className="flex flex-col gap-6 max-w-5xl">
+      <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
+        <div className="flex flex-col gap-6 max-w-5xl">
         <div>
           <h1 className="font-heading text-2xl md:text-3xl font-bold flex items-center gap-2">
             <Users className="h-7 w-7 text-primary" />
@@ -224,6 +225,7 @@ export default function AdminAccounts() {
             })}
           </div>
         )}
+        </div>
       </div>
       <AlertDialog open={!!confirmDelete} onOpenChange={open => { if (!open) setConfirmDelete(null); }}>
         <AlertDialogContent>

@@ -618,7 +618,8 @@ export default function CaseDetail() {
 
   return (
     <AppLayout>
-      <div className="space-y-6 animate-fade-in">
+      <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
+        <div className="space-y-6 animate-fade-in">
         <Button variant="outline" onClick={() => navigate('/dashboard')} className="font-body text-sm border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Dashboard
         </Button>
@@ -1593,6 +1594,7 @@ export default function CaseDetail() {
             )}
           </DialogContent>
         </Dialog>
+        </div>
       </div>
     </AppLayout>
   );

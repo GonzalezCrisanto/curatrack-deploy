@@ -569,7 +569,7 @@ export default function Dashboard() {
     return (
       <AppLayout>
         <div className="mx-auto w-full max-w-5xl flex-1">
-          <div className="flex h-full flex-col gap-5 p-4 md:p-6">
+          <div className="flex h-full flex-col gap-5 p-4 md:p-6 lg:p-8">
             <section>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
@@ -906,7 +906,7 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="bg-muted/30 rounded-xl p-4 md:p-5 flex-1 min-h-0 h-[calc(100dvh-8rem)] overflow-hidden">
+      <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1 min-h-0 h-[calc(100dvh-8rem)] overflow-hidden">
         <div className="animate-fade-in max-w-7xl mx-auto h-full flex flex-col gap-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>

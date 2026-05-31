@@ -102,7 +102,8 @@ export default function SponsorOrders() {
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-6xl mx-auto w-full">
+      <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
+        <div className="space-y-6 max-w-6xl mx-auto w-full">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
           <div>
             <h1 className="heading-display text-2xl md:text-3xl flex items-center gap-2.5">
@@ -185,6 +186,7 @@ export default function SponsorOrders() {
             })}
           </div>
         )}
+        </div>
       </div>
     </AppLayout>
   );

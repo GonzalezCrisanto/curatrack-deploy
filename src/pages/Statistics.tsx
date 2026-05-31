@@ -225,7 +225,8 @@ export default function Statistics() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
+        <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
             <h1 className="font-heading text-3xl font-bold text-foreground">Estadísticas sponsor</h1>
@@ -327,6 +328,7 @@ export default function Statistics() {
             </ResponsiveContainer>
           )}
         </ChartCard>
+        </div>
       </div>
     </AppLayout>
   );

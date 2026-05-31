@@ -60,7 +60,8 @@ export default function NewPatient() {
 
   return (
     <AppLayout>
-      <div className="w-full space-y-6 animate-fade-in">
+      <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
+        <div className="w-full space-y-6 animate-fade-in">
         <div>
           <Button
             variant="outline"
@@ -289,6 +290,7 @@ export default function NewPatient() {
             <Button variant="outline" onClick={() => navigate('/dashboard')} className="font-body">Cancelar</Button>
             <Button onClick={handleSave} className="font-body">Crear paciente</Button>
           </div>
+        </div>
         </div>
       </div>
     </AppLayout>

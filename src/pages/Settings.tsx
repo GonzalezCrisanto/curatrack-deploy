@@ -118,7 +118,8 @@ export default function SettingsPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-4xl mx-auto w-full animate-fade-in">
+      <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
+        <div className="space-y-6 max-w-4xl mx-auto w-full animate-fade-in">
         <h1 className="heading-display text-2xl md:text-3xl">Configuración</h1>
 
         {!isSponsorRole ? (
@@ -325,6 +326,7 @@ export default function SettingsPage() {
         <p className="font-body text-xs text-muted-foreground text-center">
           {sponsor?.app_name} · {new Date().getFullYear()}
         </p>
+        </div>
       </div>
     </AppLayout>
   );

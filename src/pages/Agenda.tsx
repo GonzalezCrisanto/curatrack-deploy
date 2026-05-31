@@ -47,7 +47,8 @@ export default function Agenda() {
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-5xl mx-auto w-full">
+      <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
+        <div className="space-y-6 max-w-5xl mx-auto w-full">
         <div>
           <h1 className="heading-display text-3xl flex items-center gap-3">
             <Calendar className="h-7 w-7 text-primary" /> Agenda
@@ -98,6 +99,7 @@ export default function Agenda() {
             ))}
           </div>
         )}
+        </div>
       </div>
     </AppLayout>
   );

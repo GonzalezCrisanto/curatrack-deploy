@@ -94,7 +94,8 @@ export default function Marketplace() {
 
   return (
     <AppLayout>
-      <div className="flex flex-col gap-6">
+      <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
+        <div className="flex flex-col gap-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
           <div>
@@ -236,6 +237,7 @@ export default function Marketplace() {
             ))}
           </div>
         )}
+        </div>
       </div>
     </AppLayout>
   );
