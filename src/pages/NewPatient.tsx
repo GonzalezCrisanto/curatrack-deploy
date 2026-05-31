@@ -40,19 +40,6 @@ export default function NewPatient() {
     const next: Record<string, string> = {};
     if (!form.firstName.trim()) next.firstName = 'Ingresá el nombre';
     if (!form.lastName.trim()) next.lastName = 'Ingresá el apellido';
-    if (!form.birthDate) {
-      next.birthDate = 'Indicá la fecha de nacimiento';
-    } else {
-      const age = calculateAge(form.birthDate);
-      if (age === null) next.birthDate = 'Fecha de nacimiento inválida';
-      else if (age < 0 || age > 120) next.birthDate = 'La edad calculada debe estar entre 0 y 120 años';
-      else if (new Date(form.birthDate) > new Date()) next.birthDate = 'La fecha no puede ser futura';
-    }
-    if (!form.gender) next.gender = 'Seleccioná el sexo';
-    if (!form.dni.trim()) next.dni = 'Ingresá el documento';
-    if (!form.phone.trim()) next.phone = 'Ingresá un teléfono de contacto';
-    if (!form.address.trim()) next.address = 'Ingresá el domicilio';
-    if (!form.admissionDate) next.admissionDate = 'Indicá la fecha de ingreso';
     return next;
   };
 
@@ -73,7 +60,7 @@ export default function NewPatient() {
 
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+      <div className="w-full space-y-6 animate-fade-in">
         <div>
           <Button
             variant="outline"
@@ -93,16 +80,7 @@ export default function NewPatient() {
           <section className="space-y-3">
             <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-muted-foreground">Datos personales</h3>
             <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5" data-error={!!errors.firstName}>
-                <Label className="font-body text-sm">Nombre <span className="text-destructive">*</span></Label>
-                <Input
-                  value={form.firstName}
-                  onChange={e => setField('firstName', e.target.value)}
-                  className={`font-body ${errors.firstName ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                  aria-invalid={!!errors.firstName}
-                />
-                {errors.firstName && <p className="font-body text-[11px] text-destructive">{errors.firstName}</p>}
-              </div>
+              {/* Apellido */}
               <div className="space-y-1.5" data-error={!!errors.lastName}>
                 <Label className="font-body text-sm">Apellido <span className="text-destructive">*</span></Label>
                 <Input
@@ -113,8 +91,38 @@ export default function NewPatient() {
                 />
                 {errors.lastName && <p className="font-body text-[11px] text-destructive">{errors.lastName}</p>}
               </div>
-              <div className="space-y-1.5" data-error={!!errors.birthDate}>
-                <Label className="font-body text-sm">Fecha de nacimiento <span className="text-destructive">*</span></Label>
+              {/* Nombre */}
+              <div className="space-y-1.5" data-error={!!errors.firstName}>
+                <Label className="font-body text-sm">Nombre <span className="text-destructive">*</span></Label>
+                <Input
+                  value={form.firstName}
+                  onChange={e => setField('firstName', e.target.value)}
+                  className={`font-body ${errors.firstName ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                  aria-invalid={!!errors.firstName}
+                />
+                {errors.firstName && <p className="font-body text-[11px] text-destructive">{errors.firstName}</p>}
+              </div>
+              {/* Domicilio */}
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="font-body text-sm">Domicilio <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                <Input
+                  value={form.address}
+                  onChange={e => setField('address', e.target.value)}
+                  className="font-body"
+                />
+              </div>
+              {/* Teléfono */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-sm">Teléfono de contacto <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                <Input
+                  value={form.phone}
+                  onChange={e => setField('phone', e.target.value)}
+                  className="font-body"
+                />
+              </div>
+              {/* Fecha de nacimiento */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-sm">Fecha de nacimiento <span className="text-muted-foreground font-normal">(opcional)</span></Label>
                 <Input
                   type="date"
                   max={new Date().toISOString().split('T')[0]}
@@ -125,26 +133,22 @@ export default function NewPatient() {
                     const a = calculateAge(v);
                     setField('age', a ?? 0);
                   }}
-                  className={`font-body ${errors.birthDate ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                  aria-invalid={!!errors.birthDate}
+                  className="font-body"
                 />
-                <p className="font-body text-[11px] text-muted-foreground">
-                  {form.birthDate
-                    ? (() => {
-                        const a = calculateAge(form.birthDate);
-                        return a === null ? 'Fecha inválida' : `Edad calculada: ${a} año${a === 1 ? '' : 's'}`;
-                      })()
-                    : 'La edad se calcula automáticamente.'}
-                </p>
-                {errors.birthDate && <p className="font-body text-[11px] text-destructive">{errors.birthDate}</p>}
+                {form.birthDate && (
+                  <p className="font-body text-[11px] text-muted-foreground">
+                    {(() => {
+                      const a = calculateAge(form.birthDate);
+                      return a === null ? 'Fecha inválida' : `Edad calculada: ${a} año${a === 1 ? '' : 's'}`;
+                    })()}
+                  </p>
+                )}
               </div>
-              <div className="space-y-1.5" data-error={!!errors.gender}>
-                <Label className="font-body text-sm">Sexo <span className="text-destructive">*</span></Label>
+              {/* Sexo */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-sm">Sexo <span className="text-muted-foreground font-normal">(opcional)</span></Label>
                 <Select value={form.gender} onValueChange={v => setField('gender', v)}>
-                  <SelectTrigger
-                    className={`font-body ${errors.gender ? 'border-destructive focus:ring-destructive' : ''}`}
-                    aria-invalid={!!errors.gender}
-                  >
+                  <SelectTrigger className="font-body">
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
                   <SelectContent>
@@ -153,42 +157,21 @@ export default function NewPatient() {
                     <SelectItem value="Otro">Otro</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.gender && <p className="font-body text-[11px] text-destructive">{errors.gender}</p>}
               </div>
-              <div className="space-y-1.5" data-error={!!errors.dni}>
-                <Label className="font-body text-sm">DNI / Documento <span className="text-destructive">*</span></Label>
+              {/* DNI */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-sm">DNI / Documento <span className="text-muted-foreground font-normal">(opcional)</span></Label>
                 <Input
                   value={form.dni}
                   onChange={e => setField('dni', e.target.value)}
-                  className={`font-body ${errors.dni ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                  className="font-body"
                   placeholder="DNI, pasaporte u otro"
-                  aria-invalid={!!errors.dni}
                 />
-                {errors.dni && <p className="font-body text-[11px] text-destructive">{errors.dni}</p>}
               </div>
-              <div className="space-y-1.5" data-error={!!errors.phone}>
-                <Label className="font-body text-sm">Teléfono de contacto <span className="text-destructive">*</span></Label>
-                <Input
-                  value={form.phone}
-                  onChange={e => setField('phone', e.target.value)}
-                  className={`font-body ${errors.phone ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                  aria-invalid={!!errors.phone}
-                />
-                {errors.phone && <p className="font-body text-[11px] text-destructive">{errors.phone}</p>}
-              </div>
-              <div className="space-y-2 sm:col-span-2">
+              {/* Email */}
+              <div className="space-y-2">
                 <Label className="font-body text-sm">Email <span className="text-muted-foreground font-normal">(opcional)</span></Label>
                 <Input value={form.email} onChange={e => setField('email', e.target.value)} className="font-body" />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2" data-error={!!errors.address}>
-                <Label className="font-body text-sm">Domicilio <span className="text-destructive">*</span></Label>
-                <Input
-                  value={form.address}
-                  onChange={e => setField('address', e.target.value)}
-                  className={`font-body ${errors.address ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                  aria-invalid={!!errors.address}
-                />
-                {errors.address && <p className="font-body text-[11px] text-destructive">{errors.address}</p>}
               </div>
             </div>
           </section>
@@ -226,16 +209,14 @@ export default function NewPatient() {
           <section className="space-y-3 pt-4 border-t border-border/60">
             <h3 className="font-body text-xs font-semibold uppercase tracking-wide text-muted-foreground">Seguimiento</h3>
             <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5" data-error={!!errors.admissionDate}>
-                <Label className="font-body text-sm">Fecha de ingreso al servicio <span className="text-destructive">*</span></Label>
+              <div className="space-y-1.5">
+                <Label className="font-body text-sm">Fecha de ingreso al servicio <span className="text-muted-foreground font-normal">(opcional)</span></Label>
                 <Input
                   type="date"
                   value={form.admissionDate}
                   onChange={e => setField('admissionDate', e.target.value)}
-                  className={`font-body ${errors.admissionDate ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                  aria-invalid={!!errors.admissionDate}
+                  className="font-body"
                 />
-                {errors.admissionDate && <p className="font-body text-[11px] text-destructive">{errors.admissionDate}</p>}
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <p className="font-body text-[11px] text-muted-foreground -mt-1">
