@@ -11,14 +11,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { appendNextControlTimeMarker, formatNextControl, normalizeAppointmentTime } from '@/lib/appointments';
 import {
   ChevronLeft, ChevronRight, Search, User, Activity, Camera, Package,
-  CheckCircle2, ShoppingBag, Save, Copy, ArrowLeft, AlertCircle, Pill, Plus, X, FileText, UserPlus,
+  CheckCircle2, Save, ArrowLeft, AlertCircle, Pill, Plus, X, FileText, UserPlus,
 } from 'lucide-react';
 import type { Evolution, Patient, WoundCase } from '@/data/demoData';
 
@@ -30,7 +29,6 @@ type SupplyLine = {
   quantity: number;
   unit: string;
   used: boolean;
-  restock: boolean;
   isSponsor?: boolean;
   unitPrice?: number | null;
   presentation?: string | null;
@@ -143,7 +141,7 @@ export default function NewCuration() {
     perilesional: 'sana',
     observations: '',
     procedure: '',
-    healingFrequency: 'cada 3 días',
+    healingFrequency: '',
     nextControl: '',
     nextControlTime: '',
   });
@@ -209,7 +207,7 @@ export default function NewCuration() {
       productName: p.name,
       category: p.category ?? 'Otros',
       quantity: 1, unit: 'u',
-      used: true, restock: true,
+      used: true,
       isSponsor: true,
       unitPrice: p.price ?? null,
       presentation: p.presentation ?? null,
@@ -219,15 +217,13 @@ export default function NewCuration() {
   };
   const addSupplyGeneric = (category: string) => {
     setSupplies(prev => ([...prev, {
-      id: newId(), productName: category, category, quantity: 1, unit: 'u', used: true, restock: false,
+      id: newId(), productName: category, category, quantity: 1, unit: 'u', used: true,
     }]));
   };
   const updateSupply = (id: string, patch: Partial<SupplyLine>) => {
     setSupplies(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s));
   };
   const removeSupply = (id: string) => setSupplies(prev => prev.filter(s => s.id !== id));
-
-  const restockItems = supplies.filter(s => s.restock);
 
   const resetNewCaseForm = () => {
     setNewCase({
@@ -364,7 +360,7 @@ export default function NewCuration() {
   };
 
   // --- Save ---
-  const saveEvolution = async (alsoCreateOrder: boolean) => {
+  const saveEvolution = async () => {
     if (!patient || !wcase || !currentUser) {
       toast({ title: 'Faltan datos', description: 'Seleccioná paciente y caso.', variant: 'destructive' });
       return null;
@@ -441,78 +437,19 @@ export default function NewCuration() {
         photos: [],
       };
 
-      let orderNumber: string | null = null;
-      if (alsoCreateOrder && restockItems.length > 0) {
-        let num = `CT-${Date.now()}`;
-        try {
-          const { data: numData } = await supabase.rpc('generate_order_number' as never);
-          if (typeof numData === 'string' && numData) num = numData;
-        } catch { /* ignore */ }
-
-        const estimated = restockItems.reduce((sum, s) => sum + (Number(s.unitPrice ?? 0) * s.quantity), 0);
-        const { data: orderRow, error: ordErr } = await supabase.from('supply_orders').insert({
-          user_id: currentUser.id,
-          lab_id: sponsor?.lab_id ?? null,
-          order_number: num,
-          status: 'borrador',
-          professional_name: evo.professional || null,
-          institution: currentUser.institution ?? null,
-          general_wound_type: wcase.woundType,
-          clinical_recommendation: `Origen: curación/evolución del ${evo.date}`,
-          commercial_notes: `Generada desde wizard de Nueva curación (${sponsor?.sponsor_name ?? ''})`.trim(),
-          estimated_total: estimated || null,
-          currency: 'ARS',
-          channel: 'wizard',
-        }).select('id, order_number').single();
-        if (ordErr) throw ordErr;
-
-        const itemsPayload = restockItems.map(s => ({
-          order_id: orderRow.id,
-          product_id: s.productId ?? null,
-          product_name: s.productName,
-          product_sku: s.sku ?? null,
-          presentation: s.presentation ?? null,
-          quantity: s.quantity,
-          unit_price: s.unitPrice ?? null,
-          subtotal: s.unitPrice != null ? Number(s.unitPrice) * s.quantity : null,
-          currency: 'ARS',
-          notes: s.category,
-        }));
-        const { error: itErr } = await supabase.from('supply_order_items').insert(itemsPayload);
-        if (itErr) throw itErr;
-        orderNumber = orderRow.order_number;
-      }
-
       addEvolution(patient.id, wcase.id, savedEvolution);
 
       const controlLabel = formatNextControl(evo.nextControl, nextControlTime);
 
       toast({
         title: 'Curación guardada',
-        description: orderNumber
-          ? `Solicitud generada: ${orderNumber}.${controlLabel ? ` Turno generado para ${controlLabel}.` : ''}`
-          : `Evolución registrada correctamente.${controlLabel ? ` Turno generado para ${controlLabel}.` : ''}`,
+        description: `Evolución registrada correctamente.${controlLabel ? ` Turno generado para ${controlLabel}.` : ''}`,
       });
-      return { ok: true, orderNumber };
+      return { ok: true };
     } catch (e: any) {
       toast({ title: 'No se pudo guardar', description: e.message ?? String(e), variant: 'destructive' });
       return null;
     } finally { setSaving(false); }
-  };
-
-  const copySummary = () => {
-    const lines = [
-      `Curación — ${wcase?.woundType ?? ''}`,
-      `Fecha: ${evo.date} ${evo.time}`,
-      `Profesional: ${evo.professional}`,
-      `Dolor: EVA ${evo.pain}/10 · Exudado: ${evo.exudateAmount} / ${evo.exudateType} · Infección: ${evo.infection}`,
-      evo.procedure && `Procedimiento: ${evo.procedure}`,
-      supplies.length ? `Insumos: ${supplies.map(s => `${s.productName} x${s.quantity}`).join(', ')}` : null,
-      restockItems.length ? `Reposición: ${restockItems.map(s => s.productName).join(', ')}` : null,
-      evo.nextControl && `Turno en calendario: ${formatNextControl(evo.nextControl, evo.nextControlTime)}`,
-    ].filter(Boolean).join('\n');
-    navigator.clipboard.writeText(lines);
-    toast({ title: 'Resumen copiado' });
   };
 
   const isStepValid = (n: number) => {
@@ -856,7 +793,7 @@ export default function NewCuration() {
                 <CardTitle className="heading-display text-lg flex items-center gap-2"><Activity className="h-5 w-5 text-primary" /> Evaluación clínica</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <Label className="font-body text-sm">Fecha</Label>
                     <Input
@@ -875,7 +812,6 @@ export default function NewCuration() {
                       className={stepAttempted && !evo.time ? 'border-destructive ring-1 ring-destructive' : ''}
                     />
                   </div>
-                  <div><Label className="font-body text-sm">Profesional</Label><Input value={evo.professional} onChange={e => setEvo({ ...evo, professional: e.target.value })} /></div>
                 </div>
 
                 <div className="space-y-2">
@@ -911,11 +847,8 @@ export default function NewCuration() {
                 <div><Label className="font-body text-sm">Observaciones</Label>
                   <Textarea rows={2} value={evo.observations} onChange={e => setEvo({ ...evo, observations: e.target.value })} />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div><Label className="font-body text-sm">Frecuencia de curación</Label>
-                    <Input value={evo.healingFrequency} onChange={e => setEvo({ ...evo, healingFrequency: e.target.value })} />
-                  </div>
-                  <div><Label className="font-body text-sm">Turno / próximo control</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div><Label className="font-body text-sm">Próximo turno</Label>
                     <Input type="date" value={evo.nextControl} onChange={e => setEvo({ ...evo, nextControl: e.target.value, nextControlTime: e.target.value ? evo.nextControlTime : '' })} />
                   </div>
                   <div>
@@ -1000,7 +933,7 @@ export default function NewCuration() {
               <CardHeader>
                 <CardTitle className="heading-display text-lg flex items-center gap-2"><Package className="h-5 w-5 text-primary" /> Insumos utilizados</CardTitle>
                 <p className="font-body text-sm text-muted-foreground mt-0.5">
-                  Marcá los insumos usados en esta curación y cuáles necesitan reposición.
+                  Marcá los insumos utilizados en esta curación.
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1073,11 +1006,7 @@ export default function NewCuration() {
                         <div className="col-span-4 md:col-span-2">
                           <Input value={s.unit} onChange={e => updateSupply(s.id, { unit: e.target.value })} className="h-8 text-sm" placeholder="u" />
                         </div>
-                        <label className="col-span-4 md:col-span-2 flex items-center gap-1.5 font-body text-sm cursor-pointer">
-                          <Checkbox checked={s.restock} onCheckedChange={(v) => updateSupply(s.id, { restock: v === true })} />
-                          Reponer
-                        </label>
-                        <Button type="button" variant="ghost" size="icon" className="col-span-12 md:col-span-1 h-8 w-8 ml-auto" onClick={() => removeSupply(s.id)}>
+                        <Button type="button" variant="ghost" size="icon" className="col-span-12 md:col-span-3 h-8 w-8 ml-auto" onClick={() => removeSupply(s.id)}>
                           <X className="h-4 w-4 text-muted-foreground" />
                         </Button>
                       </div>
@@ -1117,45 +1046,18 @@ export default function NewCuration() {
                           <span>{s.productName} <span className="text-muted-foreground">· {s.category}</span></span>
                           <span className="flex items-center gap-2">
                             x{s.quantity}{s.unit}
-                            {s.restock && <Badge variant="outline" className="font-body text-[9px] uppercase border-primary/30 text-primary">Reponer</Badge>}
                           </span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-                {restockItems.length > 0 && (
-                  <div className="p-3 rounded-lg border border-primary/30 bg-primary/5">
-                    <div className="font-body text-sm font-medium flex items-center gap-2">
-                      <ShoppingBag className="h-4 w-4 text-primary" />
-                      {restockItems.length} producto(s) marcados para reposición
-                    </div>
-                    <div className="font-body text-sm text-muted-foreground mt-1">
-                      Se generará una solicitud al laboratorio sponsor con esos insumos.
-                    </div>
-                  </div>
-                )}
                 {evo.nextControl && (
                   <div className="font-body text-sm text-muted-foreground">
-                    Turno en calendario: <span className="font-medium text-foreground">{formatNextControl(evo.nextControl, evo.nextControlTime)}</span>
+                    Próximo turno: <span className="font-medium text-foreground">{formatNextControl(evo.nextControl, evo.nextControlTime)}</span>
                   </div>
                 )}
 
-                <Separator />
-
-                <div className="flex flex-wrap gap-2 justify-end">
-                  <Button variant="ghost" size="sm" className="font-body" onClick={copySummary}>
-                    <Copy className="h-4 w-4 mr-1.5" /> Copiar resumen
-                  </Button>
-                  <Button variant="outline" size="sm" className="font-body" disabled={saving}
-                    onClick={async () => { const r = await saveEvolution(false); if (r) navigate(`/patients/${patient?.id}/cases/${wcase?.id}`); }}>
-                    <Save className="h-4 w-4 mr-1.5" /> Guardar evolución
-                  </Button>
-                  <Button size="sm" className="font-body" disabled={saving || restockItems.length === 0}
-                    onClick={async () => { const r = await saveEvolution(true); if (r) navigate('/orders'); }}>
-                    <ShoppingBag className="h-4 w-4 mr-1.5" /> Guardar y generar solicitud
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           )}
@@ -1176,13 +1078,22 @@ export default function NewCuration() {
               <div className="font-body text-sm text-muted-foreground">Paso {step} de {STEPS.length}</div>
               <Button
                 className="font-body"
-                disabled={step === STEPS.length}
-                onClick={() => {
+                disabled={saving}
+                onClick={async () => {
                   if (!canNext()) { setStepAttempted(true); return; }
+                  if (step === STEPS.length) {
+                    const r = await saveEvolution();
+                    if (r) navigate(`/patients/${patient?.id}/cases/${wcase?.id}`);
+                    return;
+                  }
                   setStep(s => Math.min(STEPS.length, s + 1));
                 }}
               >
-                Siguiente <ChevronRight className="h-4 w-4 ml-1" />
+                {step === STEPS.length ? (
+                  <><Save className="h-4 w-4 mr-1" /> Guardar curación</>
+                ) : (
+                  <>Siguiente <ChevronRight className="h-4 w-4 ml-1" /></>
+                )}
               </Button>
             </div>
           </div>
