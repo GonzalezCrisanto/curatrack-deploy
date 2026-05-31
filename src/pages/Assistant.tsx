@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getPatientIndicator, indicatorMeta } from '@/lib/patientStatus';
 import { getPatientAge } from '@/lib/age';
+import { getNextControlTime } from '@/lib/appointments';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -50,7 +51,7 @@ export default function Assistant() {
         const upcoming = p.cases.flatMap(c =>
           c.evolutions
             .filter(e => e.nextControl)
-            .map(e => ({ caso: c.woundType, proximo_control: e.nextControl, hora: e.time }))
+            .map(e => ({ caso: c.woundType, proximo_control: e.nextControl, hora: getNextControlTime(e) }))
         );
         return {
           nombre: `${p.lastName}, ${p.firstName}`,

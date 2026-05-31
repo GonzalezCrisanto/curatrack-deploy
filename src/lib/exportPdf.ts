@@ -1,5 +1,6 @@
 import { Patient, getStatusLabel } from '@/data/demoData';
 import { formatPatientAge } from '@/lib/age';
+import { formatNextControl, getNextControlTime } from '@/lib/appointments';
 
 export interface EvolutionSignatureInfo {
   evolutionId: string;
@@ -62,7 +63,7 @@ export function exportPatientPdf(patient: Patient, signatureMap?: Record<string,
               ${ev.materials ? `<tr><td class="label">Material de curación</td><td>${ev.materials}</td></tr>` : ''}
               ${ev.healingFrequency ? `<tr><td class="label">Frecuencia de curación</td><td>${ev.healingFrequency}</td></tr>` : ''}
               ${ev.observations ? `<tr><td class="label">Observaciones</td><td>${ev.observations}</td></tr>` : ''}
-              <tr><td class="label">Próximo control</td><td>${ev.nextControl}</td></tr>
+              <tr><td class="label">Próximo control</td><td>${formatNextControl(ev.nextControl, getNextControlTime(ev))}</td></tr>
             </table>
             ${ev.photos.length > 0 ? `
               <div class="photos">

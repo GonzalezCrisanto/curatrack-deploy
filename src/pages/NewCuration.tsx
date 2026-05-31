@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { appendNextControlTimeMarker, formatNextControl, normalizeAppointmentTime } from '@/lib/appointments';
 import {
   ChevronLeft, ChevronRight, Search, User, Activity, Camera, Package,
   CheckCircle2, ShoppingBag, Save, Copy, ArrowLeft, AlertCircle, Pill, Plus, X, FileText, UserPlus,
@@ -58,6 +59,19 @@ const STEPS = [
 function newId() { return Math.random().toString(36).slice(2, 10); }
 function todayISO() { return new Date().toISOString().split('T')[0]; }
 function nowHM() { const d = new Date(); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+function setTimeHour(time: string, value: string) {
+  if (value === '') return '';
+  const minutes = time ? (time.split(':')[1] ?? '00') : '00';
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed)) return '';
+  const hour = Math.min(23, Math.max(0, parsed));
+  return `${String(hour).padStart(2, '0')}:${minutes}`;
+}
+function setTimeMinutes(time: string, minutes: string) {
+  if (!minutes) return '';
+  const hour = time ? (time.split(':')[0] ?? '00') : '00';
+  return `${hour}:${minutes}`;
+}
 function ageFromBirthDate(birthDate: string) {
   const birth = new Date(`${birthDate}T12:00:00`);
   if (Number.isNaN(birth.getTime())) return 0;
@@ -124,6 +138,7 @@ export default function NewCuration() {
     procedure: '',
     healingFrequency: 'cada 3 días',
     nextControl: '',
+    nextControlTime: '',
   });
 
   // Step 4 — supplies
@@ -363,7 +378,8 @@ export default function NewCuration() {
         `Perilesional: ${evo.perilesional}`,
       ].filter(Boolean).join('. ');
 
-      const { data: evoRow, error: evoErr } = await supabase.from('evolutions').insert({
+      const nextControlTime = evo.nextControl ? normalizeAppointmentTime(evo.nextControlTime) : '';
+      const baseEvolutionPayload = {
         user_id: currentUser.id,
         case_id: wcase.id,
         evolution_date: evo.date,
@@ -375,7 +391,32 @@ export default function NewCuration() {
         healing_frequency: evo.healingFrequency || null,
         observations: evo.observations || null,
         next_control: evo.nextControl || null,
-      }).select('id').single();
+      };
+      const payloadWithControlTime = nextControlTime
+        ? { ...baseEvolutionPayload, next_control_time: nextControlTime }
+        : baseEvolutionPayload;
+
+      let evolutionInsert = await supabase
+        .from('evolutions')
+        .insert(payloadWithControlTime as any)
+        .select('id')
+        .single();
+      if (
+        evolutionInsert.error
+        && nextControlTime
+        && String(evolutionInsert.error.message ?? '').includes('next_control_time')
+      ) {
+        evolutionInsert = await supabase
+          .from('evolutions')
+          .insert({
+            ...baseEvolutionPayload,
+            observations: appendNextControlTimeMarker(evo.observations, nextControlTime),
+          } as any)
+          .select('id')
+          .single();
+      }
+
+      const { data: evoRow, error: evoErr } = evolutionInsert;
       if (evoErr) throw evoErr;
 
       const savedEvolution: Evolution = {
@@ -389,6 +430,7 @@ export default function NewCuration() {
         healingFrequency: evo.healingFrequency || '',
         observations: evo.observations || '',
         nextControl: evo.nextControl || '',
+        nextControlTime,
         photos: [],
       };
 
@@ -436,11 +478,13 @@ export default function NewCuration() {
 
       addEvolution(patient.id, wcase.id, savedEvolution);
 
+      const controlLabel = formatNextControl(evo.nextControl, nextControlTime);
+
       toast({
         title: 'Curación guardada',
         description: orderNumber
-          ? `Solicitud generada: ${orderNumber}.${evo.nextControl ? ` Turno generado para ${evo.nextControl}.` : ''}`
-          : `Evolución registrada correctamente.${evo.nextControl ? ` Turno generado para ${evo.nextControl}.` : ''}`,
+          ? `Solicitud generada: ${orderNumber}.${controlLabel ? ` Turno generado para ${controlLabel}.` : ''}`
+          : `Evolución registrada correctamente.${controlLabel ? ` Turno generado para ${controlLabel}.` : ''}`,
       });
       return { ok: true, orderNumber };
     } catch (e: any) {
@@ -458,7 +502,7 @@ export default function NewCuration() {
       evo.procedure && `Procedimiento: ${evo.procedure}`,
       supplies.length ? `Insumos: ${supplies.map(s => `${s.productName} x${s.quantity}`).join(', ')}` : null,
       restockItems.length ? `Reposición: ${restockItems.map(s => s.productName).join(', ')}` : null,
-      evo.nextControl && `Turno en calendario: ${evo.nextControl}`,
+      evo.nextControl && `Turno en calendario: ${formatNextControl(evo.nextControl, evo.nextControlTime)}`,
     ].filter(Boolean).join('\n');
     navigator.clipboard.writeText(lines);
     toast({ title: 'Resumen copiado' });
@@ -674,7 +718,7 @@ export default function NewCuration() {
                             </div>
                             <div className="font-body text-sm text-muted-foreground mt-0.5">{c.anatomicalLocation}</div>
                             <div className="font-body text-[11px] text-muted-foreground mt-1">
-                              Última evolución: {c.evolutions[0]?.date ?? '—'} · Próx. control: {c.evolutions[0]?.nextControl ?? '—'}
+                              Última evolución: {c.evolutions[0]?.date ?? '—'} · Próx. control: {formatNextControl(c.evolutions[0]?.nextControl, c.evolutions[0]?.nextControlTime) || '—'}
                             </div>
                           </button>
                         ))}
@@ -860,12 +904,39 @@ export default function NewCuration() {
                 <div><Label className="font-body text-sm">Observaciones</Label>
                   <Textarea rows={2} value={evo.observations} onChange={e => setEvo({ ...evo, observations: e.target.value })} />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div><Label className="font-body text-sm">Frecuencia de curación</Label>
                     <Input value={evo.healingFrequency} onChange={e => setEvo({ ...evo, healingFrequency: e.target.value })} />
                   </div>
                   <div><Label className="font-body text-sm">Turno / próximo control</Label>
-                    <Input type="date" value={evo.nextControl} onChange={e => setEvo({ ...evo, nextControl: e.target.value })} />
+                    <Input type="date" value={evo.nextControl} onChange={e => setEvo({ ...evo, nextControl: e.target.value, nextControlTime: e.target.value ? evo.nextControlTime : '' })} />
+                  </div>
+                  <div>
+                    <Label className="font-body text-sm">Hora del turno</Label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={0}
+                        max={23}
+                        placeholder="hh"
+                        disabled={!evo.nextControl}
+                        value={evo.nextControlTime ? Number.parseInt(evo.nextControlTime.split(':')[0], 10) : ''}
+                        onChange={e => setEvo({ ...evo, nextControlTime: setTimeHour(evo.nextControlTime, e.target.value) })}
+                        className="font-body h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      />
+                      <span className="text-muted-foreground font-body">:</span>
+                      <select
+                        disabled={!evo.nextControl}
+                        value={evo.nextControlTime ? (evo.nextControlTime.split(':')[1] ?? '00') : ''}
+                        onChange={e => setEvo({ ...evo, nextControlTime: setTimeMinutes(evo.nextControlTime, e.target.value) })}
+                        className="font-body h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        <option value="">mm</option>
+                        {['00', '15', '30', '45'].map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -1059,7 +1130,7 @@ export default function NewCuration() {
                 )}
                 {evo.nextControl && (
                   <div className="font-body text-sm text-muted-foreground">
-                    Turno en calendario: <span className="font-medium text-foreground">{evo.nextControl}</span>
+                    Turno en calendario: <span className="font-medium text-foreground">{formatNextControl(evo.nextControl, evo.nextControlTime)}</span>
                   </div>
                 )}
 

@@ -31,6 +31,7 @@ export interface Evolution {
   healingFrequencyDays?: number;
   observations: string;
   nextControl: string;
+  nextControlTime?: string;
   photos: Photo[];
   healingDate?: string;
   painLevel?: number;
