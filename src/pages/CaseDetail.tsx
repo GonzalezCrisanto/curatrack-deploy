@@ -167,6 +167,10 @@ export default function CaseDetail() {
     setEvoDialogOpen(true);
   };
 
+  const goToNewCurationStep2 = () => {
+    navigate(`/curation/new?patientId=${encodeURIComponent(patient.id)}&caseId=${encodeURIComponent(woundCase.id)}&step=2`);
+  };
+
   const openEditEvo = (ev: Evolution) => {
     setEditingEvo(ev);
     const { id, photos, ...rest } = ev;
@@ -748,8 +752,8 @@ export default function CaseDetail() {
           <h2 className="heading-display text-xl flex items-center gap-2">
             <Clock className="h-5 w-5 text-primary" /> Timeline de Evoluciones
           </h2>
-          <Button onClick={openNewEvo} className="font-body" size="sm">
-            <Plus className="mr-2 h-4 w-4" /> Nueva Evolución
+          <Button onClick={goToNewCurationStep2} className="font-body" size="sm">
+            <Plus className="mr-2 h-4 w-4" /> Nueva curación
           </Button>
         </div>
 
@@ -931,8 +935,8 @@ export default function CaseDetail() {
                     {isHistory ? 'No hay evoluciones cerradas.' : 'No hay evoluciones registradas'}
                   </p>
                   {!isHistory && (
-                    <Button variant="outline" className="font-body mt-3" onClick={openNewEvo}>
-                      <Plus className="mr-2 h-4 w-4" /> Registrar primera evolución
+                    <Button variant="outline" className="font-body mt-3" onClick={goToNewCurationStep2}>
+                      <Plus className="mr-2 h-4 w-4" /> Nueva curación
                     </Button>
                   )}
                 </div>
