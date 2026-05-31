@@ -9,13 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Activity, Users, AlertTriangle, CalendarClock, Clock, ShoppingBag,
   TrendingUp, Sparkles, Plus, ArrowRight, Stethoscope, Package,
   AlertCircle, CheckCircle2, Lightbulb, Pill, FileBarChart, ChevronLeft, ChevronRight, Search,
+  UserPlus, CalendarPlus,
 } from 'lucide-react';
 
 const SPANISH_DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -106,6 +109,11 @@ export default function Dashboard() {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [selectedAgendaDay, setSelectedAgendaDay] = useState<Date | undefined>(() => new Date());
   const isProfessionalView = role === 'professional';
+  const [newTurnoOpen, setNewTurnoOpen] = useState(false);
+  const [turnoDate, setTurnoDate] = useState('');
+  const [turnoTime, setTurnoTime] = useState('');
+  const [turnoPatientQuery, setTurnoPatientQuery] = useState('');
+  const [turnoSelectedPatient, setTurnoSelectedPatient] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     if (isProfessionalView) {
@@ -340,6 +348,17 @@ export default function Dashboard() {
       .slice(0, 6);
   }, [patients, patientQuery]);
 
+  const turnoPatientSuggestions = useMemo(() => {
+    const q = turnoPatientQuery.trim().toLowerCase();
+    if (!q) return [];
+    return patients
+      .filter((p) => {
+        const name = `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim().toLowerCase();
+        return name.includes(q) || (p.dni ?? '').toLowerCase().includes(q);
+      })
+      .slice(0, 6);
+  }, [patients, turnoPatientQuery]);
+
   const opportunities = [
     {
       title: 'Demanda alta de apósitos',
@@ -543,15 +562,30 @@ export default function Dashboard() {
         <div className="mx-auto w-full max-w-5xl flex-1">
           <div className="flex h-full flex-col gap-5 p-4 md:p-6">
             <section>
-              <Button
-                size="lg"
-                className="h-20 w-full text-lg md:text-xl font-semibold shadow-sm active:scale-[0.99]"
-                style={sponsor?.primary_color ? { backgroundColor: sponsor.primary_color } : undefined}
-                onClick={() => navigate('/curation/new')}
-              >
-                <Plus className="mr-2 h-5 w-5" />
-                Nueva curación
-              </Button>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { label: 'Nueva curación', Icon: Stethoscope, onClick: () => navigate('/curation/new') },
+                  { label: 'Nuevo paciente', Icon: UserPlus, onClick: () => navigate('/patients/new') },
+                  { label: 'Nuevo turno', Icon: CalendarPlus, onClick: () => {
+                    setTurnoDate(toISO(new Date()));
+                    setTurnoTime('');
+                    setTurnoPatientQuery('');
+                    setTurnoSelectedPatient(null);
+                    setNewTurnoOpen(true);
+                  } },
+                ].map(({ label, Icon, onClick }) => (
+                  <Button
+                    key={label}
+                    size="lg"
+                    className="h-20 flex-col gap-1 text-sm font-semibold shadow-sm active:scale-[0.99]"
+                    style={sponsor?.primary_color ? { backgroundColor: sponsor.primary_color } : undefined}
+                    onClick={onClick}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {label}
+                  </Button>
+                ))}
+              </div>
             </section>
 
             <Card>
@@ -711,6 +745,99 @@ export default function Dashboard() {
             </Card>
           </div>
         </div>
+
+        <Dialog open={newTurnoOpen} onOpenChange={setNewTurnoOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="heading-display text-xl">Nuevo turno</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-5 mt-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="font-body text-sm">Fecha</Label>
+                  <Input
+                    type="date"
+                    value={turnoDate}
+                    onChange={e => setTurnoDate(e.target.value)}
+                    className="font-body"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-body text-sm">Hora</Label>
+                  <Input
+                    type="time"
+                    value={turnoTime}
+                    onChange={e => setTurnoTime(e.target.value)}
+                    className="font-body"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-body text-sm">Paciente</Label>
+                {turnoSelectedPatient ? (
+                  <div className="flex items-center justify-between rounded-md border border-primary/40 bg-primary/5 px-3 py-2">
+                    <span className="font-body text-sm font-medium">{turnoSelectedPatient.name}</span>
+                    <button
+                      onClick={() => { setTurnoSelectedPatient(null); setTurnoPatientQuery(''); }}
+                      className="font-body text-xs text-muted-foreground hover:text-foreground ml-2"
+                      aria-label="Quitar paciente seleccionado"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={turnoPatientQuery}
+                      onChange={e => setTurnoPatientQuery(e.target.value)}
+                      placeholder="Buscar por nombre o DNI..."
+                      className="font-body pl-9"
+                      autoFocus
+                    />
+                    {turnoPatientSuggestions.length > 0 && (
+                      <ul className="mt-1 w-full rounded-md border border-border bg-background max-h-40 overflow-y-auto">
+                        {turnoPatientSuggestions.map(p => {
+                          const name = `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || 'Paciente sin identificar';
+                          return (
+                            <li key={p.id}>
+                              <button
+                                type="button"
+                                onClick={() => { setTurnoSelectedPatient({ id: p.id, name }); setTurnoPatientQuery(''); }}
+                                className="w-full text-left px-3 py-2 font-body text-sm hover:bg-accent/50 focus-visible:bg-accent/50 outline-none"
+                              >
+                                <span className="font-medium">{name}</span>
+                                {p.dni && <span className="ml-2 text-xs text-muted-foreground">DNI {p.dni}</span>}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-4">
+              <Button variant="outline" className="font-body" onClick={() => setNewTurnoOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                className="font-body"
+                disabled={!turnoDate || !turnoSelectedPatient}
+                onClick={() => {
+                  setNewTurnoOpen(false);
+                  navigate(`/patients/${turnoSelectedPatient!.id}`);
+                }}
+              >
+                Confirmar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
       </AppLayout>
     );
   }
