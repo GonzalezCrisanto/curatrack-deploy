@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Patient, WoundCase, Evolution, demoPatients } from '@/data/demoData';
+import { extractNextControlTime, normalizeAppointmentTime, stripNextControlTimeMarker } from '@/lib/appointments';
 
 // ============================================================================
 // PHASE 1 BACKEND MIGRATION
@@ -212,6 +213,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               .in('case_id', caseIds)
               .order('evolution_date', { ascending: false });
             for (const e of (evoRows || []) as any[]) {
+              const nextControlTime = normalizeAppointmentTime(e.next_control_time) || extractNextControlTime(e.observations);
               const ev: Evolution = {
                 id: e.id,
                 date: e.evolution_date,
@@ -221,8 +223,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 procedure: e.procedure || '',
                 materials: e.materials || '',
                 healingFrequency: e.healing_frequency || '',
-                observations: e.observations || '',
+                observations: stripNextControlTimeMarker(e.observations),
                 nextControl: e.next_control || '',
+                nextControlTime,
                 photos: [],
               };
               (evosByCase[e.case_id] ||= []).push(ev);

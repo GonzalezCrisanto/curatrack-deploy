@@ -28,6 +28,7 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { formatNextControl, getNextControlTime } from '@/lib/appointments';
 
 import ReactMarkdown from 'react-markdown';
 import { marked } from 'marked';
@@ -901,7 +902,7 @@ export default function CaseDetail() {
                       {/* AI summary moved to case header — no per-evolution button */}
                       {ev.nextControl && (
                         <div className="flex items-center gap-1 text-xs font-body text-muted-foreground">
-                          <Clock className="h-3.5 w-3.5" /> Próximo control: {ev.nextControl}
+                          <Clock className="h-3.5 w-3.5" /> Próximo control: {formatNextControl(ev.nextControl, getNextControlTime(ev))}
                         </div>
                       )}
 

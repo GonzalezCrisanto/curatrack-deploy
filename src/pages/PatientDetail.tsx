@@ -32,6 +32,7 @@ import { PatientConsentCard } from '@/components/PatientConsentCard';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { formatPatientAge } from '@/lib/age';
+import { getNextControlTime } from '@/lib/appointments';
 
 const RequiredMark = () => (
   <span className="text-destructive ml-0.5" aria-label="campo obligatorio">*</span>
@@ -143,7 +144,7 @@ export default function PatientDetail() {
         .filter(e => e.nextControl === apptDate)
         .map(e => ({
           patientName: p.id === patientId ? 'Este paciente' : `${p.lastName}, ${p.firstName}`,
-          time: e.time || '',
+          time: getNextControlTime(e),
           woundType: c.woundType,
           isCurrent: p.id === patientId,
         }))
@@ -386,6 +387,7 @@ export default function PatientDetail() {
       healingFrequency: '',
       observations: '',
       nextControl: apptDate,
+      nextControlTime: apptTime,
       photos: [],
     };
     addEvolution(patient.id, apptCaseId, newEvo);
@@ -548,7 +550,7 @@ export default function PatientDetail() {
                 .filter(e => e.nextControl && e.nextControl.trim() !== '' && new Date(e.nextControl + 'T12:00:00') >= today)
                 .map(e => ({
                   date: new Date(e.nextControl + 'T12:00:00'),
-                  time: e.time || '',
+                  time: getNextControlTime(e),
                   patientName: `${p.lastName}, ${p.firstName}`,
                   woundType: c.woundType,
                 }))
@@ -712,7 +714,10 @@ export default function PatientDetail() {
             // Default time: first 15-min slot from 09:00 not colliding with any appointment that day.
             const takenThatDay = new Set<string>();
             patients.forEach(p => p.cases.forEach(c => c.evolutions.forEach(e => {
-              if (e.nextControl === defaultDate && e.time) takenThatDay.add(e.time);
+              if (e.nextControl === defaultDate) {
+                const controlTime = getNextControlTime(e);
+                if (controlTime) takenThatDay.add(controlTime);
+              }
             })));
             setApptTime(pickAvailableTime(takenThatDay));
 
@@ -965,7 +970,10 @@ export default function PatientDetail() {
                       setApptDate(newDate);
                       const takenThatDay = new Set<string>();
                       patients.forEach(p => p.cases.forEach(c => c.evolutions.forEach(ev => {
-                        if (ev.nextControl === newDate && ev.time) takenThatDay.add(ev.time);
+                        if (ev.nextControl === newDate) {
+                          const controlTime = getNextControlTime(ev);
+                          if (controlTime) takenThatDay.add(controlTime);
+                        }
                       })));
                       setApptTime(pickAvailableTime(takenThatDay));
                     }}

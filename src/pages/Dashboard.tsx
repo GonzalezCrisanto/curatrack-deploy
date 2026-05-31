@@ -3,6 +3,7 @@ import { useApp } from '@/context/AppContext';
 import { useSponsor } from '@/context/SponsorContext';
 import { useAppRole } from '@/hooks/useAppRole';
 import { supabase } from '@/integrations/supabase/client';
+import { getNextControlTime, formatNextControl } from '@/lib/appointments';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import AppLayout from '@/components/AppLayout';
@@ -515,7 +516,7 @@ export default function Dashboard() {
             .filter((e) => e.nextControl === todayIso)
             .map((e) => ({
               key: `${p.id}-${c.id}-${e.id ?? e.date}`,
-              time: e.time || '',
+              time: getNextControlTime(e),
               patientId: p.id,
               caseId: c.id,
               patientName: `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || 'Paciente sin identificar',
@@ -547,7 +548,7 @@ export default function Dashboard() {
           .map((e) => ({
             key: `${p.id}-${c.id}-${e.id ?? e.date}`,
             date: e.nextControl!,
-            time: e.time || '',
+            time: getNextControlTime(e),
             patientId: p.id,
             caseId: c.id,
             patientName: `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || 'Paciente sin identificar',
@@ -884,9 +885,10 @@ export default function Dashboard() {
                     healingFrequency: '',
                     observations: '',
                     nextControl: turnoDate,
+                    nextControlTime: turnoTime,
                     photos: [],
                   });
-                  toast({ title: 'Turno guardado', description: `${turnoSelectedPatient!.name} — ${turnoDate}` });
+                  toast({ title: 'Turno guardado', description: `${turnoSelectedPatient!.name} — ${formatNextControl(turnoDate, turnoTime)}` });
                   setNewTurnoOpen(false);
                   setTurnoDate('');
                   setTurnoTime('');
@@ -1024,7 +1026,7 @@ export default function Dashboard() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-body text-sm font-medium truncate">
-                            {a.evo.time || 'Sin horario'} · {a.woundType || 'Curación'}
+                            {getNextControlTime(a.evo) || 'Sin horario'} · {a.woundType || 'Curación'}
                           </div>
                           <div className="font-body text-xs text-muted-foreground truncate">
                             {a.patientName} · {a.evo.professional || 'Profesional asignado'}

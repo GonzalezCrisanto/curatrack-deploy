@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, ChevronRight, User } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { getNextControlTime } from '@/lib/appointments';
 import { useNavigate } from 'react-router-dom';
 
 export default function Agenda() {
@@ -16,12 +17,12 @@ export default function Agenda() {
       p.cases.forEach(c => {
         c.evolutions.forEach(e => {
           if (e.nextControl) {
-            items.push({ date: e.nextControl, time: e.time, patient: p, caseId: c.id, woundType: c.woundType });
+            items.push({ date: e.nextControl, time: getNextControlTime(e), patient: p, caseId: c.id, woundType: c.woundType });
           }
         });
       });
     });
-    return items.sort((a, b) => a.date.localeCompare(b.date));
+    return items.sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
   }, [patients]);
 
   const today = new Date().toISOString().slice(0, 10);
