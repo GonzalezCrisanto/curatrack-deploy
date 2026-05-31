@@ -111,7 +111,8 @@ export default function NewCuration() {
     time: nowHM(),
     professional: currentUserName || '',
     pain: 3,
-    exudate: 'moderado',
+    exudateAmount: 'Moderado',
+    exudateType: 'Seroso',
     odor: 'no',
     infection: 'no',
     size: '',
@@ -352,7 +353,7 @@ export default function NewCuration() {
         .map(s => `${s.productName} x${s.quantity}${s.unit}`).join(', ') || null;
       const description = [
         `Dolor EVA ${evo.pain}/10`,
-        `Exudado: ${evo.exudate}`,
+        `Exudado: ${evo.exudateAmount} / ${evo.exudateType}`,
         `Olor: ${evo.odor}`,
         `Infección: ${evo.infection}`,
         evo.size && `Tamaño: ${evo.size}`,
@@ -435,7 +436,7 @@ export default function NewCuration() {
       `Curación — ${wcase?.woundType ?? ''}`,
       `Fecha: ${evo.date} ${evo.time}`,
       `Profesional: ${evo.professional}`,
-      `Dolor: EVA ${evo.pain}/10 · Exudado: ${evo.exudate} · Infección: ${evo.infection}`,
+      `Dolor: EVA ${evo.pain}/10 · Exudado: ${evo.exudateAmount} / ${evo.exudateType} · Infección: ${evo.infection}`,
       evo.procedure && `Procedimiento: ${evo.procedure}`,
       supplies.length ? `Insumos: ${supplies.map(s => `${s.productName} x${s.quantity}`).join(', ')}` : null,
       restockItems.length ? `Reposición: ${restockItems.map(s => s.productName).join(', ')}` : null,
@@ -815,11 +816,12 @@ export default function NewCuration() {
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
-                    { k: 'exudate', label: 'Exudado', opts: ['ausente','escaso','moderado','abundante'] },
-                    { k: 'odor', label: 'Olor', opts: ['no','leve','marcado'] },
+                    { k: 'exudateAmount', label: 'Exudado: cantidad', opts: ['Sin exudado','Escaso','Moderado','Abundante'] },
+                    { k: 'exudateType', label: 'Exudado: tipo', opts: ['Seroso','Serosanguinolento','Sanguinolento','Purulento','Fibrinoso'] },
+                    { k: 'odor', label: 'Olor', opts: ['no','leve','moderado','intenso'] },
                     { k: 'infection', label: 'Infección', opts: ['no','sospecha','si'] },
-                    { k: 'tissue', label: 'Tejido predom.', opts: ['epitelización','granulación','fibrina','esfacelo','necrosis'] },
-                    { k: 'edges', label: 'Bordes', opts: ['definidos','irregulares','macerados','en pendiente'] },
+                    { k: 'tissue', label: 'Tejido predom.', opts: ['epitelización','granulación','fibrina','esfacelo','necrosis','hueso o tendón expuesto'] },
+                    { k: 'edges', label: 'Bordes', opts: ['definidos','irregulares','macerados','eritematoso','socavado','enrollado','necrosado'] },
                     { k: 'perilesional', label: 'Perilesional', opts: ['sana','eritematosa','macerada','seca'] },
                   ].map((f) => (
                     <div key={f.k}>
@@ -1007,7 +1009,7 @@ export default function NewCuration() {
                   <div className="p-3 rounded-lg border border-border/60 bg-background">
                     <div className="font-body text-[10px] uppercase text-muted-foreground tracking-wide">Evolución</div>
                     <div className="font-body text-sm mt-1">{evo.date} {evo.time} · {evo.professional}</div>
-                    <div className="font-body text-sm text-muted-foreground">EVA {evo.pain}/10 · Exudado {evo.exudate} · Inf. {evo.infection}</div>
+                    <div className="font-body text-sm text-muted-foreground">EVA {evo.pain}/10 · Exudado {evo.exudateAmount} / {evo.exudateType} · Inf. {evo.infection}</div>
                   </div>
                 </div>
                 {supplies.length > 0 && (
