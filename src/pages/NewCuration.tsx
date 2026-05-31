@@ -88,14 +88,21 @@ export default function NewCuration() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [params] = useSearchParams();
+  const initialPatientId = params.get('patientId');
+  const initialCaseId = params.get('caseId');
+  const requestedStep = Number(params.get('step'));
+  const initialStep =
+    initialPatientId && initialCaseId && Number.isInteger(requestedStep) && requestedStep >= 2 && requestedStep <= STEPS.length
+      ? requestedStep
+      : 1;
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(initialStep);
   const [stepAttempted, setStepAttempted] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [patientId, setPatientId] = useState<string | null>(params.get('patientId'));
-  const [caseId, setCaseId] = useState<string | null>(params.get('caseId'));
+  const [patientId, setPatientId] = useState<string | null>(initialPatientId);
+  const [caseId, setCaseId] = useState<string | null>(initialCaseId);
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
   const [creatingPatient, setCreatingPatient] = useState(false);
   const [newPatient, setNewPatient] = useState({
