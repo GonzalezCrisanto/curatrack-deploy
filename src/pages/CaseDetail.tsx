@@ -610,19 +610,13 @@ export default function CaseDetail() {
     { icon: Stethoscope, label: 'Tipo de herida', value: woundCase.woundType },
     { icon: FileText, label: 'Ubicación', value: woundCase.anatomicalLocation },
     { icon: Clock, label: 'Inicio', value: woundCase.startDate },
-    { icon: Ruler, label: 'Tamaño', value: woundCase.size },
-    { icon: FileText, label: 'Profundidad', value: woundCase.depth },
-    { icon: Droplets, label: 'Exudado', value: woundCase.exudate },
-    { icon: ShieldAlert, label: 'Infección', value: woundCase.infection },
-    { icon: Thermometer, label: 'Dolor', value: woundCase.pain },
-    { icon: Pill, label: 'Tratamiento', value: woundCase.treatment },
   ];
 
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
-        <Button variant="outline" onClick={() => navigate(`/patients/${patient.id}`)} className="font-body text-sm border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Volver a {patient.lastName}, {patient.firstName}
+        <Button variant="outline" onClick={() => navigate('/dashboard')} className="font-body text-sm border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Dashboard
         </Button>
 
         {/* Case Header */}
