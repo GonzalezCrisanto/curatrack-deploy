@@ -15,6 +15,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   ShoppingBag, Send, CheckCircle2, XCircle, FileText, Ban, Loader2, Search,
   TrendingUp, Package, Clock, BarChart3, Download, Plus, Filter,
@@ -45,6 +46,13 @@ interface OrderRow {
   channel: string | null;
   sent_at: string | null;
   created_at: string;
+}
+
+// Orders saved from the cart "Realizar Pedido" flow (table `orders`, not in types.ts).
+interface SimpleOrder {
+  id: string;
+  created_at: string;
+  items: { name: string; quantity: number }[];
 }
 
 interface OrderItem {
@@ -100,6 +108,10 @@ export default function Orders() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [periodFilter, setPeriodFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
+
+  // Orders created from the cart flow (table `orders`).
+  const [myOrders, setMyOrders] = useState<SimpleOrder[]>([]);
+  const [openOrder, setOpenOrder] = useState<SimpleOrder | null>(null);
 
   const handleCancel = async () => {
     if (!cancelTarget) return;
@@ -172,6 +184,17 @@ export default function Orders() {
     return () => { cancelled = true; };
   }, [sponsor?.lab_id]);
 
+  // Load orders saved from the cart. Persisted in localStorage (no backend),
+  // already stored newest first.
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('curatrack_orders') || '[]');
+      if (Array.isArray(stored)) setMyOrders(stored as SimpleOrder[]);
+    } catch {
+      // Ignore malformed storage.
+    }
+  }, []);
+
   const filtered = useMemo(() => {
     const now = Date.now();
     const cutoffMs = periodFilter === 'all' ? 0 : Date.now() - parseInt(periodFilter, 10) * 86400000;
@@ -231,6 +254,44 @@ export default function Orders() {
               </Button>
             </div>
           </div>
+
+          {/* Pedidos realizados */}
+          <Card className="p-10 text-center border-dashed">
+            {myOrders.length === 0 ? (
+              <>
+                <ShoppingBag className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="heading-display text-lg mb-1">Sin pedidos realizados</p>
+                <p className="text-sm text-muted-foreground font-body mb-4">
+                  Cuando realices un pedido se verá reflejado aquí.
+                </p>
+                <Button asChild><Link to="/marketplace">Ir al catálogo</Link></Button>
+              </>
+            ) : (
+              <div className="space-y-2 text-left">
+                {myOrders.map((o) => {
+                  const products = o.items ?? [];
+                  const totalUnits = products.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
+                  return (
+                    <button
+                      key={o.id}
+                      onClick={() => setOpenOrder(o)}
+                      className="w-full text-left flex items-center justify-between gap-3 p-3 rounded-lg border border-border/60 bg-card hover:border-primary/40 hover:shadow-sm transition-all"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-body text-sm font-semibold">{formatDate(o.created_at)}</p>
+                        <p className="font-body text-xs text-muted-foreground">
+                          {products.length} producto{products.length === 1 ? '' : 's'} · {totalUnits} insumo{totalUnits === 1 ? '' : 's'}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="font-body text-[10px] uppercase tracking-wide shrink-0">
+                        Ver detalle
+                      </Badge>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
 
           {/* KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
@@ -415,6 +476,28 @@ export default function Orders() {
           )}
         </div>
       </div>
+
+      <Dialog open={!!openOrder} onOpenChange={(o) => { if (!o) setOpenOrder(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="heading-display">
+              Pedido · {openOrder ? formatDate(openOrder.created_at) : ''}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {(openOrder?.items ?? []).length === 0 ? (
+              <p className="font-body text-sm text-muted-foreground">Este pedido no tiene productos.</p>
+            ) : (
+              (openOrder?.items ?? []).map((it, idx) => (
+                <div key={idx} className="flex items-center justify-between gap-2 border-b border-border/60 last:border-0 pb-2 last:pb-0">
+                  <span className="font-body text-sm">{it.name}</span>
+                  <Badge variant="secondary" className="font-body shrink-0">x{it.quantity}</Badge>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!cancelTarget} onOpenChange={(o) => { if (!o && !cancelling) setCancelTarget(null); }}>
         <AlertDialogContent>

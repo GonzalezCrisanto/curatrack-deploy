@@ -527,9 +527,6 @@ export default function NewCuration() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
             <div>
-              <Badge variant="outline" className="font-body text-[10px] uppercase tracking-wider border-primary/30 text-primary bg-primary/5 mb-2">
-                Programa sponsor: {sponsor?.sponsor_name ?? '—'}
-              </Badge>
               <h1 className="heading-display text-2xl md:text-3xl">Nueva curación</h1>
               <p className="font-body text-sm text-muted-foreground mt-1">
                 Flujo guiado: paciente → evaluación → fotos → insumos → resumen.

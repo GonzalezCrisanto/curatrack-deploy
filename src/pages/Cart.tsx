@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/AppLayout';
 import { useCart } from '@/context/CartContext';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +17,36 @@ function formatPrice(value: number | null | undefined, currency = 'ARS') {
 
 export default function Cart() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { items, itemCount, totalEstimated, updateQuantity, removeItem, clearCart, loading } = useCart();
+  const [placing, setPlacing] = useState(false);
+
+  const handlePlaceOrder = async () => {
+    if (items.length === 0 || placing) return;
+    setPlacing(true);
+    try {
+      // Orders are persisted in localStorage (no backend). Newest first.
+      const newOrder = {
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        created_at: new Date().toISOString(),
+        items: items.map((it) => ({ name: it.product?.name ?? 'Producto', quantity: it.quantity })),
+      };
+      const stored = JSON.parse(localStorage.getItem('curatrack_orders') || '[]');
+      const existing = Array.isArray(stored) ? stored : [];
+      localStorage.setItem('curatrack_orders', JSON.stringify([newOrder, ...existing]));
+      await clearCart();
+      toast({ title: 'Pedido realizado', description: 'Tu pedido fue registrado correctamente.' });
+      navigate('/orders');
+    } catch (e: any) {
+      toast({
+        title: 'No se pudo realizar el pedido',
+        description: e?.message ?? 'Reintentá en unos segundos.',
+        variant: 'destructive',
+      });
+    } finally {
+      setPlacing(false);
+    }
+  };
 
   return (
     <AppLayout>
@@ -24,7 +55,7 @@ export default function Cart() {
           <div>
             <Button
               variant="outline"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate(-1)}
               className="font-body text-sm border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm"
             >
               <ArrowLeft className="mr-2 h-4 w-4" /> Volver
@@ -146,8 +177,12 @@ export default function Cart() {
                   </div>
 
                   <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                    <Button variant="outline" className="font-body" onClick={clearCart}>
+                    <Button variant="outline" className="font-body" onClick={clearCart} disabled={placing}>
                       Vaciar carrito
+                    </Button>
+                    <Button className="font-body" onClick={handlePlaceOrder} disabled={placing}>
+                      <ShoppingCart className="h-4 w-4 mr-1.5" />
+                      {placing ? 'Procesando...' : 'Realizar Pedido'}
                     </Button>
                   </div>
                 </div>

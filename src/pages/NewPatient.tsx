@@ -79,9 +79,6 @@ export default function NewPatient() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
             <div>
-              <Badge variant="outline" className="font-body text-[10px] uppercase tracking-wider border-primary/30 text-primary bg-primary/5 mb-2">
-                Alta de paciente
-              </Badge>
               <h1 className="heading-display text-2xl md:text-3xl">Nuevo Paciente</h1>
               <p className="font-body text-sm text-muted-foreground mt-1">
                 Completá la ficha del paciente. Solo nombre y apellido son obligatorios.
