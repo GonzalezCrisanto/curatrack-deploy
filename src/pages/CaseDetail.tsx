@@ -89,6 +89,44 @@ export default function CaseDetail() {
       .then(({ data }) => setHasGeneralConsent((data ?? []).length > 0));
   }, [patient?.id]);
 
+  // Load persisted evolution photos for this case from the DB. Stored paths live
+  // in the private `signatures` bucket, so we sign them for display. Grouped by
+  // evolution_id to render under each evolution in the timeline below.
+  const [evoDbPhotos, setEvoDbPhotos] = useState<Record<string, Photo[]>>({});
+  useEffect(() => {
+    if (!woundCase) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('photos')
+        .select('id, url, caption, photo_date, evolution_id')
+        .eq('case_id', woundCase.id)
+        .not('evolution_id', 'is', null);
+      if (error || !data || cancelled) return;
+      const paths = data.map(r => r.url);
+      const signedByPath = new Map<string, string>();
+      if (paths.length > 0) {
+        const { data: signed } = await supabase.storage
+          .from('signatures')
+          .createSignedUrls(paths, 60 * 60 * 24 * 365);
+        (signed ?? []).forEach((s, i) => { if (s.signedUrl) signedByPath.set(paths[i], s.signedUrl); });
+      }
+      if (cancelled) return;
+      const grouped: Record<string, Photo[]> = {};
+      data.forEach(r => {
+        const photo: Photo = {
+          id: r.id,
+          url: signedByPath.get(r.url) ?? r.url,
+          caption: r.caption ?? '',
+          date: r.photo_date ?? '',
+        };
+        (grouped[r.evolution_id as string] ||= []).push(photo);
+      });
+      setEvoDbPhotos(grouped);
+    })();
+    return () => { cancelled = true; };
+  }, [woundCase?.id]);
+
   // Case-level AI summary viewer
   const [caseSummaryOpen, setCaseSummaryOpen] = useState(false);
 
@@ -620,8 +658,8 @@ export default function CaseDetail() {
     <AppLayout>
       <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
         <div className="space-y-6 animate-fade-in">
-        <Button variant="outline" onClick={() => navigate('/dashboard')} className="font-body text-sm border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Dashboard
+        <Button variant="outline" onClick={() => navigate(`/patients/${patient.id}`)} className="font-body text-sm border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver al paciente
         </Button>
 
         {/* Case Header */}
@@ -751,7 +789,7 @@ export default function CaseDetail() {
         {/* Timeline */}
         <div className="flex items-center justify-between">
           <h2 className="heading-display text-xl flex items-center gap-2">
-            <Clock className="h-5 w-5 text-primary" /> Timeline de Evoluciones
+            <Clock className="h-5 w-5 text-primary" /> Evolución de la Herida
           </h2>
           <Button onClick={goToNewCurationStep2} className="font-body" size="sm">
             <Plus className="mr-2 h-4 w-4" /> Nueva curación
@@ -904,19 +942,22 @@ export default function CaseDetail() {
                         </div>
                       )}
 
-                      {ev.photos.length > 0 && (
-                        <div className="flex gap-2 mt-2 flex-wrap">
-                          {ev.photos.map(ph => (
-                            <div
-                              key={ph.id}
-                              className="w-20 h-16 rounded-md overflow-hidden border border-border/50 cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all"
-                              onClick={() => setPhotoViewer(ph.url)}
-                            >
-                              <img src={ph.url} alt={ph.caption} className="w-full h-full object-cover" />
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      {(() => {
+                        const photos = [...ev.photos, ...(evoDbPhotos[ev.id] ?? [])];
+                        return photos.length > 0 && (
+                          <div className="flex gap-2 mt-2 flex-wrap">
+                            {photos.map(ph => (
+                              <div
+                                key={ph.id}
+                                className="w-20 h-16 rounded-md overflow-hidden border border-border/50 cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all"
+                                onClick={() => setPhotoViewer(ph.url)}
+                              >
+                                <img src={ph.url} alt={ph.caption} className="w-full h-full object-cover" />
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </CardContent>
                 </Card>

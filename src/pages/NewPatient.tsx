@@ -43,7 +43,7 @@ export default function NewPatient() {
     return next;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const v = validate();
     setErrors(v);
     if (Object.keys(v).length > 0) {
@@ -54,8 +54,10 @@ export default function NewPatient() {
       });
       return;
     }
-    addPatient({ ...form, id: `p${Date.now()}`, cases: [] } as Patient);
-    navigate('/dashboard');
+    const newId = await addPatient({ ...form, id: `p${Date.now()}`, cases: [] } as Patient);
+    if (newId) {
+      navigate(`/patients/${newId}`);
+    }
   };
 
   return (
@@ -65,7 +67,7 @@ export default function NewPatient() {
         <div>
           <Button
             variant="outline"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/dashboard')}
             className="font-body text-sm border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm"
           >
             <ArrowLeft className="mr-2 h-4 w-4" /> Volver

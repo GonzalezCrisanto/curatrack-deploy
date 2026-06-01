@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import {
-  ArrowLeft, Plus, Edit, Trash2, ChevronRight, Phone, Mail, CalendarClock, CalendarDays,
+  ArrowLeft, Plus, Edit, Trash2, ChevronRight, Phone, MapPin, Mail, CalendarClock, CalendarDays,
   FileDown, ShieldAlert, BadgeCheck, UserCog, FileDown as FileDownIcon, Users as UsersIcon,
   Droplets, Thermometer, Package, CheckCircle2, Camera, Upload, X,
 } from 'lucide-react';
@@ -28,6 +28,7 @@ import { ROLE_LABEL_SHORT } from '@/data/demoUsers';
 import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { SharePatientDialog } from '@/components/SharePatientDialog';
+import { WoundForm } from '@/components/WoundForm';
 import { PatientConsentCard } from '@/components/PatientConsentCard';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -102,6 +103,8 @@ export default function PatientDetail() {
   const { patients, addCase, updateCase, deleteCase, addEvolution, currentUserName } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const [caseDialogOpen, setCaseDialogOpen] = useState(false);
+  const [woundFormOpen, setWoundFormOpen] = useState(false);
+  const [editingWound, setEditingWound] = useState<WoundCase | null>(null);
   const [editingCase, setEditingCase] = useState<WoundCase | null>(null);
   const [caseForm, setCaseForm] = useState(emptyCase);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -419,12 +422,14 @@ export default function PatientDetail() {
           <CardContent className="space-y-4 pt-6 pb-4">
             <div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                <div className="flex items-start">
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <p className="font-body text-lg font-semibold truncate" title={patient.address}>{patient.address || '—'}</p>
                   </div>
                 </div>
-                <div className="flex items-start">
+                <div className="flex items-start gap-2">
+                  <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <p className="font-body text-lg font-semibold truncate" title={patient.phone}>{patient.phone || '—'}</p>
                   </div>
@@ -512,8 +517,8 @@ export default function PatientDetail() {
 
         {/* Casos / Heridas */}
         <div className="flex items-center justify-between">
-          <h2 className="heading-display text-xl">Casos / Heridas</h2>
-          <Button onClick={openNewCase} className="font-body" size="sm">
+          <h2 className="heading-display text-xl">Heridas</h2>
+          <Button onClick={() => { setEditingWound(null); setWoundFormOpen(true); }} className="font-body" size="sm">
             <Plus className="mr-2 h-4 w-4" /> Nueva Herida
           </Button>
         </div>
@@ -536,31 +541,18 @@ export default function PatientDetail() {
                   <p className="font-body text-xs text-muted-foreground">{c.anatomicalLocation}</p>
                   <div className="flex items-center gap-3 mt-2 text-xs font-body text-muted-foreground">
                     <span>Inicio: {c.startDate}</span>
-                    <span>Tamaño: {c.size}</span>
                     <span>{c.evolutions.length} evoluciones</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 ml-4 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => openEditCase(c, e)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => { e.stopPropagation(); setEditingWound(c); setWoundFormOpen(true); }}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={e => e.stopPropagation()}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent onClick={e => e.stopPropagation()}>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="heading-display">¿Eliminar caso?</AlertDialogTitle>
-                        <AlertDialogDescription className="font-body">Se eliminarán todas las evoluciones y fotos de este caso.</AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteCase(patient.id, c.id)} className="font-body bg-destructive text-destructive-foreground hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
               </CardContent>
@@ -568,9 +560,9 @@ export default function PatientDetail() {
           ))}
           {patient.cases.length === 0 && (
             <div className="text-center py-12 border border-dashed border-border rounded-lg">
-              <p className="font-body text-muted-foreground">No hay casos registrados</p>
-              <Button variant="outline" className="font-body mt-3" onClick={openNewCase}>
-                <Plus className="mr-2 h-4 w-4" /> Crear primer caso
+              <p className="font-body text-muted-foreground">No hay heridas registradas</p>
+              <Button variant="outline" className="font-body mt-3" onClick={() => { setEditingWound(null); setWoundFormOpen(true); }}>
+                <Plus className="mr-2 h-4 w-4" /> Crear primera Herida
               </Button>
             </div>
           )}
@@ -1495,6 +1487,13 @@ export default function PatientDetail() {
           onOpenChange={setShareDialogOpen}
           patientId={patient.id}
           patientName={`${patient.lastName}, ${patient.firstName}`}
+        />
+
+        <WoundForm
+          open={woundFormOpen}
+          onOpenChange={(o) => { setWoundFormOpen(o); if (!o) setEditingWound(null); }}
+          patient={patient}
+          editingCase={editingWound}
         />
         </div>
       </div>

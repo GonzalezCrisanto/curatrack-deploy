@@ -182,15 +182,6 @@ export default function Login() {
 
       {/* Right panel */}
       <div className="flex-1 flex items-center justify-center p-6 bg-background relative overflow-y-auto">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => navigate('/')}
-          className="absolute top-4 left-4 font-body border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm"
-        >
-          <ArrowLeft className="mr-1 h-4 w-4" /> Volver al inicio
-        </Button>
-
         <Card className="w-full max-w-lg border-border/50 shadow-lg my-8">
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-3 lg:hidden">

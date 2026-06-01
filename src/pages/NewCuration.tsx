@@ -129,13 +129,16 @@ export default function NewCuration() {
     date: todayISO(),
     time: nowHM(),
     professional: currentUserName || '',
+    status: 'activo',
     pain: 3,
     exudateAmount: 'Moderado',
     exudateType: 'Seroso',
+    exudateColor: 'Transparente',
     odor: 'no',
     infection: 'no',
-    size: '',
-    depth: '',
+    woundLength: '',
+    woundWidth: '',
+    woundDepth: '',
     tissue: 'granulación',
     edges: 'definidos',
     perilesional: 'sana',
@@ -182,6 +185,13 @@ export default function NewCuration() {
     () => patients.find(p => p.id === patientId), [patients, patientId]);
   const wcase: WoundCase | undefined = useMemo(
     () => patient?.cases.find(c => c.id === caseId), [patient, caseId]);
+
+  // Surface area (Largo × Ancho) for the evaluation step, recomputed in real time.
+  const evoWoundArea = useMemo(() => {
+    const l = parseFloat(evo.woundLength);
+    const w = parseFloat(evo.woundWidth);
+    return l > 0 && w > 0 ? (l * w).toFixed(1) : '';
+  }, [evo.woundLength, evo.woundWidth]);
 
   const filteredPatients = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -369,13 +379,16 @@ export default function NewCuration() {
     try {
       const materialsList = supplies.filter(s => s.used)
         .map(s => `${s.productName} x${s.quantity}${s.unit}`).join(', ') || null;
+      const sizeText = (evo.woundLength && evo.woundWidth)
+        ? `Tamaño: ${evo.woundLength} x ${evo.woundWidth} cm${evoWoundArea ? ` (Área: ${evoWoundArea} cm²)` : ''}`
+        : '';
       const description = [
         `Dolor EVA ${evo.pain}/10`,
-        `Exudado: ${evo.exudateAmount} / ${evo.exudateType}`,
+        `Exudado: ${evo.exudateAmount} / ${evo.exudateType} / ${evo.exudateColor}`,
         `Olor: ${evo.odor}`,
         `Infección: ${evo.infection}`,
-        evo.size && `Tamaño: ${evo.size}`,
-        evo.depth && `Profundidad: ${evo.depth}`,
+        sizeText,
+        evo.woundDepth && `Profundidad: ${evo.woundDepth} cm`,
         `Tejido: ${evo.tissue}`,
         `Bordes: ${evo.edges}`,
         `Perilesional: ${evo.perilesional}`,
@@ -421,6 +434,36 @@ export default function NewCuration() {
 
       const { data: evoRow, error: evoErr } = evolutionInsert;
       if (evoErr) throw evoErr;
+
+      // Persist the clinical photo (if any): upload to Storage and store a row in
+      // `photos` linked to this evolution. We reuse the owner-scoped private
+      // `signatures` bucket (the only bucket writable by authenticated users);
+      // the herida detail page generates signed URLs from the stored path.
+      if (photoFile) {
+        try {
+          const ext = (photoFile.name.split('.').pop() || 'jpg').toLowerCase();
+          const path = `${currentUser.id}/wound-photos/${wcase.id}/${evoRow.id}-${Date.now()}.${ext}`;
+          const { error: upErr } = await supabase.storage
+            .from('signatures')
+            .upload(path, photoFile, { contentType: photoFile.type || 'image/jpeg', upsert: true });
+          if (upErr) throw upErr;
+          const { error: photoErr } = await supabase.from('photos').insert({
+            user_id: currentUser.id,
+            case_id: wcase.id,
+            evolution_id: evoRow.id,
+            url: path,
+            photo_date: evo.date,
+          });
+          if (photoErr) throw photoErr;
+        } catch (photoError: any) {
+          // The evolution is already saved; surface the photo failure without aborting.
+          toast({
+            title: 'Evolución guardada, pero la foto no se pudo subir',
+            description: photoError?.message ?? 'Reintentá cargar la foto desde el detalle de la herida.',
+            variant: 'destructive',
+          });
+        }
+      }
 
       const savedEvolution: Evolution = {
         id: evoRow.id,
@@ -471,6 +514,16 @@ export default function NewCuration() {
     <AppLayout>
       <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
         <div className="space-y-5 animate-fade-in max-w-5xl mx-auto">
+          <div>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/dashboard')}
+              className="font-body text-sm border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+            </Button>
+          </div>
+
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
             <div>
@@ -481,11 +534,6 @@ export default function NewCuration() {
               <p className="font-body text-sm text-muted-foreground mt-1">
                 Flujo guiado: paciente → evaluación → fotos → insumos → resumen.
               </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="font-body" onClick={() => navigate(-1)}>
-                <ArrowLeft className="h-4 w-4 mr-1" /> Volver
-              </Button>
             </div>
           </div>
 
@@ -598,7 +646,7 @@ export default function NewCuration() {
                   <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre o DNI..." className="pl-9 font-body" />
                 </div>
-                <div className={`grid md:grid-cols-2 gap-3 max-h-96 overflow-auto rounded-lg transition-colors ${stepAttempted && !patientId ? 'ring-2 ring-destructive ring-offset-2' : ''}`}>
+                <div className={`grid md:grid-cols-2 gap-2 max-h-96 overflow-auto rounded-lg transition-colors ${stepAttempted && !patientId ? 'ring-2 ring-destructive ring-offset-2' : ''}`}>
                   {filteredPatients.map(p => {
                     const active = p.cases.find(c => c.status !== 'resuelto');
                     const selected = patientId === p.id;
@@ -793,7 +841,7 @@ export default function NewCuration() {
                 <CardTitle className="heading-display text-lg flex items-center gap-2"><Activity className="h-5 w-5 text-primary" /> Evaluación clínica</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <Label className="font-body text-sm">Fecha</Label>
                     <Input
@@ -814,15 +862,46 @@ export default function NewCuration() {
                   </div>
                 </div>
 
+                <div>
+                  <Label className="font-body text-sm">Estado de la herida</Label>
+                  <Select value={evo.status} onValueChange={v => setEvo({ ...evo, status: v })}>
+                    <SelectTrigger className="font-body text-base"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en_mejoria">En mejoría</SelectItem>
+                      <SelectItem value="activo">Estable</SelectItem>
+                      <SelectItem value="en_deterioro">En deterioro</SelectItem>
+                      <SelectItem value="critico">Crítica</SelectItem>
+                      <SelectItem value="resuelto" className="text-success font-semibold focus:text-success">
+                        Herida Finalizada - Cicatrizada
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="space-y-2">
                   <Label className="font-body text-sm">Dolor (EVA): <span className="font-semibold text-foreground">{evo.pain}/10</span></Label>
                   <Slider value={[evo.pain]} onValueChange={([v]) => setEvo({ ...evo, pain: v })} min={0} max={10} step={1} />
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {/* Exudado: cantidad, tipo y color en la misma fila */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
                     { k: 'exudateAmount', label: 'Exudado: cantidad', opts: ['Sin exudado','Escaso','Moderado','Abundante'] },
                     { k: 'exudateType', label: 'Exudado: tipo', opts: ['Seroso','Serosanguinolento','Sanguinolento','Purulento','Fibrinoso'] },
+                    { k: 'exudateColor', label: 'Exudado: color', opts: ['Transparente','Amarillo','Verde','Rojo','Marrón'] },
+                  ].map((f) => (
+                    <div key={f.k}>
+                      <Label className="font-body text-sm">{f.label}</Label>
+                      <Select value={(evo as any)[f.k]} onValueChange={v => setEvo({ ...evo, [f.k]: v } as any)}>
+                        <SelectTrigger className="font-body text-base"><SelectValue /></SelectTrigger>
+                        <SelectContent>{f.opts.map(o => <SelectItem key={o} value={o} className="capitalize">{o}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
                     { k: 'odor', label: 'Olor', opts: ['no','leve','moderado','intenso'] },
                     { k: 'infection', label: 'Infección', opts: ['no','sospecha','si'] },
                     { k: 'tissue', label: 'Tejido predom.', opts: ['epitelización','granulación','fibrina','esfacelo','necrosis','hueso o tendón expuesto'] },
@@ -837,8 +916,27 @@ export default function NewCuration() {
                       </Select>
                     </div>
                   ))}
-                  <div><Label className="font-body text-sm">Tamaño</Label><Input placeholder="ej. 5 x 3 cm" value={evo.size} onChange={e => setEvo({ ...evo, size: e.target.value })} /></div>
-                  <div><Label className="font-body text-sm">Profundidad</Label><Input placeholder="ej. superficial" value={evo.depth} onChange={e => setEvo({ ...evo, depth: e.target.value })} /></div>
+                </div>
+
+                {/* Tamaño de la herida: largo, ancho y profundidad */}
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <Label className="font-body text-sm">Largo (cm)</Label>
+                      <Input type="number" min={0} step="0.1" inputMode="decimal" placeholder="ej. 5" value={evo.woundLength} onChange={e => setEvo({ ...evo, woundLength: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label className="font-body text-sm">Ancho (cm)</Label>
+                      <Input type="number" min={0} step="0.1" inputMode="decimal" placeholder="ej. 3" value={evo.woundWidth} onChange={e => setEvo({ ...evo, woundWidth: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label className="font-body text-sm">Profundidad (cm)</Label>
+                      <Input type="number" min={0} step="0.1" inputMode="decimal" placeholder="ej. 0.5" value={evo.woundDepth} onChange={e => setEvo({ ...evo, woundDepth: e.target.value })} />
+                    </div>
+                  </div>
+                  <p className="font-body text-sm text-muted-foreground">
+                    Superficie (Largo × Ancho): <span className="font-semibold text-foreground tabular-nums">{evoWoundArea ? `${evoWoundArea} cm²` : '—'}</span>
+                  </p>
                 </div>
 
                 <div><Label className="font-body text-sm">Procedimiento realizado</Label>
@@ -846,38 +944,6 @@ export default function NewCuration() {
                 </div>
                 <div><Label className="font-body text-sm">Observaciones</Label>
                   <Textarea rows={2} value={evo.observations} onChange={e => setEvo({ ...evo, observations: e.target.value })} />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div><Label className="font-body text-sm">Próximo turno</Label>
-                    <Input type="date" value={evo.nextControl} onChange={e => setEvo({ ...evo, nextControl: e.target.value, nextControlTime: e.target.value ? evo.nextControlTime : '' })} />
-                  </div>
-                  <div>
-                    <Label className="font-body text-sm">Hora del turno</Label>
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min={0}
-                        max={23}
-                        placeholder="hh"
-                        disabled={!evo.nextControl}
-                        value={evo.nextControlTime ? Number.parseInt(evo.nextControlTime.split(':')[0], 10) : ''}
-                        onChange={e => setEvo({ ...evo, nextControlTime: setTimeHour(evo.nextControlTime, e.target.value) })}
-                        className="font-body h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      />
-                      <span className="text-muted-foreground font-body">:</span>
-                      <select
-                        disabled={!evo.nextControl}
-                        value={evo.nextControlTime ? (evo.nextControlTime.split(':')[1] ?? '00') : ''}
-                        onChange={e => setEvo({ ...evo, nextControlTime: setTimeMinutes(evo.nextControlTime, e.target.value) })}
-                        className="font-body h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      >
-                        <option value="">mm</option>
-                        {['00', '15', '30', '45'].map(m => (
-                          <option key={m} value={m}>{m}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -944,7 +1010,7 @@ export default function NewCuration() {
                     <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input value={productQuery} onChange={e => setProductQuery(e.target.value)} placeholder="Buscar producto sponsor..." className="pl-9 font-body" />
                   </div>
-                  <div className="max-h-44 overflow-auto rounded-lg border border-border/60 divide-y divide-border/60">
+                  <div className="max-h-96 overflow-auto rounded-lg border border-border/60 divide-y divide-border/60">
                     {sponsorProducts
                       .filter(p => !productQuery || p.name.toLowerCase().includes(productQuery.toLowerCase()))
                       .slice(0, 12)

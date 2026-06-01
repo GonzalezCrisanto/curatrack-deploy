@@ -113,7 +113,7 @@ interface AppContextType {
   // Patients (synced with backend)
   patients: Patient[];
   patientsLoading: boolean;
-  addPatient: (patient: Patient) => Promise<void>;
+  addPatient: (patient: Patient) => Promise<string | null>;
   updatePatient: (patient: Patient) => Promise<void>;
   deletePatient: (id: string) => Promise<void>;
 
@@ -341,7 +341,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ---- Patient CRUD (backend) ----
   const addPatient = useCallback(async (patient: Patient) => {
-    if (!authUser) return;
+    if (!authUser) return null;
     const row = patientToRow(patient, authUser.id);
     // Let the DB generate the id
     const { id: _ignore, ...insertable } = row;
@@ -352,10 +352,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .single();
     if (error) {
       console.error('addPatient error', error);
-      return;
+      return null;
     }
     setPatientRows(prev => [data as PatientRow, ...prev]);
     setCasesByPatient(prev => ({ ...prev, [(data as PatientRow).id]: [] }));
+    return (data as PatientRow).id;
   }, [authUser]);
 
   const updatePatient = useCallback(async (patient: Patient) => {
