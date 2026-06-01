@@ -618,7 +618,7 @@ export default function Dashboard() {
                     {todayAgenda.map((a) => (
                       <li key={a.key}>
                         <button
-                          onClick={() => navigate(`/patients/${a.patientId}/cases/${a.caseId}`)}
+                          onClick={() => navigate(`/patients/${a.patientId}`)}
                           className="flex min-h-12 w-full items-center gap-3 py-2 text-left hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-2"
                         >
                           <span className="w-14 shrink-0 font-mono text-sm font-semibold text-primary">
@@ -732,7 +732,7 @@ export default function Dashboard() {
                         {selectedDayAgenda.map((a) => (
                           <li key={a.key}>
                             <button
-                              onClick={() => navigate(`/patients/${a.patientId}/cases/${a.caseId}`)}
+                              onClick={() => navigate(`/patients/${a.patientId}`)}
                               className="flex min-h-12 w-full items-center gap-3 py-2 text-left hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-2"
                             >
                               <span className="w-14 shrink-0 font-mono text-sm font-semibold text-primary">
@@ -1016,7 +1016,7 @@ export default function Dashboard() {
                     {agendaAppointments.slice(0, 3).map((a, i) => (
                       <button
                         key={i}
-                        onClick={() => navigate(`/patients/${a.patientId}/cases/${a.caseId}`)}
+                        onClick={() => navigate(`/patients/${a.patientId}`)}
                         className="w-full text-left flex items-center gap-3 p-3 rounded-lg border border-border/60 bg-background/60 hover:bg-accent/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                       >
                         <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
