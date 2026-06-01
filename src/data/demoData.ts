@@ -195,6 +195,8 @@ export interface Patient {
   address: string;
   diagnosis: string;
   assignedProfessional: string;
+  treatingDoctorName?: string;
+  treatingDoctorPhone?: string;
   observations: string;
   admissionDate: string;
   controlIntervalDays: number;

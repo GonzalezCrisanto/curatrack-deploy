@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import {
   ArrowLeft, Plus, Edit, Trash2, Clock, Camera, FileText,
-  Stethoscope, Ruler, Droplets, ShieldAlert, Thermometer, Pill, X, Image, Upload, ImagePlus, Package, RefreshCw, CheckCircle2, Save,
+  Stethoscope, Ruler, Droplets, ShieldAlert, Thermometer, Pill, X, Image, Upload, Package, RefreshCw, CheckCircle2, Save,
   TrendingDown, TrendingUp, Minus, Sparkles, Archive, Copy, Printer, Download, Loader2
 } from 'lucide-react';
 import { Evolution, Photo, professionals, getStatusLabel, woundStatuses, healingFrequencies, odorOptions, evolutionStatuses, OdorLevel, EvolutionStatus, tissueTypeOptions, edgeTypeOptions, TissueType, EdgeType, exudateAmountOptions, exudateTypeOptions, exudateColorOptions, ExudateAmount, ExudateType, ExudateColor, infectionSignFields } from '@/data/demoData';
@@ -130,8 +130,6 @@ export default function CaseDetail() {
   // Case-level AI summary viewer
   const [caseSummaryOpen, setCaseSummaryOpen] = useState(false);
 
-  const casePhotoInput = useRef<HTMLInputElement>(null);
-  const caseCameraInput = useRef<HTMLInputElement>(null);
   const evoPhotoInput = useRef<HTMLInputElement>(null);
   const evoCameraInput = useRef<HTMLInputElement>(null);
 
@@ -150,10 +148,7 @@ export default function CaseDetail() {
     return <AppLayout><div className="p-8 text-center font-body text-muted-foreground">Caso no encontrado</div></AppLayout>;
   }
 
-  const handleFileUpload = (
-    files: FileList | null,
-    target: 'case' | 'evolution'
-  ) => {
+  const handleFileUpload = (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     Array.from(files).forEach(file => {
@@ -169,22 +164,10 @@ export default function CaseDetail() {
           caption: file.name.replace(/\.[^.]+$/, ''),
           date: new Date().toISOString().split('T')[0],
         };
-        if (target === 'case') {
-          const updated = { ...woundCase, photos: [...woundCase.photos, photo] };
-          updateCase(patient.id, updated);
-          toast.success('Foto agregada al caso');
-        } else {
-          setEvoPhotos(prev => [...prev, photo]);
-        }
+        setEvoPhotos(prev => [...prev, photo]);
       };
       reader.readAsDataURL(file);
     });
-  };
-
-  const removeCasePhoto = (photoId: string) => {
-    const updated = { ...woundCase, photos: woundCase.photos.filter(p => p.id !== photoId) };
-    updateCase(patient.id, updated);
-    toast.success('Foto eliminada');
   };
 
   const openNewEvo = () => {
@@ -706,83 +689,6 @@ export default function CaseDetail() {
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Photo Gallery with upload */}
-        <Card className="border-border/50">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
-            <CardTitle className="heading-display text-lg flex items-center gap-2">
-              <Camera className="h-5 w-5 text-primary" /> Galería de Fotos
-            </CardTitle>
-            <div className="flex gap-2">
-              <input
-                ref={caseCameraInput}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={e => { handleFileUpload(e.target.files, 'case'); e.target.value = ''; }}
-              />
-              <input
-                ref={casePhotoInput}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={e => { handleFileUpload(e.target.files, 'case'); e.target.value = ''; }}
-              />
-              <Button variant="outline" size="sm" className="font-body" onClick={() => caseCameraInput.current?.click()}>
-                <Camera className="mr-1.5 h-4 w-4" /> <span className="hidden sm:inline">Cámara</span>
-              </Button>
-              <Button variant="outline" size="sm" className="font-body" onClick={() => casePhotoInput.current?.click()}>
-                <Upload className="mr-1.5 h-4 w-4" /> <span className="hidden sm:inline">Subir</span>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {woundCase.photos.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {woundCase.photos.map(photo => (
-                  <div
-                    key={photo.id}
-                    className="relative group rounded-lg overflow-hidden border border-border/50 cursor-pointer aspect-[4/3]"
-                  >
-                    <img
-                      src={photo.url}
-                      alt={photo.caption}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      onClick={() => setPhotoViewer(photo.url)}
-                    />
-                    <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/20 transition-colors flex items-end pointer-events-none">
-                      <div className="p-2 w-full bg-gradient-to-t from-foreground/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                        <p className="font-body text-xs text-primary-foreground">{photo.caption}</p>
-                        <p className="font-body text-xs text-primary-foreground/70">{photo.date}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removeCasePhoto(photo.id); }}
-                      className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 border border-dashed border-border rounded-lg">
-                <ImagePlus className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="font-body text-sm text-muted-foreground">No hay fotos aún</p>
-                <div className="flex justify-center gap-2 mt-3">
-                  <Button variant="outline" size="sm" className="font-body" onClick={() => caseCameraInput.current?.click()}>
-                    <Camera className="mr-2 h-4 w-4" /> Cámara
-                  </Button>
-                  <Button variant="outline" size="sm" className="font-body" onClick={() => casePhotoInput.current?.click()}>
-                    <Upload className="mr-2 h-4 w-4" /> Subir foto
-                  </Button>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -1413,9 +1319,9 @@ export default function CaseDetail() {
                 <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fotos</Label>
                 <div className="flex gap-2">
                   <input ref={evoCameraInput} type="file" accept="image/*" capture="environment" className="hidden"
-                    onChange={e => { handleFileUpload(e.target.files, 'evolution'); e.target.value = ''; }} />
+                    onChange={e => { handleFileUpload(e.target.files); e.target.value = ''; }} />
                   <input ref={evoPhotoInput} type="file" accept="image/*" multiple className="hidden"
-                    onChange={e => { handleFileUpload(e.target.files, 'evolution'); e.target.value = ''; }} />
+                    onChange={e => { handleFileUpload(e.target.files); e.target.value = ''; }} />
                   <Button type="button" variant="outline" size="sm" className="font-body flex-1 h-11" onClick={() => evoCameraInput.current?.click()}>
                     <Camera className="mr-1.5 h-4 w-4" /> Cámara
                   </Button>

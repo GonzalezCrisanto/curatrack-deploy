@@ -102,7 +102,7 @@ export default function Login() {
       if (target && kind !== 'admin') await setSponsorBySlug(target.slug, true);
 
       toast({
-        title: kind === 'admin' ? 'Sesión admin iniciada' : kind === 'sponsor' ? 'Sesión laboratorio iniciada' : 'Sesión profesional iniciada',
+        title: kind === 'admin' ? 'Sesión laboratorio iniciada' : kind === 'sponsor' ? 'Sesión laboratorio iniciada' : 'Sesión profesional iniciada',
         description: kind === 'admin' ? 'Acceso total a la plataforma.' : target ? `Demo de ${target.sponsor_name}` : 'Cuenta de prueba activada.',
       });
       if (kind === 'sponsor') navigate('/panel-sponsor');
@@ -239,7 +239,7 @@ export default function Login() {
                         onClick={() => handleDemoLogin(undefined, 'admin')}
                         className="w-full font-body gap-1.5 text-xs bg-slate-700 hover:bg-slate-800 text-white">
                         <ShieldCheck className="h-3.5 w-3.5" />
-                        {loadingKey === 'admin' ? '...' : 'Admin'}
+                        {loadingKey === 'admin' ? '...' : 'Laboratorio'}
                       </Button>
                     </div>
                   </div>

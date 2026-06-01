@@ -473,10 +473,12 @@ export default function PatientDetail() {
             </div>
 
             {/* Datos administrativos y contacto */}
-            {(patient.insurance || patient.emergencyContactName || patient.emergencyContactPhone) && (
+            {(patient.insurance || patient.emergencyContactName || patient.emergencyContactPhone || patient.treatingDoctorName || patient.treatingDoctorPhone) && (
               <div className="pt-3 border-t border-border/50">
                 <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Datos administrativos y contacto</p>
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
+                  {patient.treatingDoctorName && <InfoRow icon={<UserCog className="h-3.5 w-3.5" />} label="Médico tratante" value={patient.treatingDoctorName} />}
+                  {patient.treatingDoctorPhone && <InfoRow icon={<Phone className="h-3.5 w-3.5" />} label="Tel. médico" value={patient.treatingDoctorPhone} />}
                   {patient.insurance && <InfoRow icon={<BadgeCheck className="h-3.5 w-3.5" />} label="Obra social / Cobertura" value={patient.insurance} />}
                   {patient.emergencyContactName && <InfoRow icon={<UserCog className="h-3.5 w-3.5" />} label="Contacto de emergencia" value={patient.emergencyContactName} />}
                   {patient.emergencyContactPhone && <InfoRow icon={<Phone className="h-3.5 w-3.5" />} label="Tel. de emergencia" value={patient.emergencyContactPhone} />}
