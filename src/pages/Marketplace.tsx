@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Search, Filter, X, ShoppingBag, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -95,98 +95,78 @@ export default function Marketplace() {
   return (
     <AppLayout>
       <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
-        <div className="flex flex-col gap-6">
+        <div className="space-y-5 animate-fade-in max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
           <div>
-            <h1 className="font-heading text-2xl md:text-3xl font-bold flex items-center gap-2">
+            <h1 className="heading-display text-2xl md:text-3xl flex items-center gap-2.5">
               <ShoppingBag className="h-7 w-7 text-primary" />
-              Marketplace Clínico
+              Catálogo de Insumos
             </h1>
-            <p className="text-sm text-muted-foreground font-body mt-1">
-              Catálogo de insumos para curaciones de heridas complejas. Precios y stock estimados — sin pago online.
-            </p>
           </div>
         </div>
 
-        {/* Disclaimer */}
-        <Card className="p-3 bg-accent/40 border-accent flex gap-2 items-start">
-          <AlertCircle className="h-4 w-4 text-accent-foreground mt-0.5 shrink-0" />
-          <p className="text-xs text-accent-foreground font-body">
-            Las recomendaciones son orientativas y no reemplazan el criterio clínico profesional. Verificá disponibilidad y precio con el vendedor antes de confirmar el pedido.
-          </p>
-        </Card>
-
-        {/* Search + stock filter */}
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar producto, SKU o descripción…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <ToggleGroup
-            type="single"
-            value={stockFilter}
-            onValueChange={(v) => v && setStockFilter(v as StockFilter)}
-            variant="outline"
-            size="sm"
-            className="justify-start flex-wrap"
-          >
-            <ToggleGroupItem value="all">Todos</ToggleGroupItem>
-            <ToggleGroupItem value="in_stock">En stock</ToggleGroupItem>
-            <ToggleGroupItem value="low_stock">Bajo</ToggleGroupItem>
-            <ToggleGroupItem value="out_of_stock">Sin stock</ToggleGroupItem>
-          </ToggleGroup>
-        </div>
-
-        {/* Categories */}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={activeCategory === null ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActiveCategory(null)}
-          >
-            Todas las categorías
-          </Button>
-          {categories.map((c) => (
-            <Button
-              key={c.id}
-              variant={activeCategory === c.id ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setActiveCategory(activeCategory === c.id ? null : c.id)}
-            >
-              {c.name}
-            </Button>
-          ))}
-        </div>
-
-        {/* Tags */}
-        {tags.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground font-body flex items-center gap-1">
-              <Filter className="h-3 w-3" /> Filtros clínicos
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {tags.map((t) => {
-                const active = activeTags.includes(t.slug);
-                return (
-                  <Badge
-                    key={t.id}
-                    variant={active ? 'default' : 'outline'}
-                    className="cursor-pointer select-none hover:bg-primary/10"
-                    onClick={() => toggleTag(t.slug)}
-                  >
-                    {t.name}
-                  </Badge>
-                );
-              })}
+        {/* Search + filters */}
+        <Card className="border-border/60">
+          <CardContent className="p-3 space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar producto, SKU o descripción…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 font-body"
+              />
             </div>
-          </div>
-        )}
+
+            {/* Categories */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={activeCategory === null ? 'default' : 'outline'}
+                size="sm"
+                className="font-body"
+                onClick={() => setActiveCategory(null)}
+              >
+                Todas las categorías
+              </Button>
+              {categories.map((c) => (
+                <Button
+                  key={c.id}
+                  variant={activeCategory === c.id ? 'default' : 'outline'}
+                  size="sm"
+                  className="font-body"
+                  onClick={() => setActiveCategory(activeCategory === c.id ? null : c.id)}
+                >
+                  {c.name}
+                </Button>
+              ))}
+            </div>
+
+            {/* Tags */}
+            {tags.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-body flex items-center gap-1">
+                  <Filter className="h-3 w-3" /> Filtros clínicos
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map((t) => {
+                    const active = activeTags.includes(t.slug);
+                    return (
+                      <Badge
+                        key={t.id}
+                        variant={active ? 'default' : 'outline'}
+                        className="cursor-pointer select-none hover:bg-primary/10 font-body"
+                        onClick={() => toggleTag(t.slug)}
+                      >
+                        {t.name}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Active filters / count */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -194,7 +174,7 @@ export default function Marketplace() {
             {loading ? 'Cargando…' : `${filtered.length} producto${filtered.length === 1 ? '' : 's'}`}
           </p>
           {hasFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 font-body">
               <X className="h-3 w-3" /> Limpiar filtros
             </Button>
           )}
@@ -208,13 +188,13 @@ export default function Marketplace() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <Card className="p-10 text-center">
-            <p className="font-heading font-semibold mb-1">No encontramos productos</p>
+          <Card className="p-10 text-center border-border/60">
+            <p className="heading-display text-lg mb-1">No encontramos productos</p>
             <p className="text-sm text-muted-foreground font-body mb-4">
               Probá ajustar los filtros o el término de búsqueda.
             </p>
             {hasFilters && (
-              <Button variant="outline" size="sm" onClick={clearFilters}>
+              <Button variant="outline" size="sm" className="font-body" onClick={clearFilters}>
                 Limpiar filtros
               </Button>
             )}

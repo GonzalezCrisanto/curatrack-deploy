@@ -213,22 +213,14 @@ export default function Orders() {
   return (
     <AppLayout>
       <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
-        <div className="space-y-6 animate-fade-in max-w-7xl mx-auto">
+        <div className="space-y-5 animate-fade-in max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Badge variant="outline" className="font-body text-[10px] uppercase tracking-wider border-primary/30 text-primary bg-primary/5">
-                  Programa sponsor: {sponsorName}
-                </Badge>
-              </div>
               <h1 className="heading-display text-2xl md:text-3xl flex items-center gap-2.5">
                 <ShoppingBag className="h-7 w-7 text-primary" />
-                Solicitudes de reposición
+                Mis Pedidos
               </h1>
-              <p className="font-body text-sm text-muted-foreground mt-1 max-w-2xl">
-                Seguimiento de insumos solicitados a {sponsorName}. Los datos del paciente permanecen protegidos: solo se comparte tipo de herida, profesional e institución.
-              </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" className="font-body">
@@ -306,7 +298,7 @@ export default function Orders() {
           ) : filtered.length === 0 ? (
             <Card className="p-10 text-center border-dashed">
               <ShoppingBag className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <p className="font-heading font-semibold mb-1">Sin solicitudes para mostrar</p>
+              <p className="heading-display text-lg mb-1">Sin solicitudes para mostrar</p>
               <p className="text-sm text-muted-foreground font-body mb-4">
                 Cuando confirmes una reposición desde el catálogo clínico, va a aparecer acá.
               </p>
@@ -326,7 +318,7 @@ export default function Orders() {
                       <div className="flex items-start justify-between gap-3 flex-wrap">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <CardTitle className="font-heading text-base md:text-lg">
+                            <CardTitle className="heading-display text-base md:text-lg">
                               {o.order_number}
                             </CardTitle>
                             <Badge variant="outline" className={`${cfg.className} gap-1 font-body text-[10px] uppercase tracking-wide`}>
@@ -427,7 +419,7 @@ export default function Orders() {
       <AlertDialog open={!!cancelTarget} onOpenChange={(o) => { if (!o && !cancelling) setCancelTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-heading">¿Cancelar esta solicitud?</AlertDialogTitle>
+            <AlertDialogTitle className="heading-display">¿Cancelar esta solicitud?</AlertDialogTitle>
             <AlertDialogDescription className="font-body">
               Vas a cancelar la solicitud <strong>{cancelTarget?.order_number}</strong>. El representante comercial verá el cambio de estado y no procesará la entrega. Esta acción no se puede deshacer.
             </AlertDialogDescription>

@@ -5,10 +5,11 @@ import { useApp } from '@/context/AppContext';
 import { useSponsor } from '@/context/SponsorContext';
 import { useAppRole } from '@/hooks/useAppRole';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Activity, LogOut, Menu, Settings, Package } from 'lucide-react';
+import { Activity, LogOut, Menu, Settings, Package, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { CartButton, CartDrawer } from '@/components/marketplace/CartDrawer';
+import { CartDrawer } from '@/components/marketplace/CartDrawer';
+import { useCart } from '@/context/CartContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +27,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const { sponsor, resetBrandingToDefault } = useSponsor();
   const { role } = useAppRole();
   const { toast } = useToast();
+  const { itemCount } = useCart();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -92,10 +94,20 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="relative">
-                    <CartButton
-                      onClick={() => navigate('/orders')}
-                      ariaLabel="Solicitudes de reposición pendientes"
-                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="relative h-9 w-9"
+                      onClick={() => navigate('/cart')}
+                      aria-label="Solicitudes de reposición pendientes"
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      {itemCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
+                          {itemCount > 99 ? '99+' : itemCount}
+                        </span>
+                      )}
+                    </Button>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>Solicitudes de reposición pendientes</TooltipContent>

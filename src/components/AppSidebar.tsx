@@ -46,8 +46,8 @@ const clinicalItems: SidebarItem[] = [
 ];
 
 const commercialItems: SidebarItem[] = [
-  { title: 'Catálogo clínico', url: '/marketplace', icon: ShoppingBag, section: 'catalogo-clinico' },
-  { title: 'Solicitudes de reposición', url: '/orders', icon: Truck, section: 'solicitudes-reposicion' },
+  { title: 'Catálogo de Insumos', url: '/marketplace', icon: ShoppingBag, section: 'catalogo-clinico' },
+  { title: 'Mis Pedidos', url: '/orders', icon: Truck, section: 'solicitudes-reposicion' },
   { title: 'Panel Sponsor', url: '/sponsor', icon: Briefcase, section: 'panel-sponsor' },
 ];
 
@@ -73,7 +73,7 @@ const sponsorCommercialItems: SidebarItem[] = [
 const sponsorProductsItems: SidebarItem[] = [
   { title: 'Catálogo de productos', url: '/catalogo-productos', icon: Package, section: 'catalogo-productos' },
   { title: 'Pedidos', url: '/orders', icon: ClipboardList, section: 'pedidos' },
-  { title: 'Solicitudes de reposición', url: '/orders', icon: Truck, section: 'solicitudes-reposicion' },
+  { title: 'Mis Pedidos', url: '/orders', icon: Truck, section: 'solicitudes-reposicion' },
 ];
 
 const sponsorAccountItems: SidebarItem[] = [
@@ -166,8 +166,8 @@ export function AppSidebar() {
   // Items per role
   const profClinical = filterByPermission(clinicalItems);
   const profSupplies = filterByPermission([
-    { title: 'Catálogo clínico', url: '/marketplace', icon: ShoppingBag, section: 'catalogo-clinico' },
-    { title: 'Solicitudes de reposición', url: '/orders', icon: Truck, section: 'solicitudes-reposicion' },
+    { title: 'Catálogo de Insumos', url: '/marketplace', icon: ShoppingBag, section: 'catalogo-clinico' },
+    { title: 'Mis Pedidos', url: '/orders', icon: Truck, section: 'solicitudes-reposicion' },
   ]);
   const profPlatform = filterByPermission([
     //{ title: 'Asistente clínico', url: '/assistant', icon: Sparkles, section: 'asistente-clinico' },

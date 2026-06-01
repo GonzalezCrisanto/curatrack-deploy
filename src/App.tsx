@@ -19,6 +19,7 @@ import NewCuration from "./pages/NewCuration";
 import Agenda from "./pages/Agenda";
 import Marketplace from "./pages/Marketplace";
 import Orders from "./pages/Orders";
+import Cart from "./pages/Cart";
 import SponsorPanel from "./pages/SponsorPanel";
 import Reports from "./pages/Reports";
 import AdminProducts from "./pages/AdminProducts";
@@ -64,6 +65,7 @@ const App = () => (
                 {/* Shared authenticated routes */}
                 <Route path="/marketplace" element={<ProtectedRoute requiredAnyOf={['catalogo-clinico', 'catalogo-productos']}><Marketplace /></ProtectedRoute>} />
                 <Route path="/orders" element={<ProtectedRoute requiredAnyOf={['solicitudes-reposicion', 'pedidos']}><Orders /></ProtectedRoute>} />
+                <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
                 {/* Admin only */}
