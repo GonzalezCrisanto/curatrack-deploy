@@ -965,8 +965,8 @@ export default function NewCuration() {
                     }}
                   />
                   {photoPreview ? (
-                    <div className="relative rounded-lg overflow-hidden border border-border/60">
-                      <img src={photoPreview} alt="Vista previa" className="w-full max-h-72 object-cover" />
+                    <div className="relative rounded-lg overflow-hidden border border-border/60 bg-slate-950/5">
+                      <img src={photoPreview} alt="Vista previa" className="w-full max-h-72 object-contain" />
                       <div className="absolute bottom-2 right-2">
                         <span className="font-body text-sm bg-background/90 rounded-md px-2 py-1 border border-border/60">
                           Cambiar foto

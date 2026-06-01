@@ -36,8 +36,6 @@ interface PatientRow {
   address: string | null;
   diagnosis: string | null;
   assigned_professional: string | null;
-  treating_doctor_name: string | null;
-  treating_doctor_phone: string | null;
   observations: string | null;
   admission_date: string | null;
   control_interval_days: number | null;
@@ -57,8 +55,8 @@ function rowToPatient(row: PatientRow, cases: WoundCase[]): Patient {
     address: row.address ?? '',
     diagnosis: row.diagnosis ?? '',
     assignedProfessional: row.assigned_professional ?? '',
-    treatingDoctorName: row.treating_doctor_name ?? '',
-    treatingDoctorPhone: row.treating_doctor_phone ?? '',
+    treatingDoctorName: '',
+    treatingDoctorPhone: '',
     observations: row.observations ?? '',
     admissionDate: row.admission_date ?? new Date().toISOString().split('T')[0],
     controlIntervalDays: row.control_interval_days ?? 7,
@@ -80,8 +78,6 @@ function patientToRow(p: Patient, userId: string): Omit<PatientRow, 'id'> & { id
     address: p.address || null,
     diagnosis: p.diagnosis || null,
     assigned_professional: p.assignedProfessional || null,
-    treating_doctor_name: p.treatingDoctorName || null,
-    treating_doctor_phone: p.treatingDoctorPhone || null,
     observations: p.observations || null,
     admission_date: p.admissionDate || null,
     control_interval_days: p.controlIntervalDays ?? 7,

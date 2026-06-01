@@ -217,24 +217,6 @@ export default function NewPatientDialog({ open, onOpenChange, editing = null }:
                   Información médica relevante para el cuidado de las heridas. El detalle de cada herida se carga al crearla.
                 </p>
               </div>
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Médico tratante <span className="text-muted-foreground font-normal">(opcional)</span></Label>
-                <Input
-                  value={form.treatingDoctorName || ''}
-                  onChange={e => setField('treatingDoctorName', e.target.value)}
-                  className="font-body"
-                  placeholder="Nombre y apellido"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Teléfono del médico <span className="text-muted-foreground font-normal">(opcional)</span></Label>
-                <Input
-                  value={form.treatingDoctorPhone || ''}
-                  onChange={e => setField('treatingDoctorPhone', e.target.value)}
-                  className="font-body"
-                  placeholder="Ej: +54 11 5555 1234"
-                />
-              </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label className="font-body text-sm">Alergias <span className="text-muted-foreground font-normal">(opcional)</span></Label>
                 <Input
