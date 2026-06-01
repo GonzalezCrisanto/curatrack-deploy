@@ -130,7 +130,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate('/orders')}>
                     <Package className="mr-2 h-4 w-4" />
-                    Solicitudes
+                    Mis Pedidos
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/settings')}>
                     <Settings className="mr-2 h-4 w-4" />
