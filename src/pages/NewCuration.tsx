@@ -528,9 +528,6 @@ export default function NewCuration() {
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
             <div>
               <h1 className="heading-display text-2xl md:text-3xl">Nueva curación</h1>
-              <p className="font-body text-sm text-muted-foreground mt-1">
-                Flujo guiado: paciente → evaluación → fotos → insumos → resumen.
-              </p>
             </div>
           </div>
 
@@ -706,9 +703,6 @@ export default function NewCuration() {
                               <Badge variant="outline" className="font-body text-[10px] uppercase">{c.status}</Badge>
                             </div>
                             <div className="font-body text-sm text-muted-foreground mt-0.5">{c.anatomicalLocation}</div>
-                            <div className="font-body text-[11px] text-muted-foreground mt-1">
-                              Última evolución: {c.evolutions[0]?.date ?? '—'} · Próx. control: {formatNextControl(c.evolutions[0]?.nextControl, c.evolutions[0]?.nextControlTime) || '—'}
-                            </div>
                           </button>
                         ))}
                         <button
