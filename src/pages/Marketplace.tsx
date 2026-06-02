@@ -1,63 +1,103 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { supabase } from '@/integrations/supabase/client';
 import { LabProduct, ProductCategory, ClinicalTag, getStockStatus } from '@/types/marketplace';
 import { ProductCard } from '@/components/marketplace/ProductCard';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
-import { Search, Filter, X, ShoppingBag, AlertCircle } from 'lucide-react';
+import { Search, Filter, X, ShoppingBag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useCart } from '@/context/CartContext';
-import { useSponsor } from '@/context/SponsorContext';
+// Product catalog comes from a local JSON file (no backend). The file is a bare
+// JSON array with no module export, so we read it raw and parse it.
+import rawProductsData from '../../data/dataProducto.js?raw';
 
 type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';
+
+interface RawProduct {
+  id: number;
+  franquicia: string;
+  categoria: string;
+  icc_convatec: string;
+  descripcion: string;
+  precio_con_iva: number;
+  img: string;
+}
+
+const RAW_PRODUCTS: RawProduct[] = JSON.parse(rawProductsData);
+
+// Resolve the relative `img` path (e.g. "data/img/producto-1.jpg") to a URL that
+// Vite bundles/serves. Matching is done by file name; missing images resolve to
+// null so the card falls back to its placeholder.
+const productImages = import.meta.glob('../../data/img/*', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+}) as Record<string, string>;
+
+// Remote placeholder used until real product images exist under data/img/.
+const PLACEHOLDER_IMG = 'https://placehold.co/400x300/e2e8f0/64748b?text=Producto';
+
+function resolveProductImage(img?: string): string {
+  const file = img?.split('/').pop();
+  if (file) {
+    const entry = Object.entries(productImages).find(([path]) => path.endsWith(`/${file}`));
+    if (entry) return entry[1];
+  }
+  // No local image bundled (data/img/ is empty/missing) → use a placeholder that
+  // actually renders, so the catalog shows images instead of broken/empty boxes.
+  return PLACEHOLDER_IMG;
+}
+
+// Map the JSON shape to the LabProduct shape the UI already expects.
+function mapToLabProduct(p: RawProduct): LabProduct {
+  return {
+    id: String(p.id),
+    lab_id: '',
+    category_id: p.categoria,
+    name: p.descripcion,
+    short_description: null,
+    description: p.descripcion,
+    sku: p.icc_convatec,
+    presentation: null,
+    size: null,
+    units_per_box: null,
+    image_url: resolveProductImage(p.img),
+    datasheet_url: null,
+    usage_instructions: null,
+    price: p.precio_con_iva,
+    currency: 'ARS',
+    price_updated_at: '',
+    price_valid_until: null,
+    stock: null,
+    min_stock: null,
+    stock_updated_at: '',
+    is_active: true,
+    is_featured: false,
+    clinical_tags: [],
+    wound_types: [],
+  };
+}
+
+const ALL_PRODUCTS: LabProduct[] = RAW_PRODUCTS.map(mapToLabProduct);
+
+const ALL_CATEGORIES: ProductCategory[] = Array.from(new Set(RAW_PRODUCTS.map((p) => p.categoria))).map(
+  (categoria, i) => ({ id: categoria, name: categoria, slug: categoria, description: null, icon: null, sort_order: i }),
+);
 
 export default function Marketplace() {
   const { toast } = useToast();
   const { addProduct } = useCart();
-  const { sponsor } = useSponsor();
-  const [loading, setLoading] = useState(true);
-  const [products, setProducts] = useState<LabProduct[]>([]);
-  const [categories, setCategories] = useState<ProductCategory[]>([]);
-  const [tags, setTags] = useState<ClinicalTag[]>([]);
+
+  const products = ALL_PRODUCTS;
+  const categories = ALL_CATEGORIES;
+  const tags: ClinicalTag[] = [];
 
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [stockFilter, setStockFilter] = useState<StockFilter>('all');
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      let prodQuery = supabase.from('lab_products').select('*').eq('is_active', true).order('is_featured', { ascending: false }).order('name');
-      if (sponsor?.lab_id) prodQuery = prodQuery.eq('lab_id', sponsor.lab_id);
-      const [prodRes, catRes, tagRes] = await Promise.all([
-        prodQuery,
-        supabase.from('product_categories').select('*').order('sort_order'),
-        supabase.from('product_clinical_tags').select('*').order('name'),
-      ]);
-      if (cancelled) return;
-      if (prodRes.error || catRes.error || tagRes.error) {
-        toast({
-          title: 'No se pudo cargar el catálogo',
-          description: prodRes.error?.message || catRes.error?.message || tagRes.error?.message,
-          variant: 'destructive',
-        });
-      }
-      setProducts((prodRes.data ?? []) as LabProduct[]);
-      setCategories((catRes.data ?? []) as ProductCategory[]);
-      setTags((tagRes.data ?? []) as ClinicalTag[]);
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [toast, sponsor?.lab_id]);
 
   const categoriesById = useMemo(() => {
     const m = new Map<string, ProductCategory>();
@@ -171,7 +211,7 @@ export default function Marketplace() {
         {/* Active filters / count */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <p className="text-sm text-muted-foreground font-body">
-            {loading ? 'Cargando…' : `${filtered.length} producto${filtered.length === 1 ? '' : 's'}`}
+            {`${filtered.length} producto${filtered.length === 1 ? '' : 's'}`}
           </p>
           {hasFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 font-body">
@@ -181,13 +221,7 @@ export default function Marketplace() {
         </div>
 
         {/* Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-[380px] rounded-lg" />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
+        {filtered.length === 0 ? (
           <Card className="p-10 text-center border-border/60">
             <p className="heading-display text-lg mb-1">No encontramos productos</p>
             <p className="text-sm text-muted-foreground font-body mb-4">

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ const stockStyles: Record<string, { label: string; className: string }> = {
 };
 
 export function ProductCard({ product, categoryName, onAddToCart, onView }: Props) {
+  const [imgFailed, setImgFailed] = useState(false);
   const status = getStockStatus(product);
   const stock = stockStyles[status];
   const priceLabel = product.price != null
@@ -28,11 +30,12 @@ export function ProductCard({ product, categoryName, onAddToCart, onView }: Prop
   return (
     <Card className="flex flex-col overflow-hidden hover:shadow-md transition-shadow group">
       <div className="relative aspect-[4/3] bg-muted overflow-hidden">
-        {product.image_url ? (
+        {product.image_url && !imgFailed ? (
           <img
             src={product.image_url}
             alt={product.name}
             loading="lazy"
+            onError={() => setImgFailed(true)}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform"
           />
         ) : (

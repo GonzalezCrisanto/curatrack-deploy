@@ -24,6 +24,70 @@ async function redirectByRole(navigate: (p: string) => void, fallback = '/dashbo
   else navigate('/dashboard');
 }
 
+// Convatec palette (matches the sponsor seed). Applied synchronously on the first
+// render so the login page paints with the right colors instead of flashing the
+// default Care Platform theme. Mirrors SponsorContext.applyTheme exactly (those
+// helpers aren't exported) so the later context re-apply produces identical values.
+const CONVATEC_COLORS = { primary: '#E11D48', secondary: '#7F1D1D', accent: '#F472B6' };
+
+function hexToHslString(hex: string): string {
+  const h = hex.replace('#', '');
+  const bigint = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+  const r = ((bigint >> 16) & 255) / 255;
+  const g = ((bigint >> 8) & 255) / 255;
+  const b = (bigint & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let hH = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: hH = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: hH = (b - r) / d + 2; break;
+      case b: hH = (r - g) / d + 4; break;
+    }
+    hH /= 6;
+  }
+  return `${Math.round(hH * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
+function darkenHex(hex: string, percent = 10): string {
+  const normalized = hex.replace('#', '');
+  const full = normalized.length === 3
+    ? normalized.split('').map((c) => `${c}${c}`).join('')
+    : normalized;
+  const num = parseInt(full, 16);
+  const clamp = (v: number) => Math.max(0, Math.min(255, v));
+  const factor = (100 - percent) / 100;
+  const r = clamp(Math.round(((num >> 16) & 255) * factor));
+  const g = clamp(Math.round(((num >> 8) & 255) * factor));
+  const b = clamp(Math.round((num & 255) * factor));
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function applyConvatecTheme() {
+  const root = document.documentElement;
+  const primary = hexToHslString(CONVATEC_COLORS.primary);
+  const secondary = hexToHslString(CONVATEC_COLORS.secondary);
+  const accent = hexToHslString(CONVATEC_COLORS.accent);
+  const primaryHover = darkenHex(CONVATEC_COLORS.primary, 12);
+  root.style.setProperty('--primary', primary);
+  root.style.setProperty('--ring', primary);
+  root.style.setProperty('--sidebar-primary', primary);
+  root.style.setProperty('--sidebar-ring', primary);
+  root.style.setProperty('--brand-blue', primary);
+  root.style.setProperty('--brand-green', accent);
+  root.style.setProperty('--color-primary', CONVATEC_COLORS.primary);
+  root.style.setProperty('--color-primary-hover', primaryHover);
+  root.style.setProperty('--color-primary-hsl', primary);
+  root.style.setProperty('--color-primary-hover-hsl', hexToHslString(primaryHover));
+  root.style.setProperty('--sidebar-accent-foreground', primary);
+  root.style.setProperty('--sponsor-primary', primary);
+  root.style.setProperty('--sponsor-secondary', secondary);
+  root.style.setProperty('--sponsor-accent', accent);
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -36,6 +100,16 @@ export default function Login() {
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [forgotMode, setForgotMode] = useState(false);
   const demoAutoTriggered = useRef(false);
+
+  // Default the selected laboratory to Convatec on the very first render (before
+  // paint), so the correct colors show immediately with no flash and SponsorContext
+  // resolves Convatec from localStorage. An explicit ?sponsor= override still wins.
+  useState(() => {
+    if (new URLSearchParams(window.location.search).has('sponsor')) return null;
+    try { localStorage.setItem('active_sponsor_slug', 'convatec'); } catch { /* ignore */ }
+    applyConvatecTheme();
+    return null;
+  });
 
   const sponsorParam = searchParams.get('sponsor');
   const isSponsorLocked = !!sponsorParam;
