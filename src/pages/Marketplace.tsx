@@ -23,6 +23,7 @@ interface RawProduct {
   descripcion: string;
   precio_con_iva: number;
   img: string;
+  size?: string;
 }
 
 const RAW_PRODUCTS: RawProduct[] = JSON.parse(rawProductsData);
@@ -54,6 +55,16 @@ function resolveProductImage(img?: string): string {
   return PLACEHOLDER_IMG;
 }
 
+// Extract a size/dimension (e.g. "10X10cm") from the free-text description.
+// Matches patterns like "10X10CM", "12,5X12,5 CM", "20X16.9 CM", "16 cm X 16 cm".
+function extractSize(text?: string): string | null {
+  if (!text) return null;
+  const m = text.match(/(\d+(?:[.,]\d+)?)\s*(?:cm|mm)?\s*[xX]\s*(\d+(?:[.,]\d+)?)\s*(cm|mm)?/i);
+  if (!m) return null;
+  const unit = (m[3] || 'cm').toLowerCase();
+  return `${m[1]}X${m[2]}${unit}`;
+}
+
 // Map the JSON shape to the LabProduct shape the UI already expects.
 function mapToLabProduct(p: RawProduct): LabProduct {
   return {
@@ -65,7 +76,7 @@ function mapToLabProduct(p: RawProduct): LabProduct {
     description: p.descripcion,
     sku: p.icc_convatec,
     presentation: null,
-    size: null,
+    size: p.size ?? extractSize(p.descripcion),
     units_per_box: null,
     image_url: resolveProductImage(p.img),
     datasheet_url: null,

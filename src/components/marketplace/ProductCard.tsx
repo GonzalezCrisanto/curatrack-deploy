@@ -58,6 +58,9 @@ export function ProductCard({ product, categoryName, onAddToCart, onView }: Prop
           <p className="text-xs uppercase tracking-wide text-muted-foreground font-body">{categoryName}</p>
         )}
         <h3 className="font-heading font-semibold leading-tight line-clamp-2">{product.name}</h3>
+        {product.size && (
+          <p className="text-xs text-muted-foreground font-body">{product.size}</p>
+        )}
         {product.short_description && (
           <p className="text-sm text-muted-foreground line-clamp-2 font-body">{product.short_description}</p>
         )}

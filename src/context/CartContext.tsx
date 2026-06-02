@@ -54,136 +54,129 @@ export interface ConfirmOrderInput {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
+// The cart is persisted in localStorage (no backend) so it works with the local
+// product catalog (data/dataProducto.js). Each line stores a product snapshot +
+// quantity, which also keeps name/price/image available for the cart UI.
+const CART_LS_KEY = 'curatrack_cart';
+
+interface StoredCartItem {
+  product: LabProduct;
+  quantity: number;
+}
+
+function readStoredCart(): StoredCartItem[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(CART_LS_KEY) || '[]');
+    return Array.isArray(raw) ? (raw as StoredCartItem[]).filter((s) => s && s.product && s.product.id) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredCart(items: StoredCartItem[]) {
+  try {
+    localStorage.setItem(CART_LS_KEY, JSON.stringify(items));
+  } catch {
+    /* ignore quota / serialization errors */
+  }
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
   const [userId, setUserId] = useState<string | null>(null);
-  const [rows, setRows] = useState<CartItemRow[]>([]);
-  const [products, setProducts] = useState<Record<string, LabProduct>>({});
-  const [loading, setLoading] = useState(false);
+  const [stored, setStored] = useState<StoredCartItem[]>(() => readStoredCart());
   const [open, setOpen] = useState(false);
 
-  // Track session
+  // Track session — only needed for the legacy confirmOrder (supply_orders) flow.
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setUserId(s?.user?.id ?? null);
-    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setUserId(s?.user?.id ?? null));
     supabase.auth.getSession().then(({ data }) => setUserId(data.session?.user?.id ?? null));
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Load cart whenever user changes
-  const reload = useCallback(async () => {
-    if (!userId) {
-      setRows([]);
-      setProducts({});
-      return;
-    }
-    setLoading(true);
-    const { data: cartData, error } = await supabase
-      .from('cart_items')
-      .select('*')
-      .order('created_at', { ascending: true });
-    if (error) {
-      console.error('Cart load error', error);
-      setLoading(false);
-      return;
-    }
-    const cartRows = (cartData ?? []) as CartItemRow[];
-    setRows(cartRows);
-
-    const ids = Array.from(new Set(cartRows.map((r) => r.product_id)));
-    if (ids.length > 0) {
-      const { data: prodData } = await supabase
-        .from('lab_products')
-        .select('*')
-        .in('id', ids);
-      const map: Record<string, LabProduct> = {};
-      (prodData ?? []).forEach((p) => {
-        map[p.id] = p as LabProduct;
-      });
-      setProducts(map);
-    } else {
-      setProducts({});
-    }
-    setLoading(false);
-  }, [userId]);
-
+  // Keep in sync when another tab updates the cart.
   useEffect(() => {
-    reload();
-  }, [reload]);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === CART_LS_KEY) setStored(readStoredCart());
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  // Single mutation helper: update state and persist atomically (no stale closures).
+  const mutate = useCallback((updater: (prev: StoredCartItem[]) => StoredCartItem[]) => {
+    setStored((prev) => {
+      const next = updater(prev);
+      writeStoredCart(next);
+      return next;
+    });
+  }, []);
 
   const items: CartItemWithProduct[] = useMemo(
-    () => rows.map((r) => ({ ...r, product: products[r.product_id] ?? null })),
-    [rows, products],
+    () =>
+      stored.map((s) => ({
+        id: s.product.id,
+        user_id: userId ?? '',
+        product_id: s.product.id,
+        quantity: s.quantity,
+        notes: null,
+        priority: 'normal',
+        related_case_id: null,
+        related_evolution_id: null,
+        curation_date: null,
+        created_at: '',
+        updated_at: '',
+        product: s.product,
+      })),
+    [stored, userId],
   );
 
-  const itemCount = useMemo(() => rows.reduce((sum, r) => sum + r.quantity, 0), [rows]);
+  const itemCount = useMemo(() => stored.reduce((sum, s) => sum + s.quantity, 0), [stored]);
   const totalEstimated = useMemo(
-    () =>
-      items.reduce((sum, it) => {
-        const price = it.product?.price ? Number(it.product.price) : 0;
-        return sum + price * it.quantity;
-      }, 0),
-    [items],
+    () => stored.reduce((sum, s) => sum + (s.product?.price ? Number(s.product.price) : 0) * s.quantity, 0),
+    [stored],
   );
 
   const addProduct = useCallback(
     async (product: LabProduct, quantity = 1) => {
-      if (!userId) {
-        toast({ title: 'Iniciá sesión', description: 'Necesitás una cuenta para usar el carrito.', variant: 'destructive' });
-        return;
-      }
-      const existing = rows.find((r) => r.product_id === product.id);
-      if (existing) {
-        await supabase
-          .from('cart_items')
-          .update({ quantity: existing.quantity + quantity, updated_at: new Date().toISOString() })
-          .eq('id', existing.id);
-      } else {
-        await supabase.from('cart_items').insert({
-          user_id: userId,
-          product_id: product.id,
-          quantity,
-        });
-      }
-      await reload();
+      mutate((prev) => {
+        const idx = prev.findIndex((s) => s.product.id === product.id);
+        if (idx >= 0) {
+          return prev.map((s, i) => (i === idx ? { ...s, quantity: s.quantity + quantity } : s));
+        }
+        return [...prev, { product, quantity }];
+      });
       toast({ title: 'Producto agregado al carrito', description: product.name });
     },
-    [userId, rows, reload, toast],
+    [mutate, toast],
   );
 
   const updateQuantity = useCallback(
     async (cartItemId: string, quantity: number) => {
       if (quantity < 1) return;
-      await supabase
-        .from('cart_items')
-        .update({ quantity, updated_at: new Date().toISOString() })
-        .eq('id', cartItemId);
-      await reload();
+      mutate((prev) => prev.map((s) => (s.product.id === cartItemId ? { ...s, quantity } : s)));
     },
-    [reload],
+    [mutate],
   );
 
   const removeItem = useCallback(
     async (cartItemId: string) => {
-      await supabase.from('cart_items').delete().eq('id', cartItemId);
-      await reload();
+      mutate((prev) => prev.filter((s) => s.product.id !== cartItemId));
     },
-    [reload],
+    [mutate],
   );
 
   const clearCart = useCallback(async () => {
-    if (!userId) return;
-    await supabase.from('cart_items').delete().eq('user_id', userId);
-    await reload();
-  }, [userId, reload]);
+    mutate(() => []);
+  }, [mutate]);
 
+  // Legacy checkout flow (CartDrawer → CheckoutDialog). The primary order flow now
+  // lives in Cart.tsx (localStorage). Kept for interface compatibility.
   const confirmOrder = useCallback<CartContextValue['confirmOrder']>(
     async (input) => {
       if (!userId) return { ok: false, message: 'Sesión no válida' };
       if (items.length === 0) return { ok: false, message: 'El carrito está vacío' };
 
-      // Resolve sponsor + seller (best effort)
       const { data: sponsorRow } = await supabase
         .from('user_lab_sponsors')
         .select('lab_id')
@@ -204,7 +197,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         sellerId = sellerRow?.id ?? null;
       }
 
-      // Generate order number via RPC (function exists in DB)
       let orderNumber = `CT-${Date.now()}`;
       try {
         const { data: numData } = await supabase.rpc('generate_order_number' as never);
@@ -278,7 +270,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     items,
     itemCount,
     totalEstimated,
-    loading,
+    loading: false,
     open,
     setOpen,
     addProduct,
