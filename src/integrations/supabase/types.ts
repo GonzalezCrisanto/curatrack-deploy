@@ -1189,6 +1189,37 @@ export type Database = {
     }
     Functions: {
       generate_order_number: { Args: never; Returns: string }
+      get_sponsor_order_items_anon: {
+        Args: { p_order_ids?: string[] }
+        Returns: {
+          currency: string
+          id: string
+          order_id: string
+          presentation: string
+          product_id: string
+          product_name: string
+          product_sku: string
+          quantity: number
+          subtotal: number
+          unit_price: number
+        }[]
+      }
+      get_sponsor_orders_anon: {
+        Args: { p_period_days?: number }
+        Returns: {
+          anonymized_case_code: string
+          channel: string
+          created_at: string
+          currency: string
+          estimated_total: number
+          general_wound_type: string
+          id: string
+          institution: string
+          order_number: string
+          sent_at: string
+          status: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
