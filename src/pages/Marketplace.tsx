@@ -40,13 +40,17 @@ const productImages = import.meta.glob('../../data/img/*', {
 const PLACEHOLDER_IMG = 'https://placehold.co/400x300/e2e8f0/64748b?text=Producto';
 
 function resolveProductImage(img?: string): string {
-  const file = img?.split('/').pop();
-  if (file) {
-    const entry = Object.entries(productImages).find(([path]) => path.endsWith(`/${file}`));
-    if (entry) return entry[1];
+  if (img) {
+    // Absolute URL in the JSON (e.g. an external CDN) → use it directly.
+    if (/^https?:\/\//i.test(img)) return img;
+    // Otherwise treat it as a local file and match a bundled image by file name.
+    const file = img.split('/').pop();
+    if (file) {
+      const entry = Object.entries(productImages).find(([path]) => path.endsWith(`/${file}`));
+      if (entry) return entry[1];
+    }
   }
-  // No local image bundled (data/img/ is empty/missing) → use a placeholder that
-  // actually renders, so the catalog shows images instead of broken/empty boxes.
+  // No usable image → placeholder so the catalog shows something instead of an empty box.
   return PLACEHOLDER_IMG;
 }
 
