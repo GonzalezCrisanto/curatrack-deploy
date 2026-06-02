@@ -375,7 +375,7 @@
     "icc_convatec": "423286",
     "descripcion": "ESENTA PROTECTOR CUTÁNEO EN SPRAY 28 ML",
     "precio_con_iva": 36253.42,
-    "img": "https://m.media-amazon.com/images/I/61OvIzE0nNL._AC_SL1000_.jpg"
+    "img": "42.png"
   },
   {
     "id": 43,
@@ -384,7 +384,7 @@
     "icc_convatec": "422567",
     "descripcion": "CONVAMAX Apósito superabsorbente de polipropileno, poliacrilato de 10X10CM",
     "precio_con_iva": 8200.35,
-    "img": "https://m.media-amazon.com/images/I/71RoXMJJWkL._AC_SL1000_.jpg"
+    "img": "43.png"
   },
   {
     "id": 44,
@@ -393,25 +393,7 @@
     "icc_convatec": "422570",
     "descripcion": "CONVAMAX Apósito superabsorbente de polipropileno, poliacrilato de 15X15CM",
     "precio_con_iva": 13667.25,
-    "img": "https://m.media-amazon.com/images/I/71RoXMJJWkL._AC_SL1000_.jpg"
-  },
-  {
-    "id": 45,
-    "franquicia": "AWC",
-    "categoria": "Super Absorbente - Heridas",
-    "icc_convatec": "422572",
-    "descripcion": "CONVAMAX Apósito superabsorbente de polipropileno, poliacrilato de 20X20CM",
-    "precio_con_iva": 25284.41,
-    "img": "https://m.media-amazon.com/images/I/71RoXMJJWkL._AC_SL1000_.jpg"
-  },
-  {
-    "id": 46,
-    "franquicia": "CC",
-    "categoria": "Incontinencia Fecal",
-    "icc_convatec": "418000",
-    "descripcion": "FLEXI SEAL  SIST. INCONT. FECAL",
-    "precio_con_iva": 949293.97,
-    "img": "https://m.media-amazon.com/images/I/71sA0QxCfVL._AC_SL1000_.jpg"
+    "img": "44.png"
   },
   {
     "id": 47,
@@ -420,6 +402,6 @@
     "icc_convatec": "411108",
     "descripcion": "FLEXI SEAL  BOLSAS COLECTORAS",
     "precio_con_iva": 36184.64,
-    "img": "https://m.media-amazon.com/images/I/71sA0QxCfVL._AC_SL1000_.jpg"
+    "img": "47.png"
   }
 ]
