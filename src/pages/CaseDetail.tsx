@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
-import { EvolutionConsentSection, validateEvolutionConsent, type ProfessionalSignatureData, type PatientConsentData } from '@/components/EvolutionConsentSection';
+import { EvolutionConsentSection, validateEvolutionConsent, type ProfessionalSignatureData } from '@/components/EvolutionConsentSection';
+import { saveEvolutionSignature } from '@/lib/evolutionSignature';
 
 import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import {
-  ArrowLeft, Plus, Edit, Trash2, Clock, Camera, FileText,
+  ArrowLeft, Plus, Edit, Trash2, Clock, Camera, FileText, FileSignature,
   Stethoscope, Ruler, Droplets, ShieldAlert, Thermometer, Pill, X, Image, Upload, Package, RefreshCw, CheckCircle2, Save,
   TrendingDown, TrendingUp, Minus, Sparkles, Archive, Copy, Printer, Download, Loader2
 } from 'lucide-react';
@@ -22,6 +23,7 @@ import { Evolution, Photo, professionals, getStatusLabel, woundStatuses, odorOpt
 import { getPatientAge, formatPatientAge } from '@/lib/age';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getEvolutionArea } from '@/lib/patientStatus';
+import { getActiveTurnoForCase, formatNextControl } from '@/lib/appointments';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
@@ -41,7 +43,7 @@ const statusBadgeClass: Record<string, string> = {
 };
 
 const emptyEvolution = {
-  date: '', time: '', professional: '', description: '', procedure: '', materials: '', observations: '', nextControl: '',
+  date: '', time: '', professional: '', description: '', procedure: '', materials: '', observations: '',
   healingDate: '', painLevel: 0 as number, odor: 'sin_olor' as OdorLevel, evolutionStatus: 'tratamiento_activo' as EvolutionStatus,
   woundLength: '' as number | '', woundWidth: '' as number | '', woundDepth: '' as number | '',
   tissueTypes: [] as TissueType[], edgeTypes: [] as EdgeType[],
@@ -59,7 +61,7 @@ export default function CaseDetail() {
   const { patientId, caseId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { patients, updateCase, addEvolution, updateEvolution, deleteEvolution, currentUser } = useApp();
+  const { patients, turnos, updateCase, addEvolution, updateEvolution, deleteEvolution, currentUser } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const woundCase = patient?.cases.find(c => c.id === caseId);
 
@@ -74,12 +76,7 @@ export default function CaseDetail() {
   const [consentErrors, setConsentErrors] = useState<string[]>([]);
 
   const emptyProfSignature: ProfessionalSignatureData = { confirmed: false, signatureDataUrl: null };
-  const emptyPatientConsent: PatientConsentData = {
-    consentStatus: 'accepts_all', signerFullName: '', signerDni: '', signerRelationship: 'paciente',
-    signerRelationshipOther: '', signatureDataUrl: null, observation: '',
-  };
   const [profSignature, setProfSignature] = useState<ProfessionalSignatureData>(emptyProfSignature);
-  const [patientConsent, setPatientConsent] = useState<PatientConsentData>(emptyPatientConsent);
   const [hasGeneralConsent, setHasGeneralConsent] = useState(false);
 
   // Check if patient has general consent
@@ -126,6 +123,43 @@ export default function CaseDetail() {
     })();
     return () => { cancelled = true; };
   }, [woundCase?.id]);
+
+  // Load the professional's signature for each evolution in this case, so the
+  // timeline can offer a "Ver firma responsable" button per evolution.
+  interface EvoSignature { professionalName: string; signedAt: string | null; signatureUrl: string | null }
+  const [evoSignatures, setEvoSignatures] = useState<Record<string, EvoSignature>>({});
+  const [sigViewerEvoId, setSigViewerEvoId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!woundCase) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('evolution_signatures')
+        .select('evolution_id, professional_signature_url, professional_signed_at')
+        .eq('case_id', woundCase.id);
+      if (error || !data || cancelled) return;
+      const paths = data.map(r => r.professional_signature_url).filter((p): p is string => !!p);
+      const signedByPath = new Map<string, string>();
+      if (paths.length > 0) {
+        const { data: signed } = await supabase.storage
+          .from('signatures')
+          .createSignedUrls(paths, 60 * 60 * 24 * 365);
+        (signed ?? []).forEach((s, i) => { if (s.signedUrl) signedByPath.set(paths[i], s.signedUrl); });
+      }
+      if (cancelled) return;
+      const map: Record<string, EvoSignature> = {};
+      data.forEach(r => {
+        const ev = woundCase.evolutions.find(e => e.id === r.evolution_id);
+        map[r.evolution_id] = {
+          professionalName: ev?.professional || 'Profesional',
+          signedAt: r.professional_signed_at,
+          signatureUrl: r.professional_signature_url ? (signedByPath.get(r.professional_signature_url) ?? null) : null,
+        };
+      });
+      setEvoSignatures(map);
+    })();
+    return () => { cancelled = true; };
+  }, [woundCase?.id, woundCase?.evolutions]);
 
   // Case-level AI summary viewer
   const [caseSummaryOpen, setCaseSummaryOpen] = useState(false);
@@ -183,7 +217,6 @@ export default function CaseDetail() {
     });
     setEvoPhotos([]);
     setProfSignature(emptyProfSignature);
-    setPatientConsent({ ...emptyPatientConsent, signerFullName: `${patient.firstName} ${patient.lastName}`, signerDni: patient.dni || '' });
     setConsentErrors([]);
     setEvoDialogOpen(true);
   };
@@ -262,9 +295,10 @@ export default function CaseDetail() {
           materiales_usados: ev.materials || null,
           descripcion: ev.description || null,
           observaciones: ev.observations || null,
-          proximo_control: ev.nextControl || null,
         };
       });
+
+    const activeTurno = getActiveTurnoForCase(turnos, woundCase.id);
 
     return {
       paciente: `${patient.firstName} ${patient.lastName}`,
@@ -277,6 +311,7 @@ export default function CaseDetail() {
         estado_actual: labelOf(woundStatuses, woundCase.status as never) ?? woundCase.status,
         tratamiento_actual: woundCase.treatment || null,
         cantidad_evoluciones: evos.length,
+        proximo_control_caso: activeTurno ? formatNextControl(activeTurno.date, activeTurno.time) : null,
       },
       evoluciones: evos,
     };
@@ -321,18 +356,6 @@ export default function CaseDetail() {
     }
   };
 
-  const uploadSignature = async (dataUrl: string, prefix: string): Promise<string | null> => {
-    try {
-      const userId = currentUser?.id;
-      if (!userId) return null;
-      const blob = await (await fetch(dataUrl)).blob();
-      const path = `${userId}/${prefix}-${Date.now()}.png`;
-      const { error } = await supabase.storage.from('signatures').upload(path, blob, { contentType: 'image/png' });
-      if (error) { console.error('Signature upload error', error); return null; }
-      return path;
-    } catch (e) { console.error('Signature upload failed', e); return null; }
-  };
-
   const persistEvo = async (closeCase: boolean) => {
     const numOrUndef = (v: number | '') => (v === '' ? undefined : Number(v));
     const base = {
@@ -356,44 +379,21 @@ export default function CaseDetail() {
       if (dbId) savedEvoId = dbId;
     }
 
-    // Save signatures & consent for new evolutions
+    // Save the professional's signature for new evolutions
     if (isNew && currentUser) {
-      let profSigUrl: string | null = null;
-      let patSigUrl: string | null = null;
-      if (profSignature.signatureDataUrl) {
-        profSigUrl = await uploadSignature(profSignature.signatureDataUrl, 'prof');
-        if (!profSigUrl) {
-          toast.error('No se pudo guardar la firma profesional. Revisá la conexión e intentá nuevamente.');
-        }
-      }
-      if (patientConsent.signatureDataUrl) {
-        patSigUrl = await uploadSignature(patientConsent.signatureDataUrl, 'patient');
-        if (!patSigUrl) {
-          toast.error('No se pudo guardar la firma del paciente. Revisá la conexión e intentá nuevamente.');
-        }
-      }
-      const now = new Date().toISOString();
-      supabase.from('evolution_signatures').insert({
-        evolution_id: savedEvoId,
-        patient_id: patient.id,
-        case_id: woundCase.id,
-        user_id: currentUser.id,
-        professional_confirmation: profSignature.confirmed,
-        professional_signature_url: profSigUrl,
-        professional_signed_at: profSignature.confirmed ? now : null,
-        patient_consent_status: patientConsent.consentStatus === 'accepts_all' ? 'accepted'
-          : patientConsent.consentStatus === 'accepts_no_photos' ? 'partial' : 'rejected',
-        patient_accepts_photos: patientConsent.consentStatus !== 'accepts_no_photos' && patientConsent.consentStatus !== 'rejects',
-        patient_signer_full_name: patientConsent.signerFullName || null,
-        patient_signer_dni: patientConsent.signerDni || null,
-        patient_signer_relationship: patientConsent.signerRelationship || null,
-        patient_signer_relationship_other: patientConsent.signerRelationship === 'otro' ? patientConsent.signerRelationshipOther : null,
-        patient_signature_url: patSigUrl,
-        patient_signed_at: patientConsent.signatureDataUrl ? now : null,
-        patient_consent_observation: patientConsent.observation || null,
-      } as any).then(({ error }) => {
-        if (error) console.error('evolution_signatures insert error', error);
+      const sigResult = await saveEvolutionSignature({
+        evolutionId: savedEvoId,
+        patientId: patient.id,
+        caseId: woundCase.id,
+        userId: currentUser.id,
+        professionalData: profSignature,
       });
+      if (sigResult.uploadError === 'professional') {
+        toast.error('No se pudo guardar la firma profesional. Revisá la conexión e intentá nuevamente.');
+      }
+      if (!sigResult.ok) {
+        toast.error('No se pudo guardar la firma del profesional. Revisá la conexión e intentá nuevamente.');
+      }
     }
 
     if (closeCase) {
@@ -415,7 +415,7 @@ export default function CaseDetail() {
   const handleSaveEvo = () => {
     // Validate consent & signature (only for new evolutions)
     if (!editingEvo) {
-      const cErrors = validateEvolutionConsent(profSignature, patientConsent);
+      const cErrors = validateEvolutionConsent(profSignature);
       if (cErrors.length > 0) {
         setConsentErrors(cErrors);
         toast.error(cErrors[0]);
@@ -433,7 +433,7 @@ export default function CaseDetail() {
 
   const handleConfirmCloseCase = () => {
     if (!editingEvo) {
-      const cErrors = validateEvolutionConsent(profSignature, patientConsent);
+      const cErrors = validateEvolutionConsent(profSignature);
       if (cErrors.length > 0) {
         setConsentErrors(cErrors);
         toast.error(cErrors[0]);
@@ -580,10 +580,6 @@ export default function CaseDetail() {
     <div><b>Ubicación:</b> ${escape(woundCase.anatomicalLocation)}</div>
     <div><b>Inicio:</b> ${escape(woundCase.startDate)}</div>
     <div><b>Estado:</b> ${escape(getStatusLabel(woundCase.status))}</div>
-    <div><b>Tamaño:</b> ${escape(woundCase.size)}</div>
-    <div><b>Profundidad:</b> ${escape(woundCase.depth)}</div>
-    <div><b>Exudado:</b> ${escape(woundCase.exudate)}</div>
-    <div><b>Infección:</b> ${escape(woundCase.infection)}</div>
   </div>
 </div>
 
@@ -695,6 +691,7 @@ export default function CaseDetail() {
             const db = `${b.date || ''}T${b.time || '00:00'}`;
             return db < da ? -1 : db > da ? 1 : 0;
           });
+          const activeTurno = getActiveTurnoForCase(turnos, woundCase.id);
           const activeEvos = sorted.filter(e => !e.closedAt);
           const closedEvos = sorted.filter(e => !!e.closedAt);
 
@@ -805,9 +802,9 @@ export default function CaseDetail() {
                         </div>
                       )}
                       {/* AI summary moved to case header — no per-evolution button */}
-                      {ev.nextControl && (
+                      {!isHistory && idx === 0 && activeTurno && (
                         <div className="flex items-center gap-1 text-xs font-body text-muted-foreground">
-                          <Clock className="h-3.5 w-3.5" /> Próximo control: {ev.nextControl}
+                          <Clock className="h-3.5 w-3.5" /> Próximo control: {formatNextControl(activeTurno.date, activeTurno.time)}
                         </div>
                       )}
 
@@ -827,6 +824,17 @@ export default function CaseDetail() {
                           </div>
                         );
                       })()}
+                      {evoSignatures[ev.id] && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="font-body text-xs mt-1"
+                          onClick={() => setSigViewerEvoId(ev.id)}
+                        >
+                          <FileSignature className="h-3.5 w-3.5 mr-1.5" /> Ver firma responsable
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1308,13 +1316,9 @@ export default function CaseDetail() {
                   professionalName={currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : evoForm.professional}
                   professionalLicense={currentUser?.license}
                   professionalInstitution={currentUser?.institution}
-                  patientName={patient ? `${patient.firstName} ${patient.lastName}` : ''}
-                  patientDni={patient?.dni}
                   hasGeneralConsent={hasGeneralConsent}
                   professionalData={profSignature}
-                  patientConsentData={patientConsent}
                   onProfessionalChange={setProfSignature}
-                  onPatientConsentChange={setPatientConsent}
                   errors={consentErrors}
                 />
               )}
@@ -1367,6 +1371,32 @@ export default function CaseDetail() {
         <Dialog open={!!photoViewer} onOpenChange={() => setPhotoViewer(null)}>
           <DialogContent className="max-w-3xl p-2">
             <img src={photoViewer || ''} alt="Foto clínica" className="w-full rounded-lg" />
+          </DialogContent>
+        </Dialog>
+
+        {/* Responsible professional's signature viewer */}
+        <Dialog open={!!sigViewerEvoId} onOpenChange={() => setSigViewerEvoId(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="heading-display text-lg">Firma del profesional responsable</DialogTitle>
+            </DialogHeader>
+            {sigViewerEvoId && evoSignatures[sigViewerEvoId] && (
+              <div className="space-y-2">
+                <p className="font-body text-sm">
+                  <span className="text-muted-foreground">Profesional:</span> {evoSignatures[sigViewerEvoId].professionalName}
+                </p>
+                {evoSignatures[sigViewerEvoId].signedAt && (
+                  <p className="font-body text-sm">
+                    <span className="text-muted-foreground">Fecha:</span> {new Date(evoSignatures[sigViewerEvoId].signedAt as string).toLocaleString('es-AR')}
+                  </p>
+                )}
+                {evoSignatures[sigViewerEvoId].signatureUrl ? (
+                  <img src={evoSignatures[sigViewerEvoId].signatureUrl as string} alt="Firma del profesional" className="w-full rounded-lg border border-border/60 bg-muted/20" />
+                ) : (
+                  <p className="font-body text-sm text-muted-foreground text-center py-6">Sin firma registrada</p>
+                )}
+              </div>
+            )}
           </DialogContent>
         </Dialog>
 

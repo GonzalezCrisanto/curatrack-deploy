@@ -15,9 +15,11 @@ import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { formatNextControl, normalizeAppointmentTime } from '@/lib/appointments';
+import { EvolutionConsentSection, validateEvolutionConsent, type ProfessionalSignatureData } from '@/components/EvolutionConsentSection';
+import { saveEvolutionSignature } from '@/lib/evolutionSignature';
 import {
   ChevronLeft, ChevronRight, Search, User, Activity, Camera, Package,
-  CheckCircle2, Save, ArrowLeft, AlertCircle, Pill, Plus, X, FileText, UserPlus,
+  CheckCircle2, Save, ArrowLeft, AlertCircle, Pill, Plus, X, FileText, UserPlus, FileSignature,
 } from 'lucide-react';
 import type { Evolution, Patient, WoundCase } from '@/data/demoData';
 
@@ -52,6 +54,7 @@ const STEPS = [
   { n: 3, label: 'Fotos', icon: Camera },
   { n: 4, label: 'Insumos', icon: Package },
   { n: 5, label: 'Resumen', icon: CheckCircle2 },
+  { n: 6, label: 'Firma', icon: FileSignature },
 ];
 
 function newId() { return Math.random().toString(36).slice(2, 10); }
@@ -153,7 +156,13 @@ export default function NewCuration() {
   const [sponsorProducts, setSponsorProducts] = useState<LabProduct[]>([]);
   const [productQuery, setProductQuery] = useState('');
 
-  // Step 6
+  // Step 6 — signature & consent
+  const emptyProfSignature: ProfessionalSignatureData = { confirmed: false, signatureDataUrl: null };
+  const [profSignature, setProfSignature] = useState<ProfessionalSignatureData>(emptyProfSignature);
+  const [consentErrors, setConsentErrors] = useState<string[]>([]);
+  const [hasGeneralConsent, setHasGeneralConsent] = useState(false);
+
+  // Step 7 (final action)
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { if (currentUserName) setEvo(e => ({ ...e, professional: currentUserName })); }, [currentUserName]);
@@ -184,6 +193,12 @@ export default function NewCuration() {
     () => patients.find(p => p.id === patientId), [patients, patientId]);
   const wcase: WoundCase | undefined = useMemo(
     () => patient?.cases.find(c => c.id === caseId), [patient, caseId]);
+
+  useEffect(() => {
+    if (!patient) return;
+    supabase.from('patient_consents').select('id').eq('patient_id', patient.id).eq('status', 'accepted').limit(1)
+      .then(({ data }) => setHasGeneralConsent((data ?? []).length > 0));
+  }, [patient?.id]);
 
   // Surface area (Largo × Ancho) for the evaluation step, recomputed in real time.
   const evoWoundArea = useMemo(() => {
@@ -373,6 +388,13 @@ export default function NewCuration() {
       toast({ title: 'Faltan datos', description: 'Seleccioná paciente y caso.', variant: 'destructive' });
       return null;
     }
+    const cErrors = validateEvolutionConsent(profSignature);
+    if (cErrors.length > 0) {
+      setConsentErrors(cErrors);
+      toast({ title: 'Firma y consentimiento requeridos', description: cErrors[0], variant: 'destructive' });
+      return null;
+    }
+    setConsentErrors([]);
     setSaving(true);
     try {
       const materialsList = supplies.filter(s => s.used)
@@ -403,7 +425,6 @@ export default function NewCuration() {
         procedure: evo.procedure || null,
         materials: materialsList,
         observations: evo.observations || null,
-        next_control: evo.nextControl || null,
         // Rich clinical fields
         pain_level: typeof evo.pain === 'number' ? evo.pain : null,
         odor: evo.odor || null,
@@ -417,16 +438,35 @@ export default function NewCuration() {
         tissue_types: evo.tissue ? [evo.tissue] : null,
         edge_types: evo.edges ? [evo.edges] : null,
       };
-      const payloadWithControlTime = nextControlTime
-        ? { ...baseEvolutionPayload, next_control_time: nextControlTime }
-        : baseEvolutionPayload;
-
       const { data: evoRow, error: evoErr } = await supabase
         .from('evolutions')
-        .insert(payloadWithControlTime as any)
+        .insert(baseEvolutionPayload as any)
         .select('id')
         .single();
       if (evoErr) throw evoErr;
+
+      // Persist the professional signature tied to this evolution.
+      const sigResult = await saveEvolutionSignature({
+        evolutionId: evoRow.id,
+        patientId: patient.id,
+        caseId: wcase.id,
+        userId: currentUser.id,
+        professionalData: profSignature,
+      });
+      if (sigResult.uploadError === 'professional') {
+        toast({
+          title: 'Curación guardada, pero la firma profesional no se pudo guardar',
+          description: 'Reintentá desde el detalle de la herida.',
+          variant: 'destructive',
+        });
+      }
+      if (!sigResult.ok) {
+        toast({
+          title: 'Curación guardada, pero la firma del profesional no se pudo guardar',
+          description: 'Reintentá desde el detalle de la herida.',
+          variant: 'destructive',
+        });
+      }
 
       // Persist the clinical photo (if any): upload to Storage and store a row in
       // `photos` linked to this evolution. We reuse the owner-scoped private
@@ -1138,6 +1178,26 @@ export default function NewCuration() {
                   </div>
                 )}
 
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 6 */}
+          {step === 6 && (
+            <Card className="border-border/60">
+              <CardHeader>
+                <CardTitle className="heading-display text-lg flex items-center gap-2"><FileSignature className="h-5 w-5 text-primary" /> Firma y consentimiento</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <EvolutionConsentSection
+                  professionalName={currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : ''}
+                  professionalLicense={currentUser?.license}
+                  professionalInstitution={currentUser?.institution}
+                  hasGeneralConsent={hasGeneralConsent}
+                  professionalData={profSignature}
+                  onProfessionalChange={setProfSignature}
+                  errors={consentErrors}
+                />
               </CardContent>
             </Card>
           )}

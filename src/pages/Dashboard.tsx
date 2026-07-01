@@ -163,7 +163,6 @@ export default function Dashboard() {
           caseId: c.id,
           woundType: c.woundType,
           caseStatus: c.status,
-          pain: c.pain,
           evolutions: c.evolutions,
         })),
       ),
@@ -255,18 +254,6 @@ export default function Dashboard() {
             message,
           });
         }
-      }
-      if (Number(c.pain ?? 0) >= 7) {
-        const message = 'dolor elevado (≥7)';
-        list.push({
-          type: 'pain',
-          label: `${patientDisplayName}: ${message}`,
-          severity: 'warning',
-          icon: Activity,
-          to: caseDetail,
-          patientName: patientDisplayName,
-          message,
-        });
       }
     });
     if (list.length === 0) {

@@ -3,7 +3,6 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Patient, WoundCase, Evolution } from '@/data/demoData';
 import {
-  extractNextControlTime,
   normalizeAppointmentTime,
   stripNextControlTimeMarker,
   deriveTurnoStatus,
@@ -311,7 +310,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               .order('evolution_date', { ascending: false })
               .order('evolution_time', { ascending: false, nullsFirst: false });
             for (const e of (evoRows || []) as any[]) {
-              const nextControlTime = normalizeAppointmentTime(e.next_control_time) || extractNextControlTime(e.observations);
               const ev: Evolution = {
                 id: e.id,
                 date: e.evolution_date,
@@ -321,8 +319,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 procedure: e.procedure || '',
                 materials: e.materials || '',
                 observations: stripNextControlTimeMarker(e.observations),
-                nextControl: e.next_control || '',
-                nextControlTime,
                 photos: [],
                 painLevel: e.pain_level ?? undefined,
                 odor: e.odor ?? undefined,
@@ -360,11 +356,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               status: (c.status || 'activo') as WoundCase['status'],
               evolutions: evosByCase[c.id] || [],
               photos: [],
-              size: c.size || undefined,
-              depth: c.depth || undefined,
-              exudate: c.exudate || undefined,
-              infection: c.infection || undefined,
-              pain: c.pain || undefined,
               treatment: c.treatment || undefined,
               aiSummary: c.ai_summary || undefined,
               aiSummaryUpdatedAt: c.ai_summary_updated_at || undefined,
@@ -509,11 +500,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       anatomical_location: woundCase.anatomicalLocation || null,
       start_date: woundCase.startDate || null,
       status: woundCase.status,
-      size: woundCase.size || null,
-      depth: woundCase.depth || null,
-      exudate: woundCase.exudate || null,
-      infection: woundCase.infection || null,
-      pain: woundCase.pain || null,
       treatment: woundCase.treatment || null,
       ai_summary: woundCase.aiSummary || null,
       ai_summary_updated_at: woundCase.aiSummaryUpdatedAt || null,
@@ -551,8 +537,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       case_id: caseId,
       evolution_date: evolution.date,
       evolution_time: evolution.time || null,
-      next_control: evolution.nextControl || null,
-      next_control_time: evolution.nextControlTime || null,
       professional: evolution.professional || null,
       procedure: evolution.procedure || null,
       materials: evolution.materials || null,
@@ -608,8 +592,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.from('evolutions').update({
       evolution_date: evolution.date,
       evolution_time: evolution.time || null,
-      next_control: evolution.nextControl || null,
-      next_control_time: evolution.nextControlTime || null,
       professional: evolution.professional || null,
       procedure: evolution.procedure || null,
       materials: evolution.materials || null,

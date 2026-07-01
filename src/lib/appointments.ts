@@ -84,6 +84,24 @@ export function findTurnosToSupersede(
     .map(t => t.id);
 }
 
+export type TurnoLookup = {
+  caseId: string;
+  date: string;
+  time: string;
+  status: TurnoStatus;
+};
+
+/**
+ * Returns the case's currently active (unresolved) turno — the single
+ * upcoming/overdue appointment that represents "próximo control" for that
+ * wound now that `turnos` is the source of truth for scheduling.
+ */
+export function getActiveTurnoForCase<T extends TurnoLookup>(turnos: T[], caseId: string): T | undefined {
+  return turnos
+    .filter(t => t.caseId === caseId && (t.status === 'programado' || t.status === 'vencido'))
+    .sort((a, b) => `${a.date}T${a.time || '00:00'}`.localeCompare(`${b.date}T${b.time || '00:00'}`))[0];
+}
+
 export function normalizeAppointmentTime(value?: string | null) {
   if (!value) return '';
   const match = value.match(/^([01]\d|2[0-3]):([0-5]\d)/);

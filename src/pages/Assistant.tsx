@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getPatientIndicator, indicatorMeta } from '@/lib/patientStatus';
 import { getPatientAge } from '@/lib/age';
-import { getNextControlTime } from '@/lib/appointments';
+import { getActiveTurnoForCase } from '@/lib/appointments';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -29,7 +29,7 @@ const PRESET_QUESTIONS = [
 ];
 
 export default function Assistant() {
-  const { patients } = useApp();
+  const { patients, turnos } = useApp();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -48,11 +48,12 @@ export default function Assistant() {
       total_pacientes: patients.length,
       pacientes: patients.map(p => {
         const status = indicatorMeta[getPatientIndicator(p)].label;
-        const upcoming = p.cases.flatMap(c =>
-          c.evolutions
-            .filter(e => e.nextControl)
-            .map(e => ({ caso: c.woundType, proximo_control: e.nextControl, hora: getNextControlTime(e) }))
-        );
+        const upcoming = p.cases
+          .map(c => {
+            const t = getActiveTurnoForCase(turnos, c.id);
+            return t ? { caso: c.woundType, proximo_control: t.date, hora: t.time } : null;
+          })
+          .filter((x): x is { caso: string; proximo_control: string; hora: string } => x !== null);
         return {
           nombre: `${p.lastName}, ${p.firstName}`,
           edad: getPatientAge(p),

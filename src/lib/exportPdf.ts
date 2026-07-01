@@ -1,6 +1,7 @@
 import { Patient, getStatusLabel } from '@/data/demoData';
 import { formatPatientAge } from '@/lib/age';
-import { formatNextControl, getNextControlTime } from '@/lib/appointments';
+import { formatNextControl, getActiveTurnoForCase } from '@/lib/appointments';
+import type { Turno } from '@/context/AppContext';
 
 export interface EvolutionSignatureInfo {
   evolutionId: string;
@@ -16,7 +17,7 @@ export interface EvolutionSignatureInfo {
   patientSignatureUrl?: string;
 }
 
-export function exportPatientPdf(patient: Patient, signatureMap?: Record<string, EvolutionSignatureInfo>) {
+export function exportPatientPdf(patient: Patient, turnos: Turno[], signatureMap?: Record<string, EvolutionSignatureInfo>) {
   const win = window.open('', '_blank');
   if (!win) return;
 
@@ -34,17 +35,14 @@ export function exportPatientPdf(patient: Patient, signatureMap?: Record<string,
     return s || '—';
   };
 
-  const casesHtml = patient.cases.map(c => `
+  const casesHtml = patient.cases.map(c => {
+    const activeTurno = getActiveTurnoForCase(turnos, c.id);
+    return `
     <div class="case">
       <h2>${c.woundType} — ${c.anatomicalLocation}</h2>
       <table class="info-table">
         <tr><td class="label">Estado</td><td><span class="badge badge-${c.status}">${statusLabels[c.status] || c.status}</span></td></tr>
         <tr><td class="label">Fecha de inicio</td><td>${c.startDate}</td></tr>
-        <tr><td class="label">Tamaño</td><td>${c.size}</td></tr>
-        <tr><td class="label">Profundidad</td><td>${c.depth}</td></tr>
-        <tr><td class="label">Exudado</td><td>${c.exudate}</td></tr>
-        <tr><td class="label">Infección</td><td>${c.infection}</td></tr>
-        <tr><td class="label">Dolor</td><td>${c.pain}</td></tr>
         <tr><td class="label">Tratamiento</td><td>${c.treatment}</td></tr>
       </table>
 
@@ -62,7 +60,7 @@ export function exportPatientPdf(patient: Patient, signatureMap?: Record<string,
               <tr><td class="label">Procedimiento</td><td>${ev.procedure}</td></tr>
               ${ev.materials ? `<tr><td class="label">Material de curación</td><td>${ev.materials}</td></tr>` : ''}
               ${ev.observations ? `<tr><td class="label">Observaciones</td><td>${ev.observations}</td></tr>` : ''}
-              <tr><td class="label">Próximo control</td><td>${formatNextControl(ev.nextControl, getNextControlTime(ev))}</td></tr>
+              ${i === 0 && activeTurno ? `<tr><td class="label">Próximo control</td><td>${formatNextControl(activeTurno.date, activeTurno.time)}</td></tr>` : ''}
             </table>
             ${ev.photos.length > 0 ? `
               <div class="photos">
@@ -96,7 +94,8 @@ export function exportPatientPdf(patient: Patient, signatureMap?: Record<string,
         </div>
       ` : ''}
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   const html = `<!DOCTYPE html>
 <html lang="es">

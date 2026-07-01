@@ -28,7 +28,7 @@ export interface Evolution {
   procedure: string;
   materials: string;
   observations: string;
-  nextControl: string;
+  nextControl?: string;
   nextControlTime?: string;
   photos: Photo[];
   healingDate?: string;
@@ -159,13 +159,6 @@ export interface WoundCase {
   treatment?: string;
   aiSummary?: string;
   aiSummaryUpdatedAt?: string;
-
-  // Legacy text fields (kept optional for backward compat with old PDFs/imports)
-  size?: string;
-  depth?: string;
-  exudate?: string;
-  infection?: string;
-  pain?: string;
 }
 
 export interface Patient {
@@ -262,8 +255,6 @@ export const demoPatients: Patient[] = [
         initialMaterials: 'Solución fisiológica, hidrogel amorfo, apósito de espuma Mepilex Border, gasas estériles',
         initialObservations: 'Estadio III. Cambio de posición cada 2hs. Colchón antiescaras instalado.',
         treatment: 'Desbridamiento autolítico + apósito de espuma. Cambio cada 48-72hs.',
-        size: '8 x 6 cm', depth: 'Estadio III', exudate: 'Moderado, seroso',
-        infection: 'Sin signos de infección actual', pain: 'EVA 5/10 - Moderado',
         evolutions: [
           {
             id: 'e1-t3', date: '2026-05-03', time: '09:30',
@@ -386,8 +377,6 @@ export const demoPatients: Patient[] = [
         initialMaterials: 'Cadexómero iodado (Iodosorb), apósito no adherente Mepitel, venda de fijación, bota Walker',
         initialObservations: 'Wagner grado 2. Control glucémico estricto. HbA1c 7.8%.',
         treatment: 'Descarga con bota Walker. Curación con cadexómero iodado. Control glucémico estricto.',
-        size: '3 x 2.5 cm', depth: 'Wagner grado 2', exudate: 'Escaso, seroso',
-        infection: 'Colonización bacteriana controlada', pain: 'EVA 3/10 - Neuropatía periférica',
         evolutions: [
           {
             id: 'e4-t2',
@@ -487,9 +476,6 @@ export const demoPatients: Patient[] = [
         initialMaterials: 'Hidrofibra Aquacel Ag+, alginato con plata, vendaje compresivo Profore, protector cutáneo',
         initialObservations: 'Dermatitis ocre y lipodermatoesclerosis perilesional. Eco Doppler venoso solicitado.',
         treatment: 'Terapia compresiva multicapa. Apósito de alginato + plata. Elevación de MMII.',
-        size: '12 x 8 cm', depth: 'Superficial con bordes irregulares',
-        exudate: 'Abundante, serohemático', infection: 'Biofilm bacteriano detectado',
-        pain: 'EVA 7/10 - Dolor intenso al reposo',
         evolutions: [
           {
             id: 'e5-t3',
@@ -609,10 +595,6 @@ export const demoPatients: Patient[] = [
         initialMaterials: 'PHMB (Prontosan), gasas húmedas estériles, apósito absorbente, cinta hipoalergénica',
         initialObservations: 'Dehiscencia 6cm. ATB sistémico (Cefalotina). Cultivo: S. aureus MSSA. VAC therapy en evaluación.',
         treatment: 'ATB sistémico (Cefalotina). Curación con PHMB. VAC therapy en evaluación.',
-        size: '15 x 4 cm (dehiscencia de 6 cm)', depth: 'Hasta fascia muscular visible',
-        exudate: 'Moderado, seropurulento',
-        infection: 'Infección de sitio quirúrgico superficial - Cultivo: S. aureus MSSA',
-        pain: 'EVA 6/10',
         evolutions: [
           {
             id: 'e6-t3',
@@ -731,9 +713,6 @@ export const demoPatients: Patient[] = [
         initialMaterials: 'Solución fisiológica tibia, sulfadiazina de plata, apósito de silicona Mepitel One, gasas',
         initialObservations: 'Quemadura por agua hirviente. Analgesia pautada (paracetamol + tramadol). Sin ampollas residuales.',
         treatment: 'Sulfadiazina de plata. Apósito de silicona no adherente. Analgesia pautada.',
-        size: '10 x 7 cm', depth: 'Segundo grado superficial (ABA)',
-        exudate: 'Seroso, moderado', infection: 'Sin signos de infección',
-        pain: 'EVA 8/10 - Muy doloroso',
         evolutions: [
           {
             id: 'e7-t3',
@@ -850,10 +829,6 @@ export const demoPatients: Patient[] = [
         initialMaterials: 'Sistema VAC, esponja de polivinilo, film adhesivo, canister de drenaje',
         initialObservations: 'Politraumatismo en moto. Injerto de piel parcial planificado para 25/03. Excelente evolución.',
         treatment: 'Terapia de presión negativa (VAC) + injerto de piel parcial planificado.',
-        size: '18 x 12 cm', depth: 'Pérdida parcial de espesor con exposición de tejido subcutáneo',
-        exudate: 'Abundante los primeros días, actualmente moderado seroso',
-        infection: 'Infección controlada tras tratamiento con ATB',
-        pain: 'EVA 4/10 - En descenso',
         evolutions: [
           {
             id: 'e8-t3',
@@ -970,8 +945,6 @@ export const demoPatients: Patient[] = [
         initialMaterials: 'Hidrocoloide fino, talonera preventiva, crema hidratante',
         initialObservations: 'Estadio II. Caso resuelto el 28/02/2026. Continúa con medidas preventivas.',
         treatment: 'Apósito hidrocoloide. Protección de talones con taloneras.',
-        size: '4 x 3 cm', depth: 'Estadio II', exudate: 'Escaso',
-        infection: 'Sin infección', pain: 'EVA 2/10',
         evolutions: [
           {
             id: 'e9',

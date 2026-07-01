@@ -109,16 +109,7 @@ export type Database = {
           created_at: string
           evolution_id: string
           id: string
-          patient_accepts_photos: boolean | null
-          patient_consent_observation: string | null
-          patient_consent_status: string
           patient_id: string
-          patient_signature_url: string | null
-          patient_signed_at: string | null
-          patient_signer_dni: string | null
-          patient_signer_full_name: string | null
-          patient_signer_relationship: string | null
-          patient_signer_relationship_other: string | null
           professional_confirmation: boolean
           professional_signature_url: string | null
           professional_signed_at: string | null
@@ -129,16 +120,7 @@ export type Database = {
           created_at?: string
           evolution_id: string
           id?: string
-          patient_accepts_photos?: boolean | null
-          patient_consent_observation?: string | null
-          patient_consent_status?: string
           patient_id: string
-          patient_signature_url?: string | null
-          patient_signed_at?: string | null
-          patient_signer_dni?: string | null
-          patient_signer_full_name?: string | null
-          patient_signer_relationship?: string | null
-          patient_signer_relationship_other?: string | null
           professional_confirmation?: boolean
           professional_signature_url?: string | null
           professional_signed_at?: string | null
@@ -149,16 +131,7 @@ export type Database = {
           created_at?: string
           evolution_id?: string
           id?: string
-          patient_accepts_photos?: boolean | null
-          patient_consent_observation?: string | null
-          patient_consent_status?: string
           patient_id?: string
-          patient_signature_url?: string | null
-          patient_signed_at?: string | null
-          patient_signer_dni?: string | null
-          patient_signer_full_name?: string | null
-          patient_signer_relationship?: string | null
-          patient_signer_relationship_other?: string | null
           professional_confirmation?: boolean
           professional_signature_url?: string | null
           professional_signed_at?: string | null
@@ -212,8 +185,6 @@ export type Database = {
           inf_swelling: boolean | null
           materials: string | null
           medical_order: string | null
-          next_control: string | null
-          next_control_time: string | null
           observations: string | null
           odor: string | null
           pain_level: number | null
@@ -250,8 +221,6 @@ export type Database = {
           inf_swelling?: boolean | null
           materials?: string | null
           medical_order?: string | null
-          next_control?: string | null
-          next_control_time?: string | null
           observations?: string | null
           odor?: string | null
           pain_level?: number | null
@@ -288,8 +257,6 @@ export type Database = {
           inf_swelling?: boolean | null
           materials?: string | null
           medical_order?: string | null
-          next_control?: string | null
-          next_control_time?: string | null
           observations?: string | null
           odor?: string | null
           pain_level?: number | null
@@ -1312,6 +1279,7 @@ export type Database = {
           patient_id: string
           start_date: string | null
           status: string
+          treatment: string | null
           updated_at: string
           user_id: string
           wound_type: string
@@ -1325,6 +1293,7 @@ export type Database = {
           patient_id: string
           start_date?: string | null
           status?: string
+          treatment?: string | null
           updated_at?: string
           user_id: string
           wound_type: string
@@ -1338,6 +1307,7 @@ export type Database = {
           patient_id?: string
           start_date?: string | null
           status?: string
+          treatment?: string | null
           updated_at?: string
           user_id?: string
           wound_type?: string
