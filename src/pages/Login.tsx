@@ -154,6 +154,12 @@ export default function Login() {
     }
   };
 
+  const DEMO_CREDENTIALS: Record<'pro' | 'sponsor' | 'admin', { email: string; password: string }> = {
+    pro:     { email: 'demo.pro@curatrack.app',     password: 'DemoPro2024!' },
+    sponsor: { email: 'demo.sponsor@curatrack.app', password: 'DemoSponsor2024!' },
+    admin:   { email: 'demo.admin@curatrack.app',   password: 'DemoAdmin2024!' },
+  };
+
   const handleDemoLogin = async (target?: Sponsor, kind: 'pro' | 'sponsor' | 'admin' = 'pro') => {
     const key = kind === 'admin' ? 'admin' : `${target?.slug ?? 'default'}:${kind}`;
     setLoading(true);
@@ -161,22 +167,14 @@ export default function Login() {
     try {
       if (target && kind !== 'admin') await setSponsorBySlug(target.slug, false);
 
-      const fnName = kind === 'pro' ? 'demo-login' : kind === 'sponsor' ? 'demo-sponsor-login' : 'demo-admin-login';
-      const body: Record<string, string> = { sponsor_slug: target?.slug ?? sponsor?.slug ?? 'demo' };
-
-      const { data, error } = await supabase.functions.invoke(fnName, { body });
-      if (error || !data?.ok) throw new Error(error?.message || data?.message || 'No se pudo preparar la cuenta demo');
-      if (!data.access_token || !data.refresh_token) throw new Error('Sesión demo inválida');
-      const { error: setErr } = await supabase.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-      });
-      if (setErr) throw new Error(setErr.message || 'No se pudo iniciar sesión con la cuenta demo');
+      const { email, password } = DEMO_CREDENTIALS[kind];
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw new Error(error.message);
 
       if (target && kind !== 'admin') await setSponsorBySlug(target.slug, true);
 
       toast({
-        title: kind === 'admin' ? 'Sesión laboratorio iniciada' : kind === 'sponsor' ? 'Sesión laboratorio iniciada' : 'Sesión profesional iniciada',
+        title: kind === 'sponsor' ? 'Sesión laboratorio iniciada' : kind === 'admin' ? 'Sesión administrador iniciada' : 'Sesión profesional iniciada',
         description: kind === 'admin' ? 'Acceso total a la plataforma.' : target ? `Demo de ${target.sponsor_name}` : 'Cuenta de prueba activada.',
       });
       if (kind === 'sponsor') navigate('/panel-sponsor');

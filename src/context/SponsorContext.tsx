@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { resolveAppRoleFromRows } from '@/lib/appRole';
 
@@ -35,6 +35,7 @@ type Ctx = {
 const SponsorContext = createContext<Ctx | undefined>(undefined);
 
 const LS_KEY = 'active_sponsor_slug';
+const LS_THEME_KEY = 'active_sponsor_theme';
 const DEFAULT_SLUG = 'demo';
 const DEFAULT_THEME = {
   primaryHsl: '217 89% 38%',
@@ -81,30 +82,40 @@ function darkenHex(hex: string, percent = 10): string {
   return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
 
-function applyTheme(s: Sponsor) {
+function applyThemeColors(primary_color: string, secondary_color: string, accent_color: string) {
   const root = document.documentElement;
-  const primary = hexToHslString(s.primary_color);
-  const secondary = hexToHslString(s.secondary_color);
-  const accent = hexToHslString(s.accent_color);
-  const primaryHover = darkenHex(s.primary_color, 12);
+  const primary = hexToHslString(primary_color);
+  const secondary = hexToHslString(secondary_color);
+  const accent = hexToHslString(accent_color);
+  const primaryHover = darkenHex(primary_color, 12);
   root.style.setProperty('--primary', primary);
   root.style.setProperty('--ring', primary);
   root.style.setProperty('--sidebar-primary', primary);
   root.style.setProperty('--sidebar-ring', primary);
   root.style.setProperty('--brand-blue', primary);
   root.style.setProperty('--brand-green', accent);
-  root.style.setProperty('--color-primary', s.primary_color);
+  root.style.setProperty('--color-primary', primary_color);
   root.style.setProperty('--color-primary-hover', primaryHover);
   root.style.setProperty('--color-primary-hsl', primary);
   root.style.setProperty('--color-primary-hover-hsl', hexToHslString(primaryHover));
-  // Keep secondary/accent semantic tokens as-is (light surfaces); only override sidebar accent for richer theming.
   root.style.setProperty('--sidebar-accent-foreground', primary);
-  // Custom tokens for sponsor gradients
   root.style.setProperty('--sponsor-primary', primary);
   root.style.setProperty('--sponsor-secondary', secondary);
   root.style.setProperty('--sponsor-accent', accent);
+}
+
+function applyTheme(s: Sponsor) {
+  applyThemeColors(s.primary_color, s.secondary_color, s.accent_color);
+  try {
+    localStorage.setItem(LS_THEME_KEY, JSON.stringify({
+      primary_color: s.primary_color,
+      secondary_color: s.secondary_color,
+      accent_color: s.accent_color,
+    }));
+  } catch { /* ignore */ }
   document.title = 'CuraTrack';
 }
+
 
 function applyDefaultTheme() {
   const root = document.documentElement;
@@ -128,6 +139,7 @@ export function SponsorProvider({ children }: { children: ReactNode }) {
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [sponsor, setSponsor] = useState<Sponsor | null>(null);
   const [loading, setLoading] = useState(true);
+  const abortRef = useRef<AbortController | null>(null);
 
   const resolveInitialSlug = useCallback(async (): Promise<string> => {
     // 1. URL param
@@ -155,8 +167,14 @@ export function SponsorProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refresh = useCallback(async () => {
+    // Cancel any in-flight refresh (handles React StrictMode double-mount and race conditions)
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
     setLoading(true);
     const { data: sess } = await supabase.auth.getSession();
+    if (ctrl.signal.aborted) return;
     const uid = sess.session?.user?.id;
 
     const ANON_COLUMNS = 'id, slug, sponsor_name, app_name, logo_url, primary_color, secondary_color, accent_color, sponsor_label, catalog_name, powered_by_label, legal_footer, sales_contact_label, lab_id, is_active, created_at, updated_at';
@@ -216,9 +234,13 @@ export function SponsorProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    setSponsors(list);
+    if (ctrl.signal.aborted) return;
+
     const slug = await resolveInitialSlug();
+    if (ctrl.signal.aborted) return;
+
     const found = list.find(s => s.slug === slug) ?? list.find(s => s.slug === DEFAULT_SLUG) ?? list[0] ?? null;
+    setSponsors(list);
     if (found) {
       setSponsor(found);
       applyTheme(found);
@@ -235,10 +257,13 @@ export function SponsorProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, _session) => {
+      // Only reset branding on explicit sign-out; INITIAL_SESSION and TOKEN_REFRESHED
+      // can fire with a transient null session and must not reset the theme.
+      if (event === 'SIGNED_OUT') {
         setSponsor(null);
         applyDefaultTheme();
+        try { localStorage.removeItem(LS_THEME_KEY); } catch { /* ignore */ }
       }
     });
     return () => sub.subscription.unsubscribe();

@@ -110,11 +110,11 @@ export default function SettingsPage() {
     toast({ title: 'Configuración actualizada', description: 'Se guardaron los datos del laboratorio.' });
   };
 
-  const roleLabel = currentUser?.role === 'medico'
-    ? 'Médico/a'
-    : currentUser?.role === 'admin'
-      ? 'Administrativo/a'
-      : 'Enfermería';
+  const roleLabel = currentUser?.role === 'admin'
+    ? 'Administrativo/a'
+    : currentUser?.role === 'sponsor'
+      ? 'Sponsor'
+      : 'Profesional';
 
   return (
     <AppLayout>

@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { appendNextControlTimeMarker, formatNextControl, normalizeAppointmentTime } from '@/lib/appointments';
+import { formatNextControl, normalizeAppointmentTime } from '@/lib/appointments';
 import {
   ChevronLeft, ChevronRight, Search, User, Activity, Camera, Package,
   CheckCircle2, Save, ArrowLeft, AlertCircle, Pill, Plus, X, FileText, UserPlus,
@@ -81,7 +81,7 @@ function ageFromBirthDate(birthDate: string) {
 }
 
 export default function NewCuration() {
-  const { patients, currentUser, currentUserName, addPatient, addCase, addEvolution } = useApp();
+  const { patients, currentUser, currentUserName, addPatient, addCase, appendEvolutionToState, createTurno } = useApp();
   const { sponsor } = useSponsor();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -274,7 +274,6 @@ export default function NewCuration() {
         assignedProfessional: currentUserName || '',
         observations: `Alta rápida desde Nueva curación. Fecha de nacimiento: ${newPatient.birthDate}.`,
         admissionDate: todayISO(),
-        controlIntervalDays: 7,
         cases: [],
       });
 
@@ -407,38 +406,35 @@ export default function NewCuration() {
         healing_frequency: evo.healingFrequency || null,
         observations: evo.observations || null,
         next_control: evo.nextControl || null,
+        // Rich clinical fields
+        pain_level: typeof evo.pain === 'number' ? evo.pain : null,
+        odor: evo.odor || null,
+        exudate_amount: evo.exudateAmount || null,
+        exudate_type: evo.exudateType || null,
+        exudate_color: evo.exudateColor || null,
+        wound_length: evo.woundLength !== '' ? Number(evo.woundLength) : null,
+        wound_width: evo.woundWidth !== '' ? Number(evo.woundWidth) : null,
+        wound_depth: evo.woundDepth !== '' ? Number(evo.woundDepth) : null,
+        has_infection_signs: evo.infection === 'si',
+        tissue_types: evo.tissue ? [evo.tissue] : null,
+        edge_types: evo.edges ? [evo.edges] : null,
       };
       const payloadWithControlTime = nextControlTime
         ? { ...baseEvolutionPayload, next_control_time: nextControlTime }
         : baseEvolutionPayload;
 
-      let evolutionInsert = await supabase
+      const { data: evoRow, error: evoErr } = await supabase
         .from('evolutions')
         .insert(payloadWithControlTime as any)
         .select('id')
         .single();
-      if (
-        evolutionInsert.error
-        && nextControlTime
-        && String(evolutionInsert.error.message ?? '').includes('next_control_time')
-      ) {
-        evolutionInsert = await supabase
-          .from('evolutions')
-          .insert({
-            ...baseEvolutionPayload,
-            observations: appendNextControlTimeMarker(evo.observations, nextControlTime),
-          } as any)
-          .select('id')
-          .single();
-      }
-
-      const { data: evoRow, error: evoErr } = evolutionInsert;
       if (evoErr) throw evoErr;
 
       // Persist the clinical photo (if any): upload to Storage and store a row in
       // `photos` linked to this evolution. We reuse the owner-scoped private
       // `signatures` bucket (the only bucket writable by authenticated users);
       // the herida detail page generates signed URLs from the stored path.
+      let savedPhotoPath: string | null = null;
       if (photoFile) {
         try {
           const ext = (photoFile.name.split('.').pop() || 'jpg').toLowerCase();
@@ -455,8 +451,8 @@ export default function NewCuration() {
             photo_date: evo.date,
           });
           if (photoErr) throw photoErr;
+          savedPhotoPath = path;
         } catch (photoError: any) {
-          // The evolution is already saved; surface the photo failure without aborting.
           toast({
             title: 'Evolución guardada, pero la foto no se pudo subir',
             description: photoError?.message ?? 'Reintentá cargar la foto desde el detalle de la herida.',
@@ -477,10 +473,40 @@ export default function NewCuration() {
         observations: evo.observations || '',
         nextControl: evo.nextControl || '',
         nextControlTime,
-        photos: [],
+        photos: savedPhotoPath ? [{ id: `local-${evoRow.id}`, url: savedPhotoPath, photo_date: evo.date }] : [],
+        painLevel: typeof evo.pain === 'number' ? evo.pain : undefined,
+        odor: evo.odor || undefined,
+        exudateAmount: (evo.exudateAmount as any) || undefined,
+        exudateType: (evo.exudateType as any) || undefined,
+        exudateColor: (evo.exudateColor as any) || undefined,
+        woundLength: evo.woundLength !== '' ? Number(evo.woundLength) : undefined,
+        woundWidth: evo.woundWidth !== '' ? Number(evo.woundWidth) : undefined,
+        woundDepth: evo.woundDepth !== '' ? Number(evo.woundDepth) : undefined,
+        hasInfectionSigns: evo.infection === 'si',
+        tissueTypes: evo.tissue ? [evo.tissue as any] : [],
+        edgeTypes: evo.edges ? [evo.edges as any] : [],
       };
 
-      addEvolution(patient.id, wcase.id, savedEvolution);
+      appendEvolutionToState(patient.id, wcase.id, savedEvolution);
+
+      // `turnos` is the single source of truth for scheduling: closing an evolution
+      // with a próximo control must also create a linked turno so Agenda/Dashboard
+      // (which read exclusively from `turnos`) stay consistent.
+      if (evo.nextControl) {
+        const turnoId = await createTurno({
+          caseId: wcase.id,
+          patientId: patient.id,
+          date: evo.nextControl,
+          time: nextControlTime || undefined,
+        });
+        if (!turnoId) {
+          toast({
+            title: 'Evolución guardada, pero no se pudo generar el turno',
+            description: 'Registrá el turno manualmente desde la Agenda.',
+            variant: 'destructive',
+          });
+        }
+      }
 
       const controlLabel = formatNextControl(evo.nextControl, nextControlTime);
 

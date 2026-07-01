@@ -84,7 +84,7 @@ function statusChipClasses(status?: string) {
 }
 
 export default function Dashboard() {
-  const { patients, currentUserName, patientsLoading, addEvolution } = useApp();
+  const { patients, currentUserName, patientsLoading, turnos, createTurno } = useApp();
   const { sponsor } = useSponsor();
   const { role, ready: roleReady } = useAppRole();
   const navigate = useNavigate();
@@ -175,23 +175,29 @@ export default function Dashboard() {
   const criticalCases = allCases.filter(c => c.status === 'critico');
   const agendaDate = selectedCalendarDate ?? today;
 
-  const appointmentsByDate = casesWithPatient.flatMap(c =>
-    c.evolutions
-      .filter(e => !!e.nextControl)
-      .map(e => ({
-        evo: e,
-        woundType: c.woundType,
-        status: c.caseStatus,
-        patientId: c.patientId,
-        caseId: c.caseId,
-        patientName: c.patientName,
-        nextControl: e.nextControl!,
-      })),
-  );
-  const agendaAppointments = appointmentsByDate.filter((a) => a.nextControl === agendaDate);
+  const activeTurnos = useMemo(() => turnos.filter(t => t.status !== 'cancelado'), [turnos]);
 
-  const upcomingControls = allEvos.filter(e => e.nextControl && e.nextControl >= today).length;
-  const overdueControls = allEvos.filter(e => e.nextControl && e.nextControl < today).length;
+  const agendaAppointments = useMemo(
+    () =>
+      activeTurnos
+        .filter((t) => t.date === agendaDate)
+        .map((t) => {
+          const caseInfo = casesWithPatient.find((c) => c.caseId === t.caseId);
+          return {
+            time: t.time || '',
+            notes: t.notes,
+            woundType: caseInfo?.woundType || '',
+            status: caseInfo?.caseStatus,
+            patientId: t.patientId,
+            caseId: t.caseId,
+            patientName: caseInfo?.patientName || 'Paciente sin identificar',
+          };
+        }),
+    [activeTurnos, casesWithPatient, agendaDate],
+  );
+
+  const upcomingControls = activeTurnos.filter(t => t.status === 'programado' && t.date >= today).length;
+  const overdueControls = activeTurnos.filter(t => t.status === 'vencido').length;
   const evosLast7Days = allEvos.filter(e => {
     const t = new Date(e.date + 'T12:00:00').getTime();
     return t >= Date.now() - 7 * 86400000;
@@ -222,7 +228,7 @@ export default function Dashboard() {
           message,
         });
       }
-      if (c.evolutions.some((e) => e.nextControl && e.nextControl < today)) {
+      if (activeTurnos.some((t) => t.caseId === c.caseId && t.status === 'vencido')) {
         const message = 'control vencido';
         list.push({
           type: 'overdue',
@@ -267,7 +273,7 @@ export default function Dashboard() {
       list.push({ type: 'ok', label: 'Sin alertas activas. Buen seguimiento clínico.', severity: 'info', icon: CheckCircle2 });
     }
     return list.slice(0, 6);
-  }, [casesWithPatient, today]);
+  }, [casesWithPatient, today, activeTurnos]);
 
   const orderedAlerts = useMemo(() => {
     const rank = (severity: 'destructive' | 'warning' | 'info') => {
@@ -294,7 +300,7 @@ export default function Dashboard() {
     const entries = patients.flatMap((patient) => {
       const patientName = `${patient.firstName ?? ''} ${patient.lastName ?? ''}`.trim() || 'Paciente sin identificar';
       const activeOrScheduledCases = patient.cases.filter((c) => {
-        const hasTodayControl = c.evolutions.some((e) => e.nextControl === todayIso);
+        const hasTodayControl = activeTurnos.some((t) => t.caseId === c.id && t.date === todayIso);
         const isActiveCase = c.status === 'critico' || c.status === 'activo' || c.status === 'en_mejoria';
         return hasTodayControl || isActiveCase;
       });
@@ -331,7 +337,7 @@ export default function Dashboard() {
         if (a.urgency !== b.urgency) return a.urgency - b.urgency;
         return b.ageLastCuracion - a.ageLastCuracion;
       });
-  }, [patients]);
+  }, [patients, activeTurnos]);
 
   const selectedPatient = useMemo(
     () => patients.find((p) => p.id === selectedPatientId) ?? null,
@@ -421,25 +427,23 @@ export default function Dashboard() {
       statuses: Set<string>;
       hasOverdue: boolean;
     }>();
-    casesWithPatient.forEach((c) => {
-      c.evolutions.forEach((e) => {
-        if (!e.nextControl) return;
-        const key = e.nextControl;
-        const item = map.get(key) ?? {
-          total: 0,
-          uniqueCases: new Set<string>(),
-          statuses: new Set<string>(),
-          hasOverdue: false,
-        };
-        item.total += 1;
-        item.uniqueCases.add(c.caseId);
-        item.statuses.add(c.caseStatus);
-        if (key < today && c.caseStatus !== 'resuelto') item.hasOverdue = true;
-        map.set(key, item);
-      });
+    activeTurnos.forEach((t) => {
+      const key = t.date;
+      const caseInfo = casesWithPatient.find((c) => c.caseId === t.caseId);
+      const item = map.get(key) ?? {
+        total: 0,
+        uniqueCases: new Set<string>(),
+        statuses: new Set<string>(),
+        hasOverdue: false,
+      };
+      item.total += 1;
+      item.uniqueCases.add(t.caseId);
+      if (caseInfo) item.statuses.add(caseInfo.caseStatus);
+      if (t.status === 'vencido') item.hasOverdue = true;
+      map.set(key, item);
     });
     return map;
-  }, [casesWithPatient, today]);
+  }, [activeTurnos, casesWithPatient]);
 
   const monthDays = useMemo(() => {
     const monthStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
@@ -508,22 +512,22 @@ export default function Dashboard() {
 
   if (isProfessionalView) {
     const todayIso = toISO(new Date());
-    const todayAgenda = patients
-      .flatMap((p) =>
-        p.cases.flatMap((c) =>
-          c.evolutions
-            .filter((e) => e.nextControl === todayIso)
-            .map((e) => ({
-              key: `${p.id}-${c.id}-${e.id ?? e.date}`,
-              time: e.time || '',
-              patientId: p.id,
-              caseId: c.id,
-              patientName: `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || 'Paciente sin identificar',
-              address: p.address || '',
-              status: c.status,
-            })),
-        ),
-      )
+    const patientById = new Map(patients.map((p) => [p.id, p]));
+    const todayAgenda = activeTurnos
+      .filter((t) => t.date === todayIso)
+      .map((t) => {
+        const patient = patientById.get(t.patientId);
+        const woundCase = patient?.cases.find((c) => c.id === t.caseId);
+        return {
+          key: t.id,
+          time: t.time || '',
+          patientId: t.patientId,
+          caseId: t.caseId,
+          patientName: patient ? `${patient.firstName ?? ''} ${patient.lastName ?? ''}`.trim() || 'Paciente sin identificar' : 'Paciente sin identificar',
+          address: patient?.address || '',
+          status: woundCase?.status,
+        };
+      })
       .sort((a, b) => a.time.localeCompare(b.time));
 
     const query = patientQuery.trim().toLowerCase();
@@ -540,22 +544,20 @@ export default function Dashboard() {
           `${p.firstName ?? ''} ${p.lastName ?? ''} ${p.dni ?? ''}`.toLowerCase().includes(query),
         );
 
-    const allAppointments = patients.flatMap((p) =>
-      p.cases.flatMap((c) =>
-        c.evolutions
-          .filter((e) => !!e.nextControl)
-          .map((e) => ({
-            key: `${p.id}-${c.id}-${e.id ?? e.date}`,
-            date: e.nextControl!,
-            time: e.time || '',
-            patientId: p.id,
-            caseId: c.id,
-            patientName: `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || 'Paciente sin identificar',
-            address: p.address || '',
-            status: c.status,
-          })),
-      ),
-    );
+    const allAppointments = activeTurnos.map((t) => {
+      const patient = patientById.get(t.patientId);
+      const woundCase = patient?.cases.find((c) => c.id === t.caseId);
+      return {
+        key: t.id,
+        date: t.date,
+        time: t.time || '',
+        patientId: t.patientId,
+        caseId: t.caseId,
+        patientName: patient ? `${patient.firstName ?? ''} ${patient.lastName ?? ''}`.trim() || 'Paciente sin identificar' : 'Paciente sin identificar',
+        address: patient?.address || '',
+        status: woundCase?.status,
+      };
+    });
 
     const appointmentDates = Array.from(new Set(allAppointments.map((a) => a.date))).map((iso) =>
       fromISO(iso),
@@ -878,26 +880,23 @@ export default function Dashboard() {
                   !turnoSelectedPatient ||
                   !patients.find(p => p.id === turnoSelectedPatient?.id)?.cases.length
                 }
-                onClick={() => {
+                onClick={async () => {
                   const patient = patients.find(p => p.id === turnoSelectedPatient!.id);
                   const targetCase =
                     patient?.cases.find(
                       c => c.status === 'activo' || c.status === 'critico' || c.status === 'en_mejoria',
                     ) ?? patient?.cases[0];
                   if (!targetCase) return;
-                  addEvolution(turnoSelectedPatient!.id, targetCase.id, {
-                    id: `evo-${Date.now()}`,
+                  const turnoId = await createTurno({
+                    caseId: targetCase.id,
+                    patientId: turnoSelectedPatient!.id,
                     date: turnoDate,
                     time: turnoTime,
-                    professional: currentUserName || '',
-                    description: 'Turno programado',
-                    procedure: '',
-                    materials: '',
-                    healingFrequency: '',
-                    observations: '',
-                    nextControl: turnoDate,
-                    photos: [],
                   });
+                  if (!turnoId) {
+                    toast({ title: 'Error al guardar el turno', description: 'Intentá nuevamente.', variant: 'destructive' });
+                    return;
+                  }
                   toast({ title: 'Turno guardado', description: `${turnoSelectedPatient!.name} — ${turnoDate}` });
                   setNewTurnoOpen(false);
                   setTurnoDate('');
@@ -1036,10 +1035,10 @@ export default function Dashboard() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-body text-sm font-medium truncate">
-                            {a.evo.time || 'Sin horario'} · {a.woundType || 'Curación'}
+                            {a.time || 'Sin horario'} · {a.woundType || 'Curación'}
                           </div>
                           <div className="font-body text-xs text-muted-foreground truncate">
-                            {a.patientName} · {a.evo.professional || 'Profesional asignado'}
+                            {a.patientName} · {a.notes || 'Profesional asignado'}
                           </div>
                         </div>
                         <Badge variant="outline" className="font-body text-[10px] uppercase">

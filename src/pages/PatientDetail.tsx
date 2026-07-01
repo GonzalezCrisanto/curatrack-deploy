@@ -74,7 +74,6 @@ interface CaseFormState {
   infDolorAumentado: boolean;
   bodyTemperature: number | '';
   healingFrequency: string;
-  healingFrequencyDays: number | '';
   initialProcedure: string;
   initialMaterials: string;
   initialObservations: string;
@@ -92,7 +91,6 @@ const emptyCase: CaseFormState = {
   infMalOlor: false, infEritema: false, infCalor: false, infBiofilm: false, infPurulenta: false, infDolorAumentado: false,
   bodyTemperature: '',
   healingFrequency: '',
-  healingFrequencyDays: '',
   initialProcedure: '', initialMaterials: '', initialObservations: '',
   treatment: '',
 };
@@ -100,7 +98,7 @@ const emptyCase: CaseFormState = {
 export default function PatientDetail() {
   const { patientId } = useParams();
   const navigate = useNavigate();
-  const { patients, addCase, updateCase, deleteCase, addEvolution, currentUserName } = useApp();
+  const { patients, addCase, updateCase, deleteCase, addEvolution, updatePatient, currentUserName, turnos, createTurno } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const [caseDialogOpen, setCaseDialogOpen] = useState(false);
   const [woundFormOpen, setWoundFormOpen] = useState(false);
@@ -108,6 +106,70 @@ export default function PatientDetail() {
   const [editingCase, setEditingCase] = useState<WoundCase | null>(null);
   const [caseForm, setCaseForm] = useState(emptyCase);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+
+  // Patient edit dialog
+  const [patientEditOpen, setPatientEditOpen] = useState(false);
+  const [patientForm, setPatientForm] = useState({
+    firstName: '', lastName: '', age: '', birthDate: '', gender: '', dni: '', phone: '',
+    email: '', address: '', diagnosis: '', assignedProfessional: '', observations: '',
+    admissionDate: '', allergies: '', insurance: '',
+    emergencyContactName: '', emergencyContactPhone: '', treatingDoctorName: '', treatingDoctorPhone: '',
+  });
+
+  const openPatientEdit = () => {
+    setPatientForm({
+      firstName: patient.firstName,
+      lastName: patient.lastName,
+      age: patient.age ? String(patient.age) : '',
+      birthDate: patient.birthDate || '',
+      gender: patient.gender || '',
+      dni: patient.dni || '',
+      phone: patient.phone || '',
+      email: patient.email || '',
+      address: patient.address || '',
+      diagnosis: patient.diagnosis || '',
+      assignedProfessional: patient.assignedProfessional || '',
+      observations: patient.observations || '',
+      admissionDate: patient.admissionDate || '',
+      allergies: patient.allergies || '',
+      insurance: patient.insurance || '',
+      emergencyContactName: patient.emergencyContactName || '',
+      emergencyContactPhone: patient.emergencyContactPhone || '',
+      treatingDoctorName: patient.treatingDoctorName || '',
+      treatingDoctorPhone: patient.treatingDoctorPhone || '',
+    });
+    setPatientEditOpen(true);
+  };
+
+  const handleSavePatient = async () => {
+    if (!patientForm.firstName.trim() || !patientForm.lastName.trim()) return;
+    await updatePatient({
+      ...patient,
+      firstName: patientForm.firstName.trim(),
+      lastName: patientForm.lastName.trim(),
+      age: patientForm.age ? Number(patientForm.age) : 0,
+      birthDate: patientForm.birthDate || undefined,
+      gender: patientForm.gender,
+      dni: patientForm.dni,
+      phone: patientForm.phone,
+      email: patientForm.email,
+      address: patientForm.address,
+      diagnosis: patientForm.diagnosis,
+      assignedProfessional: patientForm.assignedProfessional,
+      observations: patientForm.observations,
+      admissionDate: patientForm.admissionDate,
+      allergies: patientForm.allergies,
+      insurance: patientForm.insurance,
+      emergencyContactName: patientForm.emergencyContactName,
+      emergencyContactPhone: patientForm.emergencyContactPhone,
+      treatingDoctorName: patientForm.treatingDoctorName,
+      treatingDoctorPhone: patientForm.treatingDoctorPhone,
+    });
+    setPatientEditOpen(false);
+  };
+
+  const setPField = <K extends keyof typeof patientForm>(key: K, value: string) =>
+    setPatientForm(prev => ({ ...prev, [key]: value }));
 
   // Photos for the new/edit case form (optional)
   const [casePhotos, setCasePhotos] = useState<Photo[]>([]);
@@ -142,17 +204,19 @@ export default function PatientDetail() {
   // Includes both the current patient's own appointments and other patients' appointments.
   const apptConflicts = useMemo(() => {
     if (!apptDate) return [] as { patientName: string; time: string; woundType: string; isCurrent: boolean }[];
-    return patients.flatMap(p => p.cases.flatMap(c =>
-      c.evolutions
-        .filter(e => e.nextControl === apptDate)
-        .map(e => ({
-          patientName: p.id === patientId ? 'Este paciente' : `${p.lastName}, ${p.firstName}`,
-          time: e.time || '',
-          woundType: c.woundType,
-          isCurrent: p.id === patientId,
-        }))
-    ));
-  }, [patients, patientId, apptDate]);
+    return turnos
+      .filter(t => t.status !== 'cancelado' && t.date === apptDate)
+      .map(t => {
+        const p = patients.find(pp => pp.id === t.patientId);
+        const c = p?.cases.find(cc => cc.id === t.caseId);
+        return {
+          patientName: t.patientId === patientId ? 'Este paciente' : (p ? `${p.lastName}, ${p.firstName}` : ''),
+          time: t.time || '',
+          woundType: c?.woundType || '',
+          isCurrent: t.patientId === patientId,
+        };
+      });
+  }, [turnos, patients, patientId, apptDate]);
 
   // Set of HH:MM times already taken on the selected day (any patient)
   const apptTakenTimes = useMemo(() => {
@@ -230,7 +294,6 @@ export default function PatientDetail() {
       infDolorAumentado: c.infDolorAumentado ?? false,
       bodyTemperature: c.bodyTemperature ?? '',
       healingFrequency: c.healingFrequency ?? '',
-      healingFrequencyDays: c.healingFrequencyDays ?? '',
       initialProcedure: c.initialProcedure ?? '',
       initialMaterials: c.initialMaterials ?? '',
       initialObservations: c.initialObservations ?? '',
@@ -240,29 +303,12 @@ export default function PatientDetail() {
     setCaseDialogOpen(true);
   };
 
-  // Helper: convert preset frequency label to days, returns null if no preset (free / "A demanda")
-  const presetFreqToDays = (freq?: string): number | null => {
-    switch ((freq || '').trim()) {
-      case 'Diaria': return 1;
-      case 'Cada 48hs': return 2;
-      case 'Cada 72hs': return 3;
-      case 'Semanal': return 7;
-      default: return null;
-    }
-  };
-
   const handleSaveCase = () => {
     // Validación de campos obligatorios
     const missing: string[] = [];
     if (!caseForm.woundType) missing.push('Tipo de herida');
     if (!caseForm.anatomicalLocation.trim()) missing.push('Ubicación anatómica');
     if (!caseForm.startDate) missing.push('Fecha de inicio');
-    // Si no hay frecuencia preestablecida, exigir días manuales
-    const presetDays = presetFreqToDays(caseForm.healingFrequency);
-    const manualDays = caseForm.healingFrequencyDays === '' ? null : Number(caseForm.healingFrequencyDays);
-    if (presetDays === null && (!manualDays || manualDays <= 0)) {
-      missing.push('Días estimados de frecuencia de curación');
-    }
     if (missing.length > 0) {
       toast({
         title: 'Faltan campos obligatorios',
@@ -296,7 +342,6 @@ export default function PatientDetail() {
       infDolorAumentado: caseForm.infDolorAumentado,
       bodyTemperature: numOrUndef(caseForm.bodyTemperature),
       healingFrequency: caseForm.healingFrequency,
-      healingFrequencyDays: caseForm.healingFrequencyDays === '' ? undefined : Number(caseForm.healingFrequencyDays),
       initialProcedure: caseForm.initialProcedure,
       initialMaterials: caseForm.initialMaterials,
       initialObservations: caseForm.initialObservations,
@@ -325,7 +370,6 @@ export default function PatientDetail() {
         procedure: caseForm.initialProcedure,
         materials: caseForm.initialMaterials,
         healingFrequency: caseForm.healingFrequency,
-        healingFrequencyDays: caseForm.healingFrequencyDays === '' ? undefined : Number(caseForm.healingFrequencyDays),
         observations: caseForm.initialObservations,
         nextControl: '',
         photos: casePhotos,
@@ -375,22 +419,9 @@ export default function PatientDetail() {
     return (l * w).toFixed(2);
   })();
 
-  const handleSaveAppointment = () => {
+  const handleSaveAppointment = async () => {
     if (!apptCaseId || !apptDate) return;
-    const newEvo = {
-      id: `evo-${Date.now()}`,
-      date: apptDate,
-      time: apptTime,
-      professional: patient.assignedProfessional || '',
-      description: 'Turno programado',
-      procedure: '',
-      materials: '',
-      healingFrequency: '',
-      observations: '',
-      nextControl: apptDate,
-      photos: [],
-    };
-    addEvolution(patient.id, apptCaseId, newEvo);
+    await createTurno({ caseId: apptCaseId, patientId: patient.id, date: apptDate, time: apptTime });
     setApptDialogOpen(false);
   };
 
@@ -403,6 +434,9 @@ export default function PatientDetail() {
             <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Dashboard
           </Button>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="font-body" onClick={openPatientEdit}>
+              <Edit className="mr-2 h-4 w-4" /> Editar paciente
+            </Button>
             <Button variant="outline" size="sm" className="font-body" onClick={() => exportPatientPdf(patient)}>
               <FileDown className="mr-2 h-4 w-4" /> Exportar Historia Clínica
             </Button>
@@ -593,32 +627,36 @@ export default function PatientDetail() {
             caseColor[c.id] = palette[idx % palette.length];
           });
 
-          // Existing appointments grouped by case
-          const appointmentsByCase = activeCases.flatMap(c =>
-            c.evolutions
-              .filter(e => e.nextControl && e.nextControl.trim() !== '' && new Date(e.nextControl + 'T12:00:00') >= today)
-              .map(e => ({
-                date: new Date(e.nextControl + 'T12:00:00'),
-                caseId: c.id,
+          // Existing appointments grouped by case (from the turnos table, excluding cancelled)
+          const activeCaseIds = new Set(activeCases.map(c => c.id));
+          const patientTurnos = turnos.filter(t => t.patientId === patient.id && t.status !== 'cancelado');
+
+          const appointmentsByCase = patientTurnos
+            .filter(t => activeCaseIds.has(t.caseId) && new Date(t.date + 'T12:00:00') >= today)
+            .map(t => {
+              const c = activeCases.find(cc => cc.id === t.caseId)!;
+              return {
+                date: new Date(t.date + 'T12:00:00'),
+                caseId: t.caseId,
                 status: c.status,
                 woundType: c.woundType,
                 anatomicalLocation: c.anatomicalLocation,
-              }))
-          );
+              };
+            });
 
           // Appointments from OTHER patients (to avoid scheduling clashes)
-          const otherPatientsAppointments = patients
-            .filter(p => p.id !== patient.id)
-            .flatMap(p => p.cases.flatMap(c =>
-              c.evolutions
-                .filter(e => e.nextControl && e.nextControl.trim() !== '' && new Date(e.nextControl + 'T12:00:00') >= today)
-                .map(e => ({
-                  date: new Date(e.nextControl + 'T12:00:00'),
-                  time: e.time || '',
-                  patientName: `${p.lastName}, ${p.firstName}`,
-                  woundType: c.woundType,
-                }))
-            ));
+          const otherPatientsAppointments = turnos
+            .filter(t => t.patientId !== patient.id && t.status !== 'cancelado' && new Date(t.date + 'T12:00:00') >= today)
+            .map(t => {
+              const p = patients.find(pp => pp.id === t.patientId);
+              const c = p?.cases.find(cc => cc.id === t.caseId);
+              return {
+                date: new Date(t.date + 'T12:00:00'),
+                time: t.time || '',
+                patientName: p ? `${p.lastName}, ${p.firstName}` : '',
+                woundType: c?.woundType || '',
+              };
+            });
           const otherDates = otherPatientsAppointments.map(a => a.date);
           const otherDateStrings = new Set(otherDates.map(d => d.toISOString().split('T')[0]));
 
@@ -635,7 +673,7 @@ export default function PatientDetail() {
           };
 
           // Suggested future dates PER CASE based on its healingFrequency.
-          // Anchor: latest evolution date with that frequency, else next existing nextControl, else today.
+          // Anchor: latest evolution date with that frequency, else next existing turno, else today.
           const existingDateStrings = new Set(appointmentsByCase.map(a => a.date.toISOString().split('T')[0]));
           const suggestionsByCase: Array<{ caseId: string; date: Date; days: number }> = [];
 
@@ -644,18 +682,16 @@ export default function PatientDetail() {
             // This way, updating an evolution to manual days overrides any older preset.
             const sortedEvos = [...c.evolutions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
             const latestWithFreq = sortedEvos.find(e =>
-              (e.healingFrequency && e.healingFrequency.trim() !== '') ||
-              (typeof e.healingFrequencyDays === 'number' && e.healingFrequencyDays > 0)
+              e.healingFrequency && e.healingFrequency.trim() !== ''
             );
             const freq = latestWithFreq?.healingFrequency || (latestWithFreq ? '' : c.healingFrequency);
-            const manualDays = latestWithFreq?.healingFrequencyDays ?? c.healingFrequencyDays ?? null;
-            const days = frequencyToDays(freq) ?? (manualDays && manualDays > 0 ? manualDays : null);
+            const days = frequencyToDays(freq);
             if (!days) return;
 
-            // Anchor date: last existing nextControl for this case, else last evolution date, else today
-            const futureControls = c.evolutions
-              .filter(e => e.nextControl && e.nextControl.trim() !== '')
-              .map(e => new Date(e.nextControl + 'T12:00:00'))
+            // Anchor date: last existing turno for this case, else last evolution date, else today
+            const futureControls = patientTurnos
+              .filter(t => t.caseId === c.id)
+              .map(t => new Date(t.date + 'T12:00:00'))
               .sort((a, b) => b.getTime() - a.getTime());
             let anchor = futureControls[0]
               || (sortedEvos[0]?.date ? new Date(sortedEvos[0].date + 'T12:00:00') : new Date(today));
@@ -777,9 +813,9 @@ export default function PatientDetail() {
 
             // Default time: first 15-min slot from 09:00 not colliding with any appointment that day.
             const takenThatDay = new Set<string>();
-            patients.forEach(p => p.cases.forEach(c => c.evolutions.forEach(e => {
-              if (e.nextControl === defaultDate && e.time) takenThatDay.add(e.time);
-            })));
+            turnos.forEach(t => {
+              if (t.status !== 'cancelado' && t.date === defaultDate && t.time) takenThatDay.add(t.time);
+            });
             setApptTime(pickAvailableTime(takenThatDay));
 
             setApptDialogOpen(true);
@@ -966,9 +1002,9 @@ export default function PatientDetail() {
                       const newDate = e.target.value;
                       setApptDate(newDate);
                       const takenThatDay = new Set<string>();
-                      patients.forEach(p => p.cases.forEach(c => c.evolutions.forEach(ev => {
-                        if (ev.nextControl === newDate && ev.time) takenThatDay.add(ev.time);
-                      })));
+                      turnos.forEach(t => {
+                        if (t.status !== 'cancelado' && t.date === newDate && t.time) takenThatDay.add(t.time);
+                      });
                       setApptTime(pickAvailableTime(takenThatDay));
                     }}
                     className="font-body"
@@ -1123,23 +1159,6 @@ export default function PatientDetail() {
                     {healingFrequencies.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                {(caseForm.healingFrequency === '' || caseForm.healingFrequency === 'A demanda') && (
-                  <div className="space-y-1 pt-1">
-                    <Label className="font-body text-[11px] text-muted-foreground">
-                      Días estimados entre curaciones <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      type="number" inputMode="numeric" min="1" step="1"
-                      value={caseForm.healingFrequencyDays}
-                      onChange={e => setCField('healingFrequencyDays', e.target.value === '' ? '' : Number(e.target.value))}
-                      className="font-body h-10 w-32 tabular-nums"
-                      placeholder="Ej: 5"
-                    />
-                    <p className="font-body text-[11px] text-muted-foreground">
-                      Se usa para sugerir los próximos turnos en el calendario.
-                    </p>
-                  </div>
-                )}
               </div>
 
               {/* Tamaño de la herida */}
@@ -1479,6 +1498,133 @@ export default function PatientDetail() {
               <Button variant="outline" onClick={() => setCaseDialogOpen(false)} className="font-body h-12 flex-1 sm:flex-none">Cancelar</Button>
               <Button onClick={handleSaveCase} className="font-body h-12 flex-[2] sm:flex-1 font-semibold">
                 {editingCase ? 'Guardar cambios' : 'Crear herida'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Patient Edit Dialog */}
+        <Dialog open={patientEditOpen} onOpenChange={setPatientEditOpen}>
+          <DialogContent className="max-w-2xl w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] p-0 gap-0 flex flex-col rounded-none sm:rounded-lg">
+            <DialogHeader className="px-4 sm:px-6 pt-4 pb-3 border-b border-border/50 shrink-0">
+              <DialogTitle className="heading-display text-lg">Editar paciente</DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-5">
+              {/* Datos básicos */}
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nombre <RequiredMark /></Label>
+                  <Input value={patientForm.firstName} onChange={e => setPField('firstName', e.target.value)} className="font-body h-11" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Apellido <RequiredMark /></Label>
+                  <Input value={patientForm.lastName} onChange={e => setPField('lastName', e.target.value)} className="font-body h-11" />
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fecha de nacimiento<OptionalTag /></Label>
+                  <Input type="date" value={patientForm.birthDate} onChange={e => setPField('birthDate', e.target.value)} className="font-body h-11" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Edad<OptionalTag /></Label>
+                  <Input type="number" inputMode="numeric" min="0" value={patientForm.age} onChange={e => setPField('age', e.target.value)} className="font-body h-11" placeholder="Ej: 65" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sexo<OptionalTag /></Label>
+                  <Select value={patientForm.gender} onValueChange={v => setPField('gender', v)}>
+                    <SelectTrigger className="font-body h-11"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Masculino">Masculino</SelectItem>
+                      <SelectItem value="Femenino">Femenino</SelectItem>
+                      <SelectItem value="Otro">Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">DNI / Documento<OptionalTag /></Label>
+                  <Input value={patientForm.dni} onChange={e => setPField('dni', e.target.value)} className="font-body h-11" placeholder="Ej: 12.345.678" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Teléfono<OptionalTag /></Label>
+                  <Input value={patientForm.phone} onChange={e => setPField('phone', e.target.value)} className="font-body h-11" placeholder="Ej: +54 11 1234-5678" />
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email<OptionalTag /></Label>
+                  <Input type="email" value={patientForm.email} onChange={e => setPField('email', e.target.value)} className="font-body h-11" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Domicilio<OptionalTag /></Label>
+                  <Input value={patientForm.address} onChange={e => setPField('address', e.target.value)} className="font-body h-11" />
+                </div>
+              </div>
+
+              {/* Datos clínicos */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Antecedentes y comorbilidades<OptionalTag /></Label>
+                <Textarea value={patientForm.diagnosis} onChange={e => setPField('diagnosis', e.target.value)} className="font-body" rows={3} placeholder="Ej: Diabetes mellitus tipo 2, HTA, obesidad..." />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Alergias<OptionalTag /></Label>
+                <Input value={patientForm.allergies} onChange={e => setPField('allergies', e.target.value)} className="font-body h-11" placeholder="Ej: Penicilina, AINEs..." />
+              </div>
+
+              {/* Cobertura y contacto de emergencia */}
+              <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+                <p className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Cobertura y contacto de emergencia</p>
+                <div className="space-y-1.5">
+                  <Label className="font-body text-[11px] text-muted-foreground">Obra social / Cobertura</Label>
+                  <Input value={patientForm.insurance} onChange={e => setPField('insurance', e.target.value)} className="font-body h-11" placeholder="Ej: OSDE 310, PAMI, Swiss Medical..." />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="font-body text-[11px] text-muted-foreground">Nombre contacto de emergencia</Label>
+                    <Input value={patientForm.emergencyContactName} onChange={e => setPField('emergencyContactName', e.target.value)} className="font-body h-11" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="font-body text-[11px] text-muted-foreground">Tel. contacto de emergencia</Label>
+                    <Input value={patientForm.emergencyContactPhone} onChange={e => setPField('emergencyContactPhone', e.target.value)} className="font-body h-11" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Médico tratante */}
+              <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+                <p className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Médico tratante</p>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="font-body text-[11px] text-muted-foreground">Nombre</Label>
+                    <Input value={patientForm.treatingDoctorName} onChange={e => setPField('treatingDoctorName', e.target.value)} className="font-body h-11" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="font-body text-[11px] text-muted-foreground">Teléfono</Label>
+                    <Input value={patientForm.treatingDoctorPhone} onChange={e => setPField('treatingDoctorPhone', e.target.value)} className="font-body h-11" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Datos administrativos */}
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Profesional asignado<OptionalTag /></Label>
+                <Input value={patientForm.assignedProfessional} onChange={e => setPField('assignedProfessional', e.target.value)} className="font-body h-11" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fecha de ingreso<OptionalTag /></Label>
+                <Input type="date" value={patientForm.admissionDate} onChange={e => setPField('admissionDate', e.target.value)} className="font-body h-11" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Observaciones generales<OptionalTag /></Label>
+                <Textarea value={patientForm.observations} onChange={e => setPField('observations', e.target.value)} className="font-body" rows={3} />
+              </div>
+            </div>
+            <div className="shrink-0 border-t border-border/50 bg-background px-4 sm:px-6 py-3 flex gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <Button variant="outline" onClick={() => setPatientEditOpen(false)} className="font-body h-12 flex-1 sm:flex-none">Cancelar</Button>
+              <Button onClick={handleSavePatient} disabled={!patientForm.firstName.trim() || !patientForm.lastName.trim()} className="font-body h-12 flex-[2] sm:flex-1 font-semibold">
+                Guardar cambios
               </Button>
             </div>
           </DialogContent>

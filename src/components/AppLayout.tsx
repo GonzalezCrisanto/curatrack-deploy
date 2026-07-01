@@ -55,11 +55,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const initials = currentUser
     ? `${currentUser.firstName[0] ?? ''}${currentUser.lastName[0] ?? ''}`.toUpperCase()
     : 'U';
-  const roleLabel = currentUser?.role === 'medico'
-    ? 'Médico/a'
-    : currentUser?.role === 'admin'
-      ? 'Administrativo/a'
-      : 'Enfermería';
+  const roleLabel = currentUser?.role === 'admin'
+    ? 'Administrativo/a'
+    : currentUser?.role === 'sponsor'
+      ? 'Sponsor'
+      : 'Profesional';
   const isProfessional = role === 'professional';
   const showSponsorSubtle = isProfessional && !!sponsor;
 

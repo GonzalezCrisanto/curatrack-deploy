@@ -1,8 +1,17 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { Patient, WoundCase, Evolution, demoPatients } from '@/data/demoData';
-import { extractNextControlTime, normalizeAppointmentTime, stripNextControlTimeMarker } from '@/lib/appointments';
+import { Patient, WoundCase, Evolution } from '@/data/demoData';
+import {
+  extractNextControlTime,
+  normalizeAppointmentTime,
+  stripNextControlTimeMarker,
+  deriveTurnoStatus,
+  findTurnosToSupersede,
+  type TurnoStatus,
+  type CaseEvolutionInput,
+} from '@/lib/appointments';
+import type { AppRole } from '@/lib/appRole';
 
 // ============================================================================
 // PHASE 1 BACKEND MIGRATION
@@ -18,7 +27,6 @@ interface ProfileRow {
   user_id: string;
   first_name: string;
   last_name: string;
-  role: string | null;
   institution: string | null;
   license: string | null;
 }
@@ -29,6 +37,7 @@ interface PatientRow {
   first_name: string;
   last_name: string;
   age: number | null;
+  birth_date: string | null;
   gender: string | null;
   dni: string | null;
   phone: string | null;
@@ -36,9 +45,14 @@ interface PatientRow {
   address: string | null;
   diagnosis: string | null;
   assigned_professional: string | null;
+  treating_doctor_name: string | null;
+  treating_doctor_phone: string | null;
   observations: string | null;
+  allergies: string | null;
+  insurance: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
   admission_date: string | null;
-  control_interval_days: number | null;
 }
 
 // Mapping helpers between DB rows and the Patient shape used by the app
@@ -48,6 +62,7 @@ function rowToPatient(row: PatientRow, cases: WoundCase[]): Patient {
     firstName: row.first_name,
     lastName: row.last_name,
     age: row.age ?? 0,
+    birthDate: row.birth_date ?? undefined,
     gender: row.gender ?? '',
     dni: row.dni ?? '',
     phone: row.phone ?? '',
@@ -55,11 +70,14 @@ function rowToPatient(row: PatientRow, cases: WoundCase[]): Patient {
     address: row.address ?? '',
     diagnosis: row.diagnosis ?? '',
     assignedProfessional: row.assigned_professional ?? '',
-    treatingDoctorName: '',
-    treatingDoctorPhone: '',
+    treatingDoctorName: row.treating_doctor_name ?? '',
+    treatingDoctorPhone: row.treating_doctor_phone ?? '',
     observations: row.observations ?? '',
+    allergies: row.allergies ?? '',
+    insurance: row.insurance ?? '',
+    emergencyContactName: row.emergency_contact_name ?? '',
+    emergencyContactPhone: row.emergency_contact_phone ?? '',
     admissionDate: row.admission_date ?? new Date().toISOString().split('T')[0],
-    controlIntervalDays: row.control_interval_days ?? 7,
     cases,
   };
 }
@@ -71,6 +89,7 @@ function patientToRow(p: Patient, userId: string): Omit<PatientRow, 'id'> & { id
     first_name: p.firstName,
     last_name: p.lastName,
     age: p.age || null,
+    birth_date: p.birthDate || null,
     gender: p.gender || null,
     dni: p.dni || null,
     phone: p.phone || null,
@@ -78,10 +97,38 @@ function patientToRow(p: Patient, userId: string): Omit<PatientRow, 'id'> & { id
     address: p.address || null,
     diagnosis: p.diagnosis || null,
     assigned_professional: p.assignedProfessional || null,
+    treating_doctor_name: p.treatingDoctorName || null,
+    treating_doctor_phone: p.treatingDoctorPhone || null,
     observations: p.observations || null,
+    allergies: p.allergies || null,
+    insurance: p.insurance || null,
+    emergency_contact_name: p.emergencyContactName || null,
+    emergency_contact_phone: p.emergencyContactPhone || null,
     admission_date: p.admissionDate || null,
-    control_interval_days: p.controlIntervalDays ?? 7,
   };
+}
+
+interface TurnoRow {
+  id: string;
+  user_id: string;
+  case_id: string;
+  patient_id: string;
+  scheduled_date: string;
+  scheduled_time: string | null;
+  status: 'programado' | 'cancelado';
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Turno {
+  id: string;
+  caseId: string;
+  patientId: string;
+  date: string;
+  time: string;
+  status: TurnoStatus;
+  notes: string;
 }
 
 // ============================================================================
@@ -91,7 +138,7 @@ export interface CurrentUser {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'enfermero' | 'medico' | 'admin';
+  role: AppRole;
   license?: string;
   institution?: string;
 }
@@ -108,7 +155,7 @@ interface AppContextType {
   registerUser: (data: {
     email: string; password: string;
     firstName: string; lastName: string;
-    role: 'enfermero' | 'medico' | 'admin';
+    role: AppRole;
     license?: string; institution?: string;
   }) => Promise<{ ok: boolean; message?: string; needsEmailConfirmation?: boolean }>;
 
@@ -119,13 +166,21 @@ interface AppContextType {
   updatePatient: (patient: Patient) => Promise<void>;
   deletePatient: (id: string) => Promise<void>;
 
-  // Cases & Evolutions (still local — Phase 2)
+  // Cases & Evolutions
   addCase: (patientId: string, woundCase: WoundCase) => void;
-  updateCase: (patientId: string, woundCase: WoundCase) => void;
+  updateCase: (patientId: string, woundCase: WoundCase) => Promise<void>;
   deleteCase: (patientId: string, caseId: string) => void;
-  addEvolution: (patientId: string, caseId: string, evolution: Evolution) => void;
-  updateEvolution: (patientId: string, caseId: string, evolution: Evolution) => void;
+  addEvolution: (patientId: string, caseId: string, evolution: Evolution) => Promise<string | null>;
+  appendEvolutionToState: (patientId: string, caseId: string, evolution: Evolution) => void;
+  updateEvolution: (patientId: string, caseId: string, evolution: Evolution) => Promise<void>;
   deleteEvolution: (patientId: string, caseId: string, evolutionId: string) => void;
+
+  // Turnos (appointments, synced with backend)
+  turnos: Turno[];
+  createTurno: (input: { caseId: string; patientId: string; date: string; time?: string; notes?: string }) => Promise<string | null>;
+  updateTurno: (turno: Turno) => Promise<void>;
+  cancelTurno: (id: string) => Promise<void>;
+  deleteTurno: (id: string) => Promise<void>;
 
   // Compatibility shim
   setIsLoggedIn: (v: boolean) => void;
@@ -137,6 +192,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
 
   const [patientRows, setPatientRows] = useState<PatientRow[]>([]);
@@ -146,12 +202,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // for convenience while Phase 2 (cases backend) is pending.
   const [casesByPatient, setCasesByPatient] = useState<Record<string, WoundCase[]>>({});
 
+  const [turnoRows, setTurnoRows] = useState<TurnoRow[]>([]);
+
   // ---- Auth bootstrap ----
   useEffect(() => {
     // 1) Listener FIRST
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-      setAuthUser(newSession?.user ?? null);
+    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setAuthUser(null);
+      } else if (newSession?.user) {
+        setSession(newSession);
+        setAuthUser(newSession.user);
+      }
+      // TOKEN_REFRESHED and other intermediate events with null session are ignored
+      // to prevent transient logouts that cause navigation to /login
     });
 
     // 2) Then load existing session
@@ -168,8 +233,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!authUser) {
       setProfile(null);
+      setUserRole(null);
       setPatientRows([]);
       setCasesByPatient({});
+      setTurnoRows([]);
       return;
     }
 
@@ -184,6 +251,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .eq('user_id', authUser.id)
         .maybeSingle();
       if (!cancelled) setProfile(prof as ProfileRow | null);
+
+      const { data: roleRow } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', authUser.id)
+        .maybeSingle();
+      if (!cancelled) setUserRole(roleRow?.role ?? null);
 
       // Patients
       const { data: pats, error } = await supabase
@@ -202,6 +276,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const patientIds = (pats || []).map((p: any) => p.id);
         const casesById: Record<string, WoundCase[]> = {};
         if (patientIds.length > 0) {
+          const { data: turnoData, error: turnoError } = await supabase
+            .from('turnos')
+            .select('*')
+            .in('patient_id', patientIds);
+          if (!cancelled) {
+            if (turnoError) {
+              console.error('Error loading turnos', turnoError);
+              setTurnoRows([]);
+            } else {
+              setTurnoRows((turnoData || []) as TurnoRow[]);
+            }
+          }
+        } else if (!cancelled) {
+          setTurnoRows([]);
+        }
+        if (patientIds.length > 0) {
           const { data: caseRows } = await supabase
             .from('wound_cases')
             .select('*')
@@ -213,7 +303,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               .from('evolutions')
               .select('*')
               .in('case_id', caseIds)
-              .order('evolution_date', { ascending: false });
+              .order('evolution_date', { ascending: false })
+              .order('evolution_time', { ascending: false, nullsFirst: false });
             for (const e of (evoRows || []) as any[]) {
               const nextControlTime = normalizeAppointmentTime(e.next_control_time) || extractNextControlTime(e.observations);
               const ev: Evolution = {
@@ -229,6 +320,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 nextControl: e.next_control || '',
                 nextControlTime,
                 photos: [],
+                painLevel: e.pain_level ?? undefined,
+                odor: e.odor ?? undefined,
+                exudateAmount: e.exudate_amount ?? undefined,
+                exudateType: e.exudate_type ?? undefined,
+                exudateColor: e.exudate_color ?? undefined,
+                tissueTypes: e.tissue_types ?? [],
+                edgeTypes: e.edge_types ?? [],
+                woundLength: e.wound_length ?? undefined,
+                woundWidth: e.wound_width ?? undefined,
+                woundDepth: e.wound_depth ?? undefined,
+                hasInfectionSigns: e.has_infection_signs ?? false,
+                infMalOlor: e.inf_odor ?? false,
+                infEritema: e.inf_redness ?? false,
+                infCalor: e.inf_heat ?? false,
+                infBiofilm: e.inf_swelling ?? false,
+                infPurulenta: e.inf_purulent ?? false,
+                infDolorAumentado: e.inf_fever ?? false,
+                bodyTemperature: e.body_temperature ?? undefined,
+                evolutionStatus: e.evolution_status ?? undefined,
+                requiresMedicalOrder: e.requires_medical_order ?? false,
+                medicalOrder: e.medical_order ?? '',
+                closedAt: e.closed_at ?? undefined,
               };
               (evosByCase[e.case_id] ||= []).push(ev);
             }
@@ -249,6 +362,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               infection: c.infection || undefined,
               pain: c.pain || undefined,
               treatment: c.treatment || undefined,
+              aiSummary: c.ai_summary || undefined,
+              aiSummaryUpdatedAt: c.ai_summary_updated_at || undefined,
             };
             (casesById[c.patient_id] ||= []).push(wc);
           }
@@ -258,16 +373,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const next = { ...prev };
           for (const row of (pats || []) as PatientRow[]) {
             if (next[row.id]) continue;
-            if (casesById[row.id] && casesById[row.id].length > 0) {
-              next[row.id] = casesById[row.id];
-              continue;
-            }
-            const seedMatch = demoPatients.find(d =>
-              d.firstName === row.first_name && d.lastName === row.last_name
-            );
-            next[row.id] = seedMatch
-              ? seedMatch.cases.map(c => ({ ...c, patientId: row.id }))
-              : [];
+            next[row.id] = casesById[row.id] || [];
           }
           return next;
         });
@@ -277,25 +383,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     })();
 
     return () => { cancelled = true; };
-  }, [authUser]);
+  }, [authUser?.id]);
 
   const currentUser: CurrentUser | null = useMemo(() => {
     if (!authUser) return null;
-    const role = (profile?.role as CurrentUser['role']) || 'enfermero';
     return {
       id: authUser.id,
       email: authUser.email || '',
       firstName: profile?.first_name || authUser.user_metadata?.first_name || '',
       lastName: profile?.last_name || authUser.user_metadata?.last_name || '',
-      role,
+      role: (userRole as AppRole) || 'professional',
       license: profile?.license || undefined,
       institution: profile?.institution || undefined,
     };
-  }, [authUser, profile]);
+  }, [authUser, profile, userRole]);
 
   const isLoggedIn = !!session;
   const currentUserName = currentUser
-    ? `${currentUser.role === 'medico' ? 'Dr.' : 'Lic.'} ${currentUser.firstName} ${currentUser.lastName}`.trim()
+    ? `Lic. ${currentUser.firstName} ${currentUser.lastName}`.trim()
     : '';
 
   // ---- Auth actions ----
@@ -359,7 +464,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setPatientRows(prev => [data as PatientRow, ...prev]);
     setCasesByPatient(prev => ({ ...prev, [(data as PatientRow).id]: [] }));
     return (data as PatientRow).id;
-  }, [authUser]);
+  }, [authUser?.id]);
 
   const updatePatient = useCallback(async (patient: Patient) => {
     if (!authUser) return;
@@ -371,7 +476,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .eq('id', patient.id);
     if (error) { console.error('updatePatient error', error); return; }
     setPatientRows(prev => prev.map(r => r.id === patient.id ? { ...r, ...updatable } as PatientRow : r));
-  }, [authUser]);
+  }, [authUser?.id]);
 
   const deletePatient = useCallback(async (id: string) => {
     const { error } = await supabase.from('patients').delete().eq('id', id);
@@ -384,23 +489,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  // ---- Cases / Evolutions (in-memory, Phase 2) ----
+  // ---- Cases / Evolutions ----
   const addCase = useCallback((patientId: string, woundCase: WoundCase) => {
     setCasesByPatient(prev => ({ ...prev, [patientId]: [...(prev[patientId] || []), woundCase] }));
   }, []);
-  const updateCase = useCallback((patientId: string, woundCase: WoundCase) => {
+
+  const updateCase = useCallback(async (patientId: string, woundCase: WoundCase) => {
     setCasesByPatient(prev => ({
       ...prev,
       [patientId]: (prev[patientId] || []).map(c => c.id === woundCase.id ? woundCase : c),
     }));
-  }, []);
+    if (!authUser) return;
+    const { error } = await supabase.from('wound_cases').update({
+      wound_type: woundCase.woundType,
+      anatomical_location: woundCase.anatomicalLocation || null,
+      start_date: woundCase.startDate || null,
+      status: woundCase.status,
+      size: woundCase.size || null,
+      depth: woundCase.depth || null,
+      exudate: woundCase.exudate || null,
+      infection: woundCase.infection || null,
+      pain: woundCase.pain || null,
+      treatment: woundCase.treatment || null,
+      ai_summary: woundCase.aiSummary || null,
+      ai_summary_updated_at: woundCase.aiSummaryUpdatedAt || null,
+    }).eq('id', woundCase.id).eq('user_id', authUser.id);
+    if (error) console.error('updateCase DB error', error);
+  }, [authUser?.id]);
+
   const deleteCase = useCallback((patientId: string, caseId: string) => {
     setCasesByPatient(prev => ({
       ...prev,
       [patientId]: (prev[patientId] || []).filter(c => c.id !== caseId),
     }));
   }, []);
-  const addEvolution = useCallback((patientId: string, caseId: string, evolution: Evolution) => {
+
+  const appendEvolutionToState = useCallback((patientId: string, caseId: string, evolution: Evolution) => {
     setCasesByPatient(prev => ({
       ...prev,
       [patientId]: (prev[patientId] || []).map(c =>
@@ -408,14 +532,113 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ),
     }));
   }, []);
-  const updateEvolution = useCallback((patientId: string, caseId: string, evolution: Evolution) => {
+
+  const addEvolution = useCallback(async (patientId: string, caseId: string, evolution: Evolution): Promise<string | null> => {
+    const tempId = evolution.id;
+    setCasesByPatient(prev => ({
+      ...prev,
+      [patientId]: (prev[patientId] || []).map(c =>
+        c.id === caseId ? { ...c, evolutions: [evolution, ...c.evolutions] } : c
+      ),
+    }));
+    if (!authUser) return tempId;
+    const { data, error } = await supabase.from('evolutions').insert({
+      user_id: authUser.id,
+      case_id: caseId,
+      evolution_date: evolution.date,
+      evolution_time: evolution.time || null,
+      next_control: evolution.nextControl || null,
+      next_control_time: evolution.nextControlTime || null,
+      professional: evolution.professional || null,
+      procedure: evolution.procedure || null,
+      materials: evolution.materials || null,
+      description: evolution.description || null,
+      observations: evolution.observations || null,
+      healing_frequency: evolution.healingFrequency || null,
+      pain_level: typeof evolution.painLevel === 'number' ? evolution.painLevel : null,
+      odor: evolution.odor || null,
+      exudate_amount: evolution.exudateAmount || null,
+      exudate_type: evolution.exudateType || null,
+      exudate_color: evolution.exudateColor || null,
+      tissue_types: (evolution.tissueTypes?.length ?? 0) > 0 ? evolution.tissueTypes : null,
+      edge_types: (evolution.edgeTypes?.length ?? 0) > 0 ? evolution.edgeTypes : null,
+      wound_length: typeof evolution.woundLength === 'number' ? evolution.woundLength : null,
+      wound_width: typeof evolution.woundWidth === 'number' ? evolution.woundWidth : null,
+      wound_depth: typeof evolution.woundDepth === 'number' ? evolution.woundDepth : null,
+      has_infection_signs: evolution.hasInfectionSigns ?? false,
+      inf_odor: evolution.infMalOlor ?? false,
+      inf_redness: evolution.infEritema ?? false,
+      inf_heat: evolution.infCalor ?? false,
+      inf_swelling: evolution.infBiofilm ?? false,
+      inf_purulent: evolution.infPurulenta ?? false,
+      inf_fever: evolution.infDolorAumentado ?? false,
+      body_temperature: typeof evolution.bodyTemperature === 'number' ? evolution.bodyTemperature : null,
+      evolution_status: evolution.evolutionStatus || null,
+      requires_medical_order: evolution.requiresMedicalOrder ?? false,
+      medical_order: evolution.medicalOrder || null,
+      closed_at: evolution.closedAt || null,
+    }).select('id').single();
+    if (error) {
+      console.error('addEvolution DB error', error);
+      return tempId;
+    }
+    const dbId = (data as { id: string }).id;
+    setCasesByPatient(prev => ({
+      ...prev,
+      [patientId]: (prev[patientId] || []).map(c =>
+        c.id === caseId
+          ? { ...c, evolutions: c.evolutions.map(e => e.id === tempId ? { ...e, id: dbId } : e) }
+          : c
+      ),
+    }));
+    return dbId;
+  }, [authUser?.id]);
+
+  const updateEvolution = useCallback(async (patientId: string, caseId: string, evolution: Evolution) => {
     setCasesByPatient(prev => ({
       ...prev,
       [patientId]: (prev[patientId] || []).map(c =>
         c.id === caseId ? { ...c, evolutions: c.evolutions.map(e => e.id === evolution.id ? evolution : e) } : c
       ),
     }));
-  }, []);
+    if (!authUser) return;
+    const { error } = await supabase.from('evolutions').update({
+      evolution_date: evolution.date,
+      evolution_time: evolution.time || null,
+      next_control: evolution.nextControl || null,
+      next_control_time: evolution.nextControlTime || null,
+      professional: evolution.professional || null,
+      procedure: evolution.procedure || null,
+      materials: evolution.materials || null,
+      description: evolution.description || null,
+      observations: evolution.observations || null,
+      healing_frequency: evolution.healingFrequency || null,
+      pain_level: typeof evolution.painLevel === 'number' ? evolution.painLevel : null,
+      odor: evolution.odor || null,
+      exudate_amount: evolution.exudateAmount || null,
+      exudate_type: evolution.exudateType || null,
+      exudate_color: evolution.exudateColor || null,
+      tissue_types: (evolution.tissueTypes?.length ?? 0) > 0 ? evolution.tissueTypes : null,
+      edge_types: (evolution.edgeTypes?.length ?? 0) > 0 ? evolution.edgeTypes : null,
+      wound_length: typeof evolution.woundLength === 'number' ? evolution.woundLength : null,
+      wound_width: typeof evolution.woundWidth === 'number' ? evolution.woundWidth : null,
+      wound_depth: typeof evolution.woundDepth === 'number' ? evolution.woundDepth : null,
+      has_infection_signs: evolution.hasInfectionSigns ?? false,
+      inf_odor: evolution.infMalOlor ?? false,
+      inf_redness: evolution.infEritema ?? false,
+      inf_heat: evolution.infCalor ?? false,
+      inf_swelling: evolution.infBiofilm ?? false,
+      inf_purulent: evolution.infPurulenta ?? false,
+      inf_fever: evolution.infDolorAumentado ?? false,
+      body_temperature: typeof evolution.bodyTemperature === 'number' ? evolution.bodyTemperature : null,
+      evolution_status: evolution.evolutionStatus || null,
+      requires_medical_order: evolution.requiresMedicalOrder ?? false,
+      medical_order: evolution.medicalOrder || null,
+      closed_at: evolution.closedAt || null,
+    }).eq('id', evolution.id).eq('user_id', authUser.id);
+    if (error) console.error('updateEvolution DB error', error);
+  }, [authUser?.id]);
+
   const deleteEvolution = useCallback((patientId: string, caseId: string, evolutionId: string) => {
     setCasesByPatient(prev => ({
       ...prev,
@@ -423,6 +646,107 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         c.id === caseId ? { ...c, evolutions: c.evolutions.filter(e => e.id !== evolutionId) } : c
       ),
     }));
+  }, []);
+
+  // ---- Compose turnos (rows -> app shape, deriving lifecycle status) ----
+  const turnos: Turno[] = useMemo(() => {
+    return turnoRows.map(row => {
+      const evolutions: CaseEvolutionInput[] = (casesByPatient[row.patient_id] || [])
+        .filter(c => c.id === row.case_id)
+        .flatMap(c => c.evolutions.map(e => ({ case_id: c.id, created_at: e.date })));
+      const status = deriveTurnoStatus(
+        {
+          case_id: row.case_id,
+          scheduled_date: row.scheduled_date,
+          scheduled_time: row.scheduled_time,
+          status: row.status,
+        },
+        evolutions,
+      );
+      return {
+        id: row.id,
+        caseId: row.case_id,
+        patientId: row.patient_id,
+        date: row.scheduled_date,
+        time: normalizeAppointmentTime(row.scheduled_time),
+        status,
+        notes: row.notes ?? '',
+      };
+    });
+  }, [turnoRows, casesByPatient]);
+
+  // ---- Turno CRUD (backend) ----
+  const cancelTurno = useCallback(async (id: string) => {
+    if (!authUser) return;
+    const { error } = await supabase
+      .from('turnos')
+      .update({ status: 'cancelado' })
+      .eq('id', id)
+      .eq('user_id', authUser.id);
+    if (error) { console.error('cancelTurno error', error); return; }
+    setTurnoRows(prev => prev.map(r => r.id === id ? { ...r, status: 'cancelado' as const } : r));
+  }, [authUser?.id]);
+
+  const createTurno = useCallback(async (input: { caseId: string; patientId: string; date: string; time?: string; notes?: string }): Promise<string | null> => {
+    if (!authUser) return null;
+
+    // Supersede any still-unresolved (programado/vencido) turno already
+    // scheduled for this case before creating a new one, so a case never
+    // accumulates duplicate/stale active turnos across multiple evolution
+    // closes. completado/cancelado turnos are final and left untouched.
+    const idsToSupersede = findTurnosToSupersede(turnos, input.caseId);
+    for (const id of idsToSupersede) {
+      try {
+        await cancelTurno(id);
+      } catch (err) {
+        // Best-effort: don't block scheduling the new turno just because
+        // superseding an old one failed, but surface it loudly.
+        console.error('createTurno: failed to supersede existing turno', id, err);
+      }
+    }
+
+    const insertable = {
+      user_id: authUser.id,
+      case_id: input.caseId,
+      patient_id: input.patientId,
+      scheduled_date: input.date,
+      scheduled_time: input.time || null,
+      notes: input.notes || null,
+      status: 'programado' as const,
+    };
+    const { data, error } = await supabase
+      .from('turnos')
+      .insert(insertable)
+      .select()
+      .single();
+    if (error) {
+      console.error('createTurno error', error);
+      return null;
+    }
+    setTurnoRows(prev => [data as TurnoRow, ...prev]);
+    return (data as TurnoRow).id;
+  }, [authUser?.id, turnos, cancelTurno]);
+
+  const updateTurno = useCallback(async (turno: Turno) => {
+    if (!authUser) return;
+    const updatable = {
+      scheduled_date: turno.date,
+      scheduled_time: turno.time || null,
+      notes: turno.notes || null,
+    };
+    const { error } = await supabase
+      .from('turnos')
+      .update(updatable)
+      .eq('id', turno.id)
+      .eq('user_id', authUser.id);
+    if (error) { console.error('updateTurno error', error); return; }
+    setTurnoRows(prev => prev.map(r => r.id === turno.id ? { ...r, ...updatable } as TurnoRow : r));
+  }, [authUser?.id]);
+
+  const deleteTurno = useCallback(async (id: string) => {
+    const { error } = await supabase.from('turnos').delete().eq('id', id);
+    if (error) { console.error('deleteTurno error', error); return; }
+    setTurnoRows(prev => prev.filter(r => r.id !== id));
   }, []);
 
   // ---- Compose patients (rows + in-memory cases) ----
@@ -440,7 +764,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addPatient, updatePatient, deletePatient,
 
       addCase, updateCase, deleteCase,
-      addEvolution, updateEvolution, deleteEvolution,
+      addEvolution, appendEvolutionToState, updateEvolution, deleteEvolution,
+
+      turnos, createTurno, updateTurno, cancelTurno, deleteTurno,
     }}>
       {children}
     </AppContext.Provider>

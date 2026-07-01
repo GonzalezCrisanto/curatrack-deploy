@@ -3,27 +3,50 @@ import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, ChevronRight, User } from 'lucide-react';
-import { useApp } from '@/context/AppContext';
-import { getNextControlTime } from '@/lib/appointments';
+import { useApp, type Turno } from '@/context/AppContext';
 import { useNavigate } from 'react-router-dom';
 
+function turnoStatusLabel(status: Turno['status']) {
+  if (status === 'completado') return 'Completado';
+  if (status === 'cancelado') return 'Cancelado';
+  if (status === 'vencido') return 'Vencido';
+  return 'Programado';
+}
+
+function turnoStatusChipClasses(status: Turno['status']) {
+  if (status === 'completado') return 'bg-success/10 text-success border-success/40';
+  if (status === 'cancelado') return 'bg-muted text-muted-foreground border-border';
+  if (status === 'vencido') return 'bg-destructive/10 text-destructive border-destructive/40';
+  return 'bg-warning/10 text-warning border-warning/40';
+}
+
 export default function Agenda() {
-  const { patients } = useApp();
+  const { patients, turnos } = useApp();
   const navigate = useNavigate();
 
+  const patientById = useMemo(() => {
+    const map: Record<string, (typeof patients)[number]> = {};
+    patients.forEach(p => { map[p.id] = p; });
+    return map;
+  }, [patients]);
+
   const upcoming = useMemo(() => {
-    const items: { date: string; time?: string; patient: any; caseId: string; woundType: string }[] = [];
-    patients.forEach(p => {
-      p.cases.forEach(c => {
-        c.evolutions.forEach(e => {
-          if (e.nextControl) {
-            items.push({ date: e.nextControl, time: getNextControlTime(e), patient: p, caseId: c.id, woundType: c.woundType });
-          }
-        });
+    const items: { date: string; time?: string; patient: (typeof patients)[number]; caseId: string; woundType: string; status: Turno['status'] }[] = [];
+    turnos.forEach(t => {
+      const patient = patientById[t.patientId];
+      if (!patient) return;
+      const woundCase = patient.cases.find(c => c.id === t.caseId);
+      items.push({
+        date: t.date,
+        time: t.time || undefined,
+        patient,
+        caseId: t.caseId,
+        woundType: woundCase?.woundType || '',
+        status: t.status,
       });
     });
     return items.sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
-  }, [patients]);
+  }, [turnos, patientById]);
 
   const today = new Date().toISOString().slice(0, 10);
   const groups = useMemo(() => {
@@ -91,6 +114,9 @@ export default function Agenda() {
                         </div>
                         <div className="font-body text-xs text-muted-foreground truncate">{it.woundType}</div>
                       </div>
+                      <Badge variant="outline" className={`font-body text-[10px] uppercase shrink-0 ${turnoStatusChipClasses(it.status)}`}>
+                        {turnoStatusLabel(it.status)}
+                      </Badge>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </button>
                   ))}

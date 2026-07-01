@@ -41,7 +41,7 @@ const statusBadgeClass: Record<string, string> = {
 };
 
 const emptyEvolution = {
-  date: '', time: '', professional: '', description: '', procedure: '', materials: '', healingFrequency: '', healingFrequencyDays: '' as number | '', observations: '', nextControl: '',
+  date: '', time: '', professional: '', description: '', procedure: '', materials: '', healingFrequency: '', observations: '', nextControl: '',
   healingDate: '', painLevel: 0 as number, odor: 'sin_olor' as OdorLevel, evolutionStatus: 'tratamiento_activo' as EvolutionStatus,
   woundLength: '' as number | '', woundWidth: '' as number | '', woundDepth: '' as number | '',
   tissueTypes: [] as TissueType[], edgeTypes: [] as EdgeType[],
@@ -205,7 +205,6 @@ export default function CaseDetail() {
       woundLength: rest.woundLength ?? '',
       woundWidth: rest.woundWidth ?? '',
       woundDepth: rest.woundDepth ?? '',
-      healingFrequencyDays: rest.healingFrequencyDays ?? '',
       tissueTypes: rest.tissueTypes ?? [],
       edgeTypes: rest.edgeTypes ?? [],
       exudateAmount: rest.exudateAmount,
@@ -260,7 +259,6 @@ export default function CaseDetail() {
               }
             : { presenta_signos: false },
           frecuencia_curacion: ev.healingFrequency || null,
-          frecuencia_dias: ev.healingFrequencyDays ?? null,
           procedimiento: ev.procedure || null,
           materiales_usados: ev.materials || null,
           descripcion: ev.description || null,
@@ -280,7 +278,6 @@ export default function CaseDetail() {
         estado_actual: labelOf(woundStatuses, woundCase.status as never) ?? woundCase.status,
         tratamiento_actual: woundCase.treatment || null,
         frecuencia_curacion_caso: woundCase.healingFrequency || null,
-        frecuencia_dias_caso: woundCase.healingFrequencyDays ?? null,
         cantidad_evoluciones: evos.length,
       },
       evoluciones: evos,
@@ -346,7 +343,6 @@ export default function CaseDetail() {
       woundWidth: numOrUndef(evoForm.woundWidth),
       woundDepth: numOrUndef(evoForm.woundDepth),
       bodyTemperature: numOrUndef(evoForm.bodyTemperature),
-      healingFrequencyDays: numOrUndef(evoForm.healingFrequencyDays),
     };
     const payload: Evolution = editingEvo
       ? { ...editingEvo, ...base, photos: evoPhotos } as Evolution
@@ -354,10 +350,12 @@ export default function CaseDetail() {
 
     const isNew = !editingEvo;
 
+    let savedEvoId = payload.id;
     if (editingEvo) {
-      updateEvolution(patient.id, woundCase.id, payload);
+      await updateEvolution(patient.id, woundCase.id, payload);
     } else {
-      addEvolution(patient.id, woundCase.id, payload);
+      const dbId = await addEvolution(patient.id, woundCase.id, payload);
+      if (dbId) savedEvoId = dbId;
     }
 
     // Save signatures & consent for new evolutions
@@ -378,7 +376,7 @@ export default function CaseDetail() {
       }
       const now = new Date().toISOString();
       supabase.from('evolution_signatures').insert({
-        evolution_id: payload.id,
+        evolution_id: savedEvoId,
         patient_id: patient.id,
         case_id: woundCase.id,
         user_id: currentUser.id,
@@ -402,9 +400,9 @@ export default function CaseDetail() {
 
     if (closeCase) {
       const closedAt = new Date().toISOString().split('T')[0];
-      const closedPayload: Evolution = { ...payload, closedAt };
-      updateEvolution(patient.id, woundCase.id, closedPayload);
-      updateCase(patient.id, { ...woundCase, status: 'resuelto' });
+      const closedPayload: Evolution = { ...payload, closedAt, id: savedEvoId };
+      await updateEvolution(patient.id, woundCase.id, closedPayload);
+      await updateCase(patient.id, { ...woundCase, status: 'resuelto' });
       toast.success('Curación registrada correctamente con firma y consentimiento. Caso cerrado.');
       setEvoDialogOpen(false);
       setCloseConfirmOpen(false);
@@ -417,15 +415,6 @@ export default function CaseDetail() {
   };
 
   const handleSaveEvo = () => {
-    // Si no hay frecuencia preestablecida (vacía o "A demanda"), exigir días manuales
-    const presetSet = ['Diaria', 'Cada 48hs', 'Cada 72hs', 'Semanal'];
-    const hasPreset = presetSet.includes((evoForm.healingFrequency || '').trim());
-    const manualDays = evoForm.healingFrequencyDays === '' ? null : Number(evoForm.healingFrequencyDays);
-    if (!hasPreset && (!manualDays || manualDays <= 0)) {
-      toast.error('Indicá la frecuencia de curación o, en su defecto, los días estimados entre curaciones.');
-      return;
-    }
-
     // Validate consent & signature (only for new evolutions)
     if (!editingEvo) {
       const cErrors = validateEvolutionConsent(profSignature, patientConsent);
@@ -703,7 +692,11 @@ export default function CaseDetail() {
         </div>
 
         {(() => {
-          const sorted = [...woundCase.evolutions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+          const sorted = [...woundCase.evolutions].sort((a, b) => {
+            const da = `${a.date || ''}T${a.time || '00:00'}`;
+            const db = `${b.date || ''}T${b.time || '00:00'}`;
+            return db < da ? -1 : db > da ? 1 : 0;
+          });
           const activeEvos = sorted.filter(e => !e.closedAt);
           const closedEvos = sorted.filter(e => !!e.closedAt);
 
@@ -937,23 +930,6 @@ export default function CaseDetail() {
                     {healingFrequencies.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                {(evoForm.healingFrequency === '' || evoForm.healingFrequency === 'A demanda') && (
-                  <div className="space-y-1 pt-1">
-                    <Label className="font-body text-[11px] text-muted-foreground">
-                      Días estimados entre curaciones <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      type="number" inputMode="numeric" min="1" step="1"
-                      value={evoForm.healingFrequencyDays}
-                      onChange={e => setEField('healingFrequencyDays', e.target.value === '' ? '' : Number(e.target.value))}
-                      className="font-body h-10 w-32 tabular-nums"
-                      placeholder="Ej: 5"
-                    />
-                    <p className="font-body text-[11px] text-muted-foreground">
-                      Se usa para sugerir los próximos turnos en el calendario.
-                    </p>
-                  </div>
-                )}
               </div>
 
               {/* Tamaño de la herida */}

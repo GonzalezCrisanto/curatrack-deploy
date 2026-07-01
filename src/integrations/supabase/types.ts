@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       cart_items: {
@@ -60,6 +85,20 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "lab_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_related_case_id_fkey"
+            columns: ["related_case_id"]
+            isOneToOne: false
+            referencedRelation: "wound_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_related_evolution_id_fkey"
+            columns: ["related_evolution_id"]
+            isOneToOne: false
+            referencedRelation: "evolutions"
             referencedColumns: ["id"]
           },
         ]
@@ -125,56 +164,147 @@ export type Database = {
           professional_signed_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "evolution_signatures_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "wound_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evolution_signatures_evolution_id_fkey"
+            columns: ["evolution_id"]
+            isOneToOne: false
+            referencedRelation: "evolutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evolution_signatures_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       evolutions: {
         Row: {
+          body_temperature: number | null
           case_id: string
+          closed_at: string | null
           created_at: string
           description: string | null
+          edge_types: string[] | null
           evolution_date: string
+          evolution_status: string | null
           evolution_time: string | null
-          healing_frequency: string | null
+          exudate_amount: string | null
+          exudate_color: string | null
+          exudate_type: string | null
+          has_infection_signs: boolean | null
+          healing_frequency_days: number | null
           id: string
+          inf_fever: boolean | null
+          inf_heat: boolean | null
+          inf_odor: boolean | null
+          inf_purulent: boolean | null
+          inf_redness: boolean | null
+          inf_swelling: boolean | null
           materials: string | null
+          medical_order: string | null
           next_control: string | null
+          next_control_time: string | null
           observations: string | null
+          odor: string | null
+          pain_level: number | null
           procedure: string | null
           professional: string | null
+          requires_medical_order: boolean | null
+          tissue_types: string[] | null
           updated_at: string
           user_id: string
+          wound_depth: number | null
+          wound_length: number | null
+          wound_width: number | null
         }
         Insert: {
+          body_temperature?: number | null
           case_id: string
+          closed_at?: string | null
           created_at?: string
           description?: string | null
+          edge_types?: string[] | null
           evolution_date: string
+          evolution_status?: string | null
           evolution_time?: string | null
-          healing_frequency?: string | null
+          exudate_amount?: string | null
+          exudate_color?: string | null
+          exudate_type?: string | null
+          has_infection_signs?: boolean | null
+          healing_frequency_days?: number | null
           id?: string
+          inf_fever?: boolean | null
+          inf_heat?: boolean | null
+          inf_odor?: boolean | null
+          inf_purulent?: boolean | null
+          inf_redness?: boolean | null
+          inf_swelling?: boolean | null
           materials?: string | null
+          medical_order?: string | null
           next_control?: string | null
+          next_control_time?: string | null
           observations?: string | null
+          odor?: string | null
+          pain_level?: number | null
           procedure?: string | null
           professional?: string | null
+          requires_medical_order?: boolean | null
+          tissue_types?: string[] | null
           updated_at?: string
           user_id: string
+          wound_depth?: number | null
+          wound_length?: number | null
+          wound_width?: number | null
         }
         Update: {
+          body_temperature?: number | null
           case_id?: string
+          closed_at?: string | null
           created_at?: string
           description?: string | null
+          edge_types?: string[] | null
           evolution_date?: string
+          evolution_status?: string | null
           evolution_time?: string | null
-          healing_frequency?: string | null
+          exudate_amount?: string | null
+          exudate_color?: string | null
+          exudate_type?: string | null
+          has_infection_signs?: boolean | null
+          healing_frequency_days?: number | null
           id?: string
+          inf_fever?: boolean | null
+          inf_heat?: boolean | null
+          inf_odor?: boolean | null
+          inf_purulent?: boolean | null
+          inf_redness?: boolean | null
+          inf_swelling?: boolean | null
           materials?: string | null
+          medical_order?: string | null
           next_control?: string | null
+          next_control_time?: string | null
           observations?: string | null
+          odor?: string | null
+          pain_level?: number | null
           procedure?: string | null
           professional?: string | null
+          requires_medical_order?: boolean | null
+          tissue_types?: string[] | null
           updated_at?: string
           user_id?: string
+          wound_depth?: number | null
+          wound_length?: number | null
+          wound_width?: number | null
         }
         Relationships: [
           {
@@ -441,25 +571,39 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "patient_consents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       patients: {
         Row: {
           address: string | null
           admission_date: string | null
           age: number | null
+          allergies: string | null
           assigned_professional: string | null
-          control_interval_days: number | null
+          birth_date: string | null
           created_at: string
           diagnosis: string | null
           dni: string | null
           email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
           first_name: string
           gender: string | null
           id: string
+          insurance: string | null
           last_name: string
           observations: string | null
           phone: string | null
+          treating_doctor_name: string | null
+          treating_doctor_phone: string | null
           updated_at: string
           user_id: string
         }
@@ -467,18 +611,24 @@ export type Database = {
           address?: string | null
           admission_date?: string | null
           age?: number | null
+          allergies?: string | null
           assigned_professional?: string | null
-          control_interval_days?: number | null
+          birth_date?: string | null
           created_at?: string
           diagnosis?: string | null
           dni?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           first_name: string
           gender?: string | null
           id?: string
+          insurance?: string | null
           last_name: string
           observations?: string | null
           phone?: string | null
+          treating_doctor_name?: string | null
+          treating_doctor_phone?: string | null
           updated_at?: string
           user_id: string
         }
@@ -486,18 +636,24 @@ export type Database = {
           address?: string | null
           admission_date?: string | null
           age?: number | null
+          allergies?: string | null
           assigned_professional?: string | null
-          control_interval_days?: number | null
+          birth_date?: string | null
           created_at?: string
           diagnosis?: string | null
           dni?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           first_name?: string
           gender?: string | null
           id?: string
+          insurance?: string | null
           last_name?: string
           observations?: string | null
           phone?: string | null
+          treating_doctor_name?: string | null
+          treating_doctor_phone?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -690,7 +846,6 @@ export type Database = {
           institution: string | null
           last_name: string
           license: string | null
-          role: string | null
           updated_at: string
           user_id: string
         }
@@ -701,7 +856,6 @@ export type Database = {
           institution?: string | null
           last_name?: string
           license?: string | null
-          role?: string | null
           updated_at?: string
           user_id: string
         }
@@ -712,7 +866,6 @@ export type Database = {
           institution?: string | null
           last_name?: string
           license?: string | null
-          role?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -774,7 +927,9 @@ export type Database = {
         Row: {
           accent_color: string
           app_name: string
+          billing_details: string | null
           catalog_name: string
+          contact_phone: string | null
           created_at: string
           id: string
           is_active: boolean
@@ -783,6 +938,7 @@ export type Database = {
           logo_url: string | null
           powered_by_label: string | null
           primary_color: string
+          responsible_person: string | null
           sales_contact_label: string | null
           secondary_color: string
           slug: string
@@ -794,7 +950,9 @@ export type Database = {
         Insert: {
           accent_color?: string
           app_name: string
+          billing_details?: string | null
           catalog_name?: string
+          contact_phone?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
@@ -803,6 +961,7 @@ export type Database = {
           logo_url?: string | null
           powered_by_label?: string | null
           primary_color?: string
+          responsible_person?: string | null
           sales_contact_label?: string | null
           secondary_color?: string
           slug: string
@@ -814,7 +973,9 @@ export type Database = {
         Update: {
           accent_color?: string
           app_name?: string
+          billing_details?: string | null
           catalog_name?: string
+          contact_phone?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
@@ -823,6 +984,7 @@ export type Database = {
           logo_url?: string | null
           powered_by_label?: string | null
           primary_color?: string
+          responsible_person?: string | null
           sales_contact_label?: string | null
           secondary_color?: string
           slug?: string
@@ -831,7 +993,15 @@ export type Database = {
           support_email?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sponsors_lab_id_fkey"
+            columns: ["lab_id"]
+            isOneToOne: false
+            referencedRelation: "labs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       supply_order_items: {
         Row: {
@@ -920,7 +1090,7 @@ export type Database = {
           sent_at: string | null
           status: string
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           channel?: string | null
@@ -939,13 +1109,13 @@ export type Database = {
           id?: string
           institution?: string | null
           lab_id?: string | null
-          order_number: string
+          order_number?: string
           professional_name?: string | null
           seller_id?: string | null
           sent_at?: string | null
           status?: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           channel?: string | null
@@ -970,7 +1140,7 @@ export type Database = {
           sent_at?: string | null
           status?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -992,6 +1162,60 @@ export type Database = {
             columns: ["seller_id"]
             isOneToOne: false
             referencedRelation: "lab_sellers_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      turnos: {
+        Row: {
+          case_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          patient_id: string
+          scheduled_date: string
+          scheduled_time: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          patient_id: string
+          scheduled_date: string
+          scheduled_time?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          scheduled_date?: string
+          scheduled_time?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turnos_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "wound_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turnos_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
@@ -1041,7 +1265,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          role: Database["public"]["Enums"]["app_role"]
+          role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
@@ -1083,52 +1307,40 @@ export type Database = {
       }
       wound_cases: {
         Row: {
+          ai_summary: string | null
+          ai_summary_updated_at: string | null
           anatomical_location: string | null
           created_at: string
-          depth: string | null
-          exudate: string | null
           id: string
-          infection: string | null
-          pain: string | null
           patient_id: string
-          size: string | null
           start_date: string | null
           status: string
-          treatment: string | null
           updated_at: string
           user_id: string
           wound_type: string
         }
         Insert: {
+          ai_summary?: string | null
+          ai_summary_updated_at?: string | null
           anatomical_location?: string | null
           created_at?: string
-          depth?: string | null
-          exudate?: string | null
           id?: string
-          infection?: string | null
-          pain?: string | null
           patient_id: string
-          size?: string | null
           start_date?: string | null
           status?: string
-          treatment?: string | null
           updated_at?: string
           user_id: string
           wound_type: string
         }
         Update: {
+          ai_summary?: string | null
+          ai_summary_updated_at?: string | null
           anatomical_location?: string | null
           created_at?: string
-          depth?: string | null
-          exudate?: string | null
           id?: string
-          infection?: string | null
-          pain?: string | null
           patient_id?: string
-          size?: string | null
           start_date?: string | null
           status?: string
-          treatment?: string | null
           updated_at?: string
           user_id?: string
           wound_type?: string
@@ -1226,10 +1438,6 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
-      }
-      seed_demo_clinical_for_user: {
-        Args: { _user_id: string }
-        Returns: undefined
       }
     }
     Enums: {
@@ -1359,6 +1567,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["admin", "professional", "sponsor"],

@@ -16,7 +16,6 @@ import { calculateAge } from '@/lib/age';
 const emptyPatient: Omit<Patient, 'id' | 'cases'> = {
   firstName: '', lastName: '', birthDate: '', age: 0, gender: '', dni: '', phone: '',
   email: '', address: '', diagnosis: '', assignedProfessional: '', observations: '', admissionDate: '',
-  controlIntervalDays: 7,
   treatingDoctorName: '', treatingDoctorPhone: '',
   allergies: '', insurance: '', emergencyContactName: '', emergencyContactPhone: '',
 };
@@ -218,6 +217,24 @@ export default function NewPatient() {
                     onChange={e => setField('allergies', e.target.value)}
                     className="font-body"
                     placeholder="Látex, yodo, antibióticos, materiales de cura, etc."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-body text-sm">Médico tratante <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                  <Input
+                    value={form.treatingDoctorName || ''}
+                    onChange={e => setField('treatingDoctorName', e.target.value)}
+                    className="font-body"
+                    placeholder="Dr. / Dra. nombre y apellido"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-body text-sm">Teléfono del médico <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                  <Input
+                    value={form.treatingDoctorPhone || ''}
+                    onChange={e => setField('treatingDoctorPhone', e.target.value)}
+                    className="font-body"
+                    placeholder="Ej: +54 11 4444 5678"
                   />
                 </div>
               </div>

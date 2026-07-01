@@ -79,14 +79,13 @@ export default function Register() {
 
     setLoading(true);
     // Self-registration never grants admin; server-side trigger also enforces this.
-    const mappedRole: 'enfermero' | 'medico' =
-      role === 'medico' ? 'medico' : 'enfermero';
+    // All clinical specialties map to the 'professional' app_role.
     const result = await registerUser({
       email: email.trim(),
       password,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
-      role: mappedRole,
+      role: 'professional',
       license: license.trim() || undefined,
       institution: institution.trim() || undefined,
     });
