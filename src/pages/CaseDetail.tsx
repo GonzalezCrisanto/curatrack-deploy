@@ -18,7 +18,7 @@ import {
   Stethoscope, Ruler, Droplets, ShieldAlert, Thermometer, Pill, X, Image, Upload, Package, RefreshCw, CheckCircle2, Save,
   TrendingDown, TrendingUp, Minus, Sparkles, Archive, Copy, Printer, Download, Loader2
 } from 'lucide-react';
-import { Evolution, Photo, professionals, getStatusLabel, woundStatuses, healingFrequencies, odorOptions, evolutionStatuses, OdorLevel, EvolutionStatus, tissueTypeOptions, edgeTypeOptions, TissueType, EdgeType, exudateAmountOptions, exudateTypeOptions, exudateColorOptions, ExudateAmount, ExudateType, ExudateColor, infectionSignFields } from '@/data/demoData';
+import { Evolution, Photo, professionals, getStatusLabel, woundStatuses, odorOptions, evolutionStatuses, OdorLevel, EvolutionStatus, tissueTypeOptions, edgeTypeOptions, TissueType, EdgeType, exudateAmountOptions, exudateTypeOptions, exudateColorOptions, ExudateAmount, ExudateType, ExudateColor, infectionSignFields } from '@/data/demoData';
 import { getPatientAge, formatPatientAge } from '@/lib/age';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getEvolutionArea } from '@/lib/patientStatus';
@@ -41,7 +41,7 @@ const statusBadgeClass: Record<string, string> = {
 };
 
 const emptyEvolution = {
-  date: '', time: '', professional: '', description: '', procedure: '', materials: '', healingFrequency: '', observations: '', nextControl: '',
+  date: '', time: '', professional: '', description: '', procedure: '', materials: '', observations: '', nextControl: '',
   healingDate: '', painLevel: 0 as number, odor: 'sin_olor' as OdorLevel, evolutionStatus: 'tratamiento_activo' as EvolutionStatus,
   woundLength: '' as number | '', woundWidth: '' as number | '', woundDepth: '' as number | '',
   tissueTypes: [] as TissueType[], edgeTypes: [] as EdgeType[],
@@ -258,7 +258,6 @@ export default function CaseDetail() {
                 temperatura_c: ev.bodyTemperature ?? null,
               }
             : { presenta_signos: false },
-          frecuencia_curacion: ev.healingFrequency || null,
           procedimiento: ev.procedure || null,
           materiales_usados: ev.materials || null,
           descripcion: ev.description || null,
@@ -277,7 +276,6 @@ export default function CaseDetail() {
         inicio: woundCase.startDate,
         estado_actual: labelOf(woundStatuses, woundCase.status as never) ?? woundCase.status,
         tratamiento_actual: woundCase.treatment || null,
-        frecuencia_curacion_caso: woundCase.healingFrequency || null,
         cantidad_evoluciones: evos.length,
       },
       evoluciones: evos,
@@ -800,12 +798,6 @@ export default function CaseDetail() {
                           <p className="font-body text-sm">{ev.materials}</p>
                         </div>
                       )}
-                      {ev.healingFrequency && (
-                        <div>
-                          <p className="font-body text-xs text-muted-foreground mb-0.5 flex items-center gap-1"><RefreshCw className="h-3 w-3" /> Frecuencia de curación</p>
-                          <p className="font-body text-sm">{ev.healingFrequency}</p>
-                        </div>
-                      )}
                       {ev.observations && (
                         <div>
                           <p className="font-body text-xs text-muted-foreground mb-0.5">Observaciones</p>
@@ -917,17 +909,6 @@ export default function CaseDetail() {
                   <SelectTrigger className="font-body h-11"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {professionals.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Frecuencia de curación */}
-              <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Frecuencia de curación <span className="text-destructive">*</span></Label>
-                <Select value={evoForm.healingFrequency} onValueChange={v => setEField('healingFrequency', v)}>
-                  <SelectTrigger className="font-body h-11"><SelectValue placeholder="Seleccionar frecuencia" /></SelectTrigger>
-                  <SelectContent>
-                    {healingFrequencies.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

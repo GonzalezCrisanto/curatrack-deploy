@@ -213,7 +213,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setAuthUser(null);
       } else if (newSession?.user) {
         setSession(newSession);
-        setAuthUser(newSession.user);
+        // Keep the same object reference when the signed-in user hasn't
+        // changed (e.g. TOKEN_REFRESHED on tab focus/visibility regain).
+        // Otherwise every token refresh produces a new `authUser` object,
+        // which cascades through the `currentUser` memo into useAppRole's
+        // effect and flashes the RoleGuard skeleton on every reference change.
+        setAuthUser(prev => (prev?.id === newSession.user.id ? prev : newSession.user));
       }
       // TOKEN_REFRESHED and other intermediate events with null session are ignored
       // to prevent transient logouts that cause navigation to /login
@@ -315,7 +320,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 description: e.description || '',
                 procedure: e.procedure || '',
                 materials: e.materials || '',
-                healingFrequency: e.healing_frequency || '',
                 observations: stripNextControlTimeMarker(e.observations),
                 nextControl: e.next_control || '',
                 nextControlTime,
@@ -554,7 +558,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       materials: evolution.materials || null,
       description: evolution.description || null,
       observations: evolution.observations || null,
-      healing_frequency: evolution.healingFrequency || null,
       pain_level: typeof evolution.painLevel === 'number' ? evolution.painLevel : null,
       odor: evolution.odor || null,
       exudate_amount: evolution.exudateAmount || null,
@@ -612,7 +615,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       materials: evolution.materials || null,
       description: evolution.description || null,
       observations: evolution.observations || null,
-      healing_frequency: evolution.healingFrequency || null,
       pain_level: typeof evolution.painLevel === 'number' ? evolution.painLevel : null,
       odor: evolution.odor || null,
       exudate_amount: evolution.exudateAmount || null,

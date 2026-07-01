@@ -144,7 +144,6 @@ export default function NewCuration() {
     perilesional: 'sana',
     observations: '',
     procedure: '',
-    healingFrequency: '',
     nextControl: '',
     nextControlTime: '',
   });
@@ -403,7 +402,6 @@ export default function NewCuration() {
         description,
         procedure: evo.procedure || null,
         materials: materialsList,
-        healing_frequency: evo.healingFrequency || null,
         observations: evo.observations || null,
         next_control: evo.nextControl || null,
         // Rich clinical fields
@@ -469,7 +467,6 @@ export default function NewCuration() {
         description,
         procedure: evo.procedure || '',
         materials: materialsList || '',
-        healingFrequency: evo.healingFrequency || '',
         observations: evo.observations || '',
         nextControl: evo.nextControl || '',
         nextControlTime,

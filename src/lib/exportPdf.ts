@@ -61,7 +61,6 @@ export function exportPatientPdf(patient: Patient, signatureMap?: Record<string,
               <tr><td class="label">Descripción clínica</td><td>${ev.description}</td></tr>
               <tr><td class="label">Procedimiento</td><td>${ev.procedure}</td></tr>
               ${ev.materials ? `<tr><td class="label">Material de curación</td><td>${ev.materials}</td></tr>` : ''}
-              ${ev.healingFrequency ? `<tr><td class="label">Frecuencia de curación</td><td>${ev.healingFrequency}</td></tr>` : ''}
               ${ev.observations ? `<tr><td class="label">Observaciones</td><td>${ev.observations}</td></tr>` : ''}
               <tr><td class="label">Próximo control</td><td>${formatNextControl(ev.nextControl, getNextControlTime(ev))}</td></tr>
             </table>

@@ -203,7 +203,6 @@ export type Database = {
           exudate_color: string | null
           exudate_type: string | null
           has_infection_signs: boolean | null
-          healing_frequency_days: number | null
           id: string
           inf_fever: boolean | null
           inf_heat: boolean | null
@@ -242,7 +241,6 @@ export type Database = {
           exudate_color?: string | null
           exudate_type?: string | null
           has_infection_signs?: boolean | null
-          healing_frequency_days?: number | null
           id?: string
           inf_fever?: boolean | null
           inf_heat?: boolean | null
@@ -281,7 +279,6 @@ export type Database = {
           exudate_color?: string | null
           exudate_type?: string | null
           has_infection_signs?: boolean | null
-          healing_frequency_days?: number | null
           id?: string
           inf_fever?: boolean | null
           inf_heat?: boolean | null

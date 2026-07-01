@@ -20,7 +20,7 @@ import {
 import { exportPatientPdf } from '@/lib/exportPdf';
 import {
   WoundCase, Photo, woundTypes, woundStatuses, getStatusLabel, professionals,
-  healingFrequencies, odorOptions, tissueTypeOptions, edgeTypeOptions,
+  odorOptions, tissueTypeOptions, edgeTypeOptions,
   exudateAmountOptions, exudateTypeOptions, exudateColorOptions, infectionSignFields,
   TissueType, EdgeType, OdorLevel, ExudateAmount, ExudateType, ExudateColor,
 } from '@/data/demoData';
@@ -73,7 +73,6 @@ interface CaseFormState {
   infPurulenta: boolean;
   infDolorAumentado: boolean;
   bodyTemperature: number | '';
-  healingFrequency: string;
   initialProcedure: string;
   initialMaterials: string;
   initialObservations: string;
@@ -90,7 +89,6 @@ const emptyCase: CaseFormState = {
   hasInfectionSigns: false,
   infMalOlor: false, infEritema: false, infCalor: false, infBiofilm: false, infPurulenta: false, infDolorAumentado: false,
   bodyTemperature: '',
-  healingFrequency: '',
   initialProcedure: '', initialMaterials: '', initialObservations: '',
   treatment: '',
 };
@@ -199,6 +197,7 @@ export default function PatientDetail() {
   const [apptCaseId, setApptCaseId] = useState<string>('');
   const [apptDate, setApptDate] = useState<string>('');
   const [apptTime, setApptTime] = useState<string>('09:00');
+  const [apptNotes, setApptNotes] = useState<string>('');
 
   // Compute conflicts for currently selected appointment date (must run before early return)
   // Includes both the current patient's own appointments and other patients' appointments.
@@ -293,7 +292,6 @@ export default function PatientDetail() {
       infPurulenta: c.infPurulenta ?? false,
       infDolorAumentado: c.infDolorAumentado ?? false,
       bodyTemperature: c.bodyTemperature ?? '',
-      healingFrequency: c.healingFrequency ?? '',
       initialProcedure: c.initialProcedure ?? '',
       initialMaterials: c.initialMaterials ?? '',
       initialObservations: c.initialObservations ?? '',
@@ -341,7 +339,6 @@ export default function PatientDetail() {
       infPurulenta: caseForm.infPurulenta,
       infDolorAumentado: caseForm.infDolorAumentado,
       bodyTemperature: numOrUndef(caseForm.bodyTemperature),
-      healingFrequency: caseForm.healingFrequency,
       initialProcedure: caseForm.initialProcedure,
       initialMaterials: caseForm.initialMaterials,
       initialObservations: caseForm.initialObservations,
@@ -369,7 +366,6 @@ export default function PatientDetail() {
         description: 'Evaluación inicial. Datos basales de la herida registrados al ingreso del caso.',
         procedure: caseForm.initialProcedure,
         materials: caseForm.initialMaterials,
-        healingFrequency: caseForm.healingFrequency,
         observations: caseForm.initialObservations,
         nextControl: '',
         photos: casePhotos,
@@ -421,8 +417,9 @@ export default function PatientDetail() {
 
   const handleSaveAppointment = async () => {
     if (!apptCaseId || !apptDate) return;
-    await createTurno({ caseId: apptCaseId, patientId: patient.id, date: apptDate, time: apptTime });
+    await createTurno({ caseId: apptCaseId, patientId: patient.id, date: apptDate, time: apptTime, notes: apptNotes.trim() || undefined });
     setApptDialogOpen(false);
+    setApptNotes('');
   };
 
   return (
@@ -658,66 +655,10 @@ export default function PatientDetail() {
               };
             });
           const otherDates = otherPatientsAppointments.map(a => a.date);
-          const otherDateStrings = new Set(otherDates.map(d => d.toISOString().split('T')[0]));
-
-          // Map healing frequency label to days interval
-          const frequencyToDays = (freq?: string): number | null => {
-            switch ((freq || '').trim()) {
-              case 'Diaria': return 1;
-              case 'Cada 48hs': return 2;
-              case 'Cada 72hs': return 3;
-              case 'Semanal': return 7;
-              case 'A demanda': return null;
-              default: return null;
-            }
-          };
-
-          // Suggested future dates PER CASE based on its healingFrequency.
-          // Anchor: latest evolution date with that frequency, else next existing turno, else today.
-          const existingDateStrings = new Set(appointmentsByCase.map(a => a.date.toISOString().split('T')[0]));
-          const suggestionsByCase: Array<{ caseId: string; date: Date; days: number }> = [];
-
-          activeCases.forEach(c => {
-            // Take the MOST RECENT evolution that defines either a preset frequency or manual days.
-            // This way, updating an evolution to manual days overrides any older preset.
-            const sortedEvos = [...c.evolutions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-            const latestWithFreq = sortedEvos.find(e =>
-              e.healingFrequency && e.healingFrequency.trim() !== ''
-            );
-            const freq = latestWithFreq?.healingFrequency || (latestWithFreq ? '' : c.healingFrequency);
-            const days = frequencyToDays(freq);
-            if (!days) return;
-
-            // Anchor date: last existing turno for this case, else last evolution date, else today
-            const futureControls = patientTurnos
-              .filter(t => t.caseId === c.id)
-              .map(t => new Date(t.date + 'T12:00:00'))
-              .sort((a, b) => b.getTime() - a.getTime());
-            let anchor = futureControls[0]
-              || (sortedEvos[0]?.date ? new Date(sortedEvos[0].date + 'T12:00:00') : new Date(today));
-            if (anchor < today) anchor = new Date(today);
-
-            for (let i = 1; i <= 6; i++) {
-              const d = new Date(anchor);
-              d.setDate(d.getDate() + days * i);
-              const ds = d.toISOString().split('T')[0];
-              if (!existingDateStrings.has(ds)) {
-                suggestionsByCase.push({ caseId: c.id, date: new Date(d), days });
-              }
-            }
-          });
-
-          const suggestedDates: Date[] = suggestionsByCase.map(s => s.date);
 
           // Build dynamic modifiers: one modifier key per case
-          const modifiers: Record<string, Date[]> = { suggested: suggestedDates, other: otherDates };
+          const modifiers: Record<string, Date[]> = { other: otherDates };
           const modifiersStyles: Record<string, React.CSSProperties> = {
-            suggested: {
-              backgroundColor: 'transparent',
-              color: 'hsl(var(--muted-foreground))',
-              borderRadius: '9999px',
-              border: '1.5px dashed hsl(var(--muted-foreground) / 0.5)',
-            },
             other: {
               backgroundColor: 'hsl(var(--muted))',
               color: 'hsl(var(--muted-foreground))',
@@ -726,21 +667,6 @@ export default function PatientDetail() {
               opacity: 0.7,
             },
           };
-          activeCases.forEach(c => {
-            // Suggested per-case (dashed circle with case color)
-            const sugDates = suggestionsByCase.filter(s => s.caseId === c.id).map(s => s.date);
-            if (sugDates.length > 0) {
-              const sKey = `sug_${c.id}`;
-              modifiers[sKey] = sugDates;
-              modifiersStyles[sKey] = {
-                backgroundColor: 'transparent',
-                color: caseColor[c.id],
-                borderRadius: '9999px',
-                border: `1.5px dashed ${caseColor[c.id]}`,
-                fontWeight: 600,
-              };
-            }
-          });
 
           // Group existing appointments by date to support multiple wounds per day
           const apptByDate = new Map<string, { date: Date; caseIds: Set<string> }>();
@@ -798,17 +724,9 @@ export default function PatientDetail() {
             const caseId = preselectCaseId || activeCases[0]?.id || '';
             setApptCaseId(caseId);
 
-            // Default date: first suggested date for the chosen case (or earliest overall),
-            // falling back to 7 days ahead if no suggestion exists.
-            let defaultDate = preselectDate;
-            if (!defaultDate) {
-              const sortedSugs = [...suggestionsByCase].sort((a, b) => a.date.getTime() - b.date.getTime());
-              const forCase = caseId ? sortedSugs.find(s => s.caseId === caseId) : undefined;
-              const chosen = forCase || sortedSugs[0];
-              defaultDate = chosen
-                ? chosen.date.toISOString().split('T')[0]
-                : new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-            }
+            // Default date: 7 days ahead of today.
+            const defaultDate = preselectDate
+              || new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
             setApptDate(defaultDate);
 
             // Default time: first 15-min slot from 09:00 not colliding with any appointment that day.
@@ -817,6 +735,7 @@ export default function PatientDetail() {
               if (t.status !== 'cancelado' && t.date === defaultDate && t.time) takenThatDay.add(t.time);
             });
             setApptTime(pickAvailableTime(takenThatDay));
+            setApptNotes('');
 
             setApptDialogOpen(true);
           };
@@ -842,7 +761,7 @@ export default function PatientDetail() {
                   <div className="shrink-0">
                     <Calendar
                       mode="multiple"
-                      selected={[...appointmentsByCase.map(a => a.date), ...suggestedDates]}
+                      selected={appointmentsByCase.map(a => a.date)}
                       className="p-3 pointer-events-auto rounded-lg border border-border/50"
                       modifiers={modifiers}
                       modifiersStyles={modifiersStyles}
@@ -868,10 +787,6 @@ export default function PatientDetail() {
                           <span className="font-body text-xs text-muted-foreground">Varias heridas</span>
                         </div>
                       )}
-                      <div className="flex items-center gap-1.5">
-                        <span className="h-3 w-3 rounded-full border-2 border-dashed border-muted-foreground/50" />
-                        <span className="font-body text-xs text-muted-foreground">Sugerido</span>
-                      </div>
                       {otherDates.length > 0 && (
                         <div className="flex items-center gap-1.5">
                           <span className="h-3 w-3 rounded-full bg-muted border border-muted-foreground/40" />
@@ -912,54 +827,6 @@ export default function PatientDetail() {
                       ));
                     })() : (
                       <p className="font-body text-sm text-muted-foreground">No hay turnos programados.</p>
-                    )}
-
-                    {suggestionsByCase.length > 0 && (
-                      <>
-                        <h3 className="font-body text-sm font-semibold text-muted-foreground mt-4">Turnos sugeridos según frecuencia de curación</h3>
-                        <div className="space-y-2">
-                          {activeCases.map(c => {
-                            const sugs = suggestionsByCase.filter(s => s.caseId === c.id).slice(0, 4);
-                            if (sugs.length === 0) return null;
-                            const days = sugs[0].days;
-                            const freqLabel =
-                              days === 1 ? 'Diaria' :
-                              days === 2 ? 'Cada 48hs' :
-                              days === 3 ? 'Cada 72hs' :
-                              days === 7 ? 'Semanal' :
-                              `Cada ${days} días`;
-                            return (
-                              <div key={`sugcase-${c.id}`} className="p-2.5 rounded-lg border border-border/40 bg-muted/20">
-                                <div className="flex items-center gap-2 mb-1.5">
-                                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: caseColor[c.id] }} />
-                                  <span className="font-body text-xs font-semibold truncate">
-                                    {c.woundType}{c.anatomicalLocation ? ` · ${c.anatomicalLocation}` : ''}
-                                  </span>
-                                  <Badge variant="outline" className="font-body text-[10px] ml-auto shrink-0">{freqLabel}</Badge>
-                                </div>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {sugs.map((s, i) => {
-                                    const ds = s.date.toISOString().split('T')[0];
-                                    const clash = otherDateStrings.has(ds);
-                                    return (
-                                      <Badge
-                                        key={`sug-${c.id}-${i}`}
-                                        variant="outline"
-                                        className={`font-body text-xs cursor-pointer ${clash ? 'border-warning/60 text-warning' : 'hover:bg-accent'}`}
-                                        style={!clash ? { borderColor: caseColor[c.id], color: caseColor[c.id], borderStyle: 'dashed' } : undefined}
-                                        onClick={() => openNewAppointment(ds, c.id)}
-                                        title={clash ? 'Ese día ya hay turno con otro paciente' : `Programar turno para ${c.woundType}`}
-                                      >
-                                        {ds}{clash ? ' ⚠' : ''}
-                                      </Badge>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </>
                     )}
 
                   </div>
@@ -1028,6 +895,17 @@ export default function PatientDetail() {
                     </p>
                   )}
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-body text-sm">Notas (opcional)</Label>
+                <Textarea
+                  value={apptNotes}
+                  onChange={e => setApptNotes(e.target.value)}
+                  placeholder="Ej: traer resultados de laboratorio"
+                  className="font-body"
+                  rows={2}
+                />
               </div>
 
               {apptConflicts.length > 0 && (() => {
@@ -1148,17 +1026,6 @@ export default function PatientDetail() {
                 <div className="font-body h-11 flex items-center px-3 rounded-md border border-input bg-muted/40 text-sm">
                   {caseForm.professional || currentUserName || '—'}
                 </div>
-              </div>
-
-              {/* Frecuencia de curación */}
-              <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Frecuencia de curación <span className="text-destructive">*</span></Label>
-                <Select value={caseForm.healingFrequency} onValueChange={v => setCField('healingFrequency', v)}>
-                  <SelectTrigger className="font-body h-11"><SelectValue placeholder="Seleccionar frecuencia" /></SelectTrigger>
-                  <SelectContent>
-                    {healingFrequencies.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                  </SelectContent>
-                </Select>
               </div>
 
               {/* Tamaño de la herida */}
