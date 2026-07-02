@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useApp } from '@/context/AppContext';
+import { useApp, type Turno } from '@/context/AppContext';
 import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { SharePatientDialog } from '@/components/SharePatientDialog';
 import { WoundForm } from '@/components/WoundForm';
 import { PatientConsentCard } from '@/components/PatientConsentCard';
+import { TurnoActionsDialog } from '@/components/TurnoActionsDialog';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
@@ -65,6 +66,7 @@ export default function PatientDetail() {
   const [woundFormOpen, setWoundFormOpen] = useState(false);
   const [editingWound, setEditingWound] = useState<WoundCase | null>(null);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [turnoActionsTarget, setTurnoActionsTarget] = useState<Turno | null>(null);
 
   // Patient edit dialog
   const [patientEditOpen, setPatientEditOpen] = useState(false);
@@ -386,7 +388,7 @@ export default function PatientDetail() {
           // This patient's upcoming turnos (excluding cancelled)
           const patientTurnos = turnos
             .filter(t => t.patientId === patient.id && t.status !== 'cancelado' && new Date(t.date + 'T12:00:00') >= today)
-            .map(t => ({ date: new Date(t.date + 'T12:00:00'), dateIso: t.date, time: t.time, status: t.status }))
+            .map(t => ({ id: t.id, date: new Date(t.date + 'T12:00:00'), dateIso: t.date, time: t.time, status: t.status }))
             .sort((a, b) => a.date.getTime() - b.date.getTime());
 
           // Appointments from OTHER patients (to avoid scheduling clashes)
@@ -479,7 +481,10 @@ export default function PatientDetail() {
                       <div
                         key={`ap-${i}`}
                         className="p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow cursor-pointer border-l-4 border-l-primary"
-                        onClick={() => navigate(`/patients/${patient.id}`)}
+                        onClick={() => {
+                          const t = turnos.find(x => x.id === ap.id);
+                          if (t) setTurnoActionsTarget(t);
+                        }}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -745,6 +750,13 @@ export default function PatientDetail() {
           onOpenChange={(o) => { setWoundFormOpen(o); if (!o) setEditingWound(null); }}
           patient={patient}
           editingCase={editingWound}
+        />
+
+        <TurnoActionsDialog
+          turno={turnoActionsTarget}
+          patientName={`${patient.firstName} ${patient.lastName}`}
+          open={!!turnoActionsTarget}
+          onOpenChange={(o) => { if (!o) setTurnoActionsTarget(null); }}
         />
         </div>
       </div>

@@ -948,11 +948,11 @@ export default function NewCuration() {
                       <SelectItem value="activo">Estable</SelectItem>
                       <SelectItem value="en_deterioro">En deterioro</SelectItem>
                       <SelectItem value="critico">Crítica</SelectItem>
-                      <SelectItem value="resuelto" className="text-success font-semibold focus:text-success">
-                        Herida Finalizada - Cicatrizada
-                      </SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="font-body text-xs text-muted-foreground mt-1">
+                    Para cerrar la herida como cicatrizada, hacelo desde el detalle de la herida.
+                  </p>
                 </div>
 
                 <div className="space-y-2">

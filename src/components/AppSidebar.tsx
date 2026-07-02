@@ -41,9 +41,8 @@ const clinicalItems: SidebarItem[] = [
  // { title: 'Casos de heridas', url: '/cases', icon: Activity, section: 'casos-heridas' },
   { title: 'Nueva curación', url: '/curation/new', icon: PlusCircle, section: 'nueva-curacion' },
   { title: 'Nuevo paciente', url: '/patients/new', icon: PlusCircle, section: 'nueva-curacion' },
- 
-
-  //{ title: 'Agenda', url: '/agenda', icon: Calendar, section: 'agenda' },
+  { title: 'Pacientes', url: '/patients', icon: Users, section: 'pacientes' },
+  { title: 'Turnos', url: '/agenda', icon: Calendar, section: 'agenda' },
 ];
 
 const commercialItems: SidebarItem[] = [

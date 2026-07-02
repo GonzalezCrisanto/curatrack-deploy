@@ -1,5 +1,5 @@
 import { KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { useApp } from '@/context/AppContext';
+import { useApp, type Turno } from '@/context/AppContext';
 import { useSponsor } from '@/context/SponsorContext';
 import { useAppRole } from '@/hooks/useAppRole';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,11 +15,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { TurnoActionsDialog } from '@/components/TurnoActionsDialog';
 import {
   Activity, Users, AlertTriangle, CalendarClock, Clock, ShoppingBag,
   TrendingUp, Sparkles, Plus, ArrowRight, Stethoscope, Package,
   AlertCircle, CheckCircle2, Lightbulb, Pill, FileBarChart, ChevronLeft, ChevronRight, Search,
-  UserPlus, CalendarPlus,
+  UserPlus, CalendarPlus, MoreVertical,
 } from 'lucide-react';
 
 const SPANISH_DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -102,6 +103,7 @@ export default function Dashboard() {
   const [turnoTime, setTurnoTime] = useState('');
   const [turnoPatientQuery, setTurnoPatientQuery] = useState('');
   const [turnoSelectedPatient, setTurnoSelectedPatient] = useState<{ id: string; name: string } | null>(null);
+  const [turnoActionsTarget, setTurnoActionsTarget] = useState<{ turno: Turno; patientName: string } | null>(null);
 
   useEffect(() => {
     if (isProfessionalView) {
@@ -610,16 +612,28 @@ export default function Dashboard() {
                 ) : (
                   <ul className="divide-y divide-border">
                     {todayAgenda.map((a) => (
-                      <li key={a.key}>
+                      <li key={a.key} className="flex items-center gap-1">
                         <button
                           onClick={() => openNewCuration(a.patientId)}
-                          className="flex min-h-12 w-full items-center gap-3 py-2 text-left hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-2"
+                          className="flex min-h-12 flex-1 min-w-0 items-center gap-3 py-2 text-left hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-2"
                         >
                           <span className="w-14 shrink-0 font-mono text-sm font-semibold text-primary">
                             {a.time || '--:--'}
                           </span>
                           <span className="flex-1 truncate text-base font-medium">{a.patientName}</span>
                         </button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 h-9 w-9"
+                          aria-label="Acciones del turno"
+                          onClick={() => {
+                            const t = turnos.find((x) => x.id === a.key);
+                            if (t) setTurnoActionsTarget({ turno: t, patientName: a.patientName });
+                          }}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
                       </li>
                     ))}
                   </ul>
@@ -719,16 +733,28 @@ export default function Dashboard() {
                     ) : (
                       <ul className="divide-y divide-border">
                         {selectedDayAgenda.map((a) => (
-                          <li key={a.key}>
+                          <li key={a.key} className="flex items-center gap-1">
                             <button
                               onClick={() => navigate(a.caseId ? `/patients/${a.patientId}/cases/${a.caseId}` : `/patients/${a.patientId}`)}
-                              className="flex min-h-12 w-full items-center gap-3 py-2 text-left hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-2"
+                              className="flex min-h-12 flex-1 min-w-0 items-center gap-3 py-2 text-left hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-2"
                             >
                               <span className="w-14 shrink-0 font-mono text-sm font-semibold text-primary">
                                 {a.time || '--:--'}
                               </span>
                               <span className="flex-1 truncate text-base font-medium">{a.patientName}</span>
                             </button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="shrink-0 h-9 w-9"
+                              aria-label="Acciones del turno"
+                              onClick={() => {
+                                const t = turnos.find((x) => x.id === a.key);
+                                if (t) setTurnoActionsTarget({ turno: t, patientName: a.patientName });
+                              }}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
                           </li>
                         ))}
                       </ul>
@@ -879,6 +905,13 @@ export default function Dashboard() {
             </div>
           </DialogContent>
         </Dialog>
+
+        <TurnoActionsDialog
+          turno={turnoActionsTarget?.turno ?? null}
+          patientName={turnoActionsTarget?.patientName}
+          open={!!turnoActionsTarget}
+          onOpenChange={(o) => { if (!o) setTurnoActionsTarget(null); }}
+        />
 
       </AppLayout>
     );
