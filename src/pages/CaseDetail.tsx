@@ -1415,14 +1415,17 @@ export default function CaseDetail() {
         <Dialog open={caseSummaryOpen} onOpenChange={setCaseSummaryOpen}>
           <DialogContent className="max-w-3xl w-full sm:max-w-3xl h-[100dvh] sm:h-auto sm:max-h-[88vh] p-0 gap-0 flex flex-col rounded-none sm:rounded-lg">
             <DialogHeader className="px-4 sm:px-6 pt-4 pb-3 border-b border-border/50 shrink-0">
-              <DialogTitle className="heading-display flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" /> Resumen con IA — {woundCase.woundType}
+              <DialogTitle className="heading-display flex items-center gap-2 text-lg sm:text-xl">
+                <Sparkles className="h-5 w-5 text-primary shrink-0" />
+                <span className="truncate">Resumen con IA — {woundCase.woundType}</span>
               </DialogTitle>
-              <p className="font-body text-base text-muted-foreground mt-1">
+              <p className="font-body text-sm text-muted-foreground mt-1 truncate">
                 {patient.firstName} {patient.lastName}
                 {woundCase.anatomicalLocation ? ` · ${woundCase.anatomicalLocation}` : ''}
-                {' · '}{woundCase.evolutions.length} evolución{woundCase.evolutions.length === 1 ? '' : 'es'} considerada{woundCase.evolutions.length === 1 ? '' : 's'}
-                {woundCase.aiSummaryUpdatedAt ? ` · Generado ${new Date(woundCase.aiSummaryUpdatedAt).toLocaleString('es-AR')}` : ''}
+              </p>
+              <p className="font-body text-sm text-muted-foreground">
+                {woundCase.evolutions.length} evolución{woundCase.evolutions.length === 1 ? '' : 'es'} considerada{woundCase.evolutions.length === 1 ? '' : 's'}
+                {woundCase.aiSummaryUpdatedAt ? ` · Generado ${new Date(woundCase.aiSummaryUpdatedAt).toLocaleDateString('es-AR')}` : ''}
               </p>
             </DialogHeader>
 

@@ -84,7 +84,7 @@ export function TurnoActionsDialog({ turno, patientName, open, onOpenChange }: T
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="heading-display text-xl flex items-center gap-2">
               <CalendarClock className="h-5 w-5 text-primary" /> Turno{patientName ? ` — ${patientName}` : ''}

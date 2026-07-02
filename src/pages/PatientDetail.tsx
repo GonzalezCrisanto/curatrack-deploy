@@ -513,7 +513,7 @@ export default function PatientDetail() {
         {/* Case Form Dialog */}
         {/* New Appointment Dialog */}
         <Dialog open={apptDialogOpen} onOpenChange={setApptDialogOpen}>
-          <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto" onOpenAutoFocus={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle className="heading-display text-lg">Nuevo turno</DialogTitle>
             </DialogHeader>

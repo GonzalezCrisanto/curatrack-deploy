@@ -110,11 +110,11 @@ export default function Patients() {
           </div>
 
           {curationWindow !== 'all' && (
-            <div className="flex items-center gap-2">
-              <span className="font-body text-sm rounded-full border border-primary/30 bg-primary/5 text-primary px-3 py-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-body text-sm rounded-full border border-primary/30 bg-primary/5 text-primary px-3 py-1 max-w-full truncate">
                 {activeWindowLabel}
               </span>
-              <Button variant="ghost" size="sm" className="font-body text-sm h-7 px-2" onClick={() => setCurationWindow('all')}>
+              <Button variant="ghost" size="sm" className="font-body text-sm h-7 px-2 shrink-0" onClick={() => setCurationWindow('all')}>
                 Quitar filtro
               </Button>
             </div>

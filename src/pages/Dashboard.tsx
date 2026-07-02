@@ -767,7 +767,7 @@ export default function Dashboard() {
         </div>
 
         <Dialog open={newTurnoOpen} onOpenChange={setNewTurnoOpen}>
-          <DialogContent className="max-w-sm">
+          <DialogContent className="max-w-sm" onOpenAutoFocus={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle className="heading-display text-xl">Nuevo turno</DialogTitle>
             </DialogHeader>
@@ -839,7 +839,6 @@ export default function Dashboard() {
                         onChange={e => setTurnoPatientQuery(e.target.value)}
                         placeholder="Buscar por nombre o DNI..."
                         className="font-body pl-9"
-                        autoFocus
                       />
                     </div>
                     {turnoPatientSuggestions.length > 0 && (

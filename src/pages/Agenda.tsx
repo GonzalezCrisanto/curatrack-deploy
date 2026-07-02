@@ -109,19 +109,20 @@ export default function Agenda() {
         <div className="space-y-6 max-w-5xl mx-auto w-full">
         <div>
           <h1 className="heading-display text-[26px] flex items-center gap-3">
-            <Calendar className="h-7 w-7 text-primary" /> Agenda
+            <Calendar className="h-7 w-7 text-primary" /> Turnos
           </h1>
-          <p className="font-body text-base text-muted-foreground mt-1">
-            Turnos programados para los pacientes en seguimiento.
-          </p>
         </div>
 
         <Tabs value={filter} onValueChange={(v) => setFilter(v as AgendaFilter)}>
-          <TabsList className="font-body">
+          <TabsList className="font-body w-full grid grid-cols-3 gap-1 h-auto">
             {AGENDA_FILTERS.map((f) => (
-              <TabsTrigger key={f.value} value={f.value} className="font-body text-sm">
-                {f.label}
-                <Badge variant="secondary" className="ml-2 font-body text-sm">{filterCounts[f.value]}</Badge>
+              <TabsTrigger
+                key={f.value}
+                value={f.value}
+                className="font-body text-xs sm:text-sm px-1 sm:px-3 py-2 flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2"
+              >
+                <span className="truncate">{f.label}</span>
+                <Badge variant="secondary" className="font-body text-[12px] sm:text-sm shrink-0">{filterCounts[f.value]}</Badge>
               </TabsTrigger>
             ))}
           </TabsList>
