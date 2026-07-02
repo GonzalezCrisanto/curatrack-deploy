@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getPatientIndicator, indicatorMeta } from '@/lib/patientStatus';
 import { getPatientAge } from '@/lib/age';
-import { getActiveTurnoForCase } from '@/lib/appointments';
+import { getActiveTurnoForPatient } from '@/lib/appointments';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -48,12 +48,9 @@ export default function Assistant() {
       total_pacientes: patients.length,
       pacientes: patients.map(p => {
         const status = indicatorMeta[getPatientIndicator(p)].label;
-        const upcoming = p.cases
-          .map(c => {
-            const t = getActiveTurnoForCase(turnos, c.id);
-            return t ? { caso: c.woundType, proximo_control: t.date, hora: t.time } : null;
-          })
-          .filter((x): x is { caso: string; proximo_control: string; hora: string } => x !== null);
+        // A turno now covers the whole patient visit (every active wound), not one case.
+        const activeTurno = getActiveTurnoForPatient(turnos, p.id);
+        const upcoming = activeTurno ? [{ proximo_control: activeTurno.date, hora: activeTurno.time }] : [];
         return {
           nombre: `${p.lastName}, ${p.firstName}`,
           edad: getPatientAge(p),
