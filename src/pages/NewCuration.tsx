@@ -119,6 +119,7 @@ export default function NewCuration() {
   const [creatingCase, setCreatingCase] = useState(false);
   const [newCase, setNewCase] = useState({
     woundType: '',
+    woundTypeOther: '',
     anatomicalLocation: '',
     laterality: 'na',
     startDate: todayISO(),
@@ -252,6 +253,7 @@ export default function NewCuration() {
   const resetNewCaseForm = () => {
     setNewCase({
       woundType: '',
+      woundTypeOther: '',
       anatomicalLocation: '',
       laterality: 'na',
       startDate: todayISO(),
@@ -323,8 +325,10 @@ export default function NewCuration() {
     if (!patient || !currentUser) return;
     const errors: Record<string, string> = {};
     if (!newCase.woundType) errors.woundType = 'Seleccioná tipo de herida.';
+    if (newCase.woundType === 'Otro' && !newCase.woundTypeOther.trim()) errors.woundTypeOther = 'Especificá el tipo de herida.';
     if (!newCase.anatomicalLocation.trim()) errors.anatomicalLocation = 'Indicá ubicación anatómica.';
     if (!newCase.startDate) errors.startDate = 'Ingresá fecha de aparición.';
+    else if (newCase.startDate > todayISO()) errors.startDate = 'La fecha de aparición no puede ser futura.';
     if (!newCase.status) errors.status = 'Seleccioná estado inicial.';
     setNewCaseErrors(errors);
     if (Object.keys(errors).length > 0) return;
@@ -339,13 +343,14 @@ export default function NewCuration() {
       const anatomicalLocation = lateralityLabel
         ? `${newCase.anatomicalLocation.trim()} (${lateralityLabel})`
         : newCase.anatomicalLocation.trim();
+      const woundType = newCase.woundType === 'Otro' ? newCase.woundTypeOther.trim() : newCase.woundType;
 
       const { data: inserted, error } = await supabase
         .from('wound_cases')
         .insert({
           user_id: currentUser.id,
           patient_id: patient.id,
-          wound_type: newCase.woundType,
+          wound_type: woundType,
           anatomical_location: anatomicalLocation,
           start_date: newCase.startDate,
           status: newCase.status,
@@ -358,7 +363,7 @@ export default function NewCuration() {
       const createdCase: WoundCase = {
         id: inserted.id,
         patientId: patient.id,
-        woundType: newCase.woundType,
+        woundType,
         anatomicalLocation,
         startDate: newCase.startDate,
         status: newCase.status,
@@ -818,6 +823,16 @@ export default function NewCuration() {
                               </SelectContent>
                             </Select>
                             {newCaseErrors.woundType && <p className="mt-1 text-xs text-destructive">{newCaseErrors.woundType}</p>}
+                            {newCase.woundType === 'Otro' && (
+                              <Input
+                                className="mt-2"
+                                value={newCase.woundTypeOther}
+                                onChange={(e) => setNewCase((prev) => ({ ...prev, woundTypeOther: e.target.value }))}
+                                placeholder="Especificá el tipo de herida"
+                                aria-invalid={!!newCaseErrors.woundTypeOther}
+                              />
+                            )}
+                            {newCaseErrors.woundTypeOther && <p className="mt-1 text-xs text-destructive">{newCaseErrors.woundTypeOther}</p>}
                           </div>
                           <div>
                             <Label className="font-body text-sm">Ubicación anatómica *</Label>
@@ -845,6 +860,7 @@ export default function NewCuration() {
                             <Label className="font-body text-sm">Fecha de aparición *</Label>
                             <Input
                               type="date"
+                              max={todayISO()}
                               value={newCase.startDate}
                               onChange={(e) => setNewCase((prev) => ({ ...prev, startDate: e.target.value }))}
                               aria-invalid={!!newCaseErrors.startDate}

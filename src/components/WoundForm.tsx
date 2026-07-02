@@ -15,8 +15,11 @@ function todayISO() {
   return new Date().toISOString().split('T')[0];
 }
 
+const WOUND_TYPES = ['Úlcera por presión', 'Pie diabético', 'Úlcera venosa', 'Herida quirúrgica', 'Quemadura', 'Otro'];
+
 const emptyWound = {
   woundType: '',
+  woundTypeOther: '',
   anatomicalLocation: '',
   laterality: 'na',
   startDate: todayISO(),
@@ -54,8 +57,10 @@ export function WoundForm({ open, onOpenChange, patient, editingCase, onCreated,
   useEffect(() => {
     if (!open) return;
     if (editingCase) {
+      const isKnownType = WOUND_TYPES.includes(editingCase.woundType);
       setForm({
-        woundType: editingCase.woundType,
+        woundType: isKnownType ? editingCase.woundType : 'Otro',
+        woundTypeOther: isKnownType ? '' : editingCase.woundType,
         anatomicalLocation: editingCase.anatomicalLocation,
         // Laterality is folded into anatomicalLocation on save; keep the stored
         // location as-is on edit and avoid re-appending a suffix.
@@ -78,8 +83,10 @@ export function WoundForm({ open, onOpenChange, patient, editingCase, onCreated,
     if (!currentUser) return;
     const newErrors: Record<string, string> = {};
     if (!form.woundType) newErrors.woundType = 'Seleccioná tipo de herida.';
+    if (form.woundType === 'Otro' && !form.woundTypeOther.trim()) newErrors.woundTypeOther = 'Especificá el tipo de herida.';
     if (!form.anatomicalLocation.trim()) newErrors.anatomicalLocation = 'Indicá ubicación anatómica.';
     if (!form.startDate) newErrors.startDate = 'Ingresá fecha de aparición.';
+    else if (form.startDate > todayISO()) newErrors.startDate = 'La fecha de aparición no puede ser futura.';
     if (!form.status) newErrors.status = 'Seleccioná estado inicial.';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
@@ -94,12 +101,13 @@ export function WoundForm({ open, onOpenChange, patient, editingCase, onCreated,
       const anatomicalLocation = lateralityLabel
         ? `${form.anatomicalLocation.trim()} (${lateralityLabel})`
         : form.anatomicalLocation.trim();
+      const woundType = form.woundType === 'Otro' ? form.woundTypeOther.trim() : form.woundType;
 
       if (editingCase) {
         const { error } = await supabase
           .from('wound_cases')
           .update({
-            wound_type: form.woundType,
+            wound_type: woundType,
             anatomical_location: anatomicalLocation,
             start_date: form.startDate,
             status: form.status,
@@ -110,7 +118,7 @@ export function WoundForm({ open, onOpenChange, patient, editingCase, onCreated,
 
         const updatedCase: WoundCase = {
           ...editingCase,
-          woundType: form.woundType,
+          woundType,
           anatomicalLocation,
           startDate: form.startDate,
           status: form.status,
@@ -126,7 +134,7 @@ export function WoundForm({ open, onOpenChange, patient, editingCase, onCreated,
           .insert({
             user_id: currentUser.id,
             patient_id: patient.id,
-            wound_type: form.woundType,
+            wound_type: woundType,
             anatomical_location: anatomicalLocation,
             start_date: form.startDate,
             status: form.status,
@@ -139,7 +147,7 @@ export function WoundForm({ open, onOpenChange, patient, editingCase, onCreated,
         const createdCase: WoundCase = {
           id: inserted.id,
           patientId: patient.id,
-          woundType: form.woundType,
+          woundType,
           anatomicalLocation,
           startDate: form.startDate,
           status: form.status,
@@ -178,12 +186,22 @@ export function WoundForm({ open, onOpenChange, patient, editingCase, onCreated,
             <Select value={form.woundType} onValueChange={(v) => setForm((prev) => ({ ...prev, woundType: v }))}>
               <SelectTrigger aria-invalid={!!errors.woundType}><SelectValue placeholder="Seleccionar" /></SelectTrigger>
               <SelectContent>
-                {['Úlcera por presión', 'Pie diabético', 'Úlcera venosa', 'Herida quirúrgica', 'Quemadura', 'Otro'].map((opt) => (
+                {WOUND_TYPES.map((opt) => (
                   <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {errors.woundType && <p className="mt-1 text-xs text-destructive">{errors.woundType}</p>}
+            {form.woundType === 'Otro' && (
+              <Input
+                className="mt-2"
+                value={form.woundTypeOther}
+                onChange={(e) => setForm((prev) => ({ ...prev, woundTypeOther: e.target.value }))}
+                placeholder="Especificá el tipo de herida"
+                aria-invalid={!!errors.woundTypeOther}
+              />
+            )}
+            {errors.woundTypeOther && <p className="mt-1 text-xs text-destructive">{errors.woundTypeOther}</p>}
           </div>
           <div>
             <Label className="font-body text-sm">Ubicación anatómica *</Label>
@@ -211,6 +229,7 @@ export function WoundForm({ open, onOpenChange, patient, editingCase, onCreated,
             <Label className="font-body text-sm">Fecha de aparición *</Label>
             <Input
               type="date"
+              max={todayISO()}
               value={form.startDate}
               onChange={(e) => setForm((prev) => ({ ...prev, startDate: e.target.value }))}
               aria-invalid={!!errors.startDate}

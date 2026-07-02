@@ -837,6 +837,11 @@ export default function Dashboard() {
                     )}
                   </>
                 )}
+                {turnoSelectedPatient && !patients.find(p => p.id === turnoSelectedPatient.id)?.cases.length && (
+                  <p className="font-body text-sm text-destructive">
+                    No se puede agendar un turno: este paciente no tiene heridas cargadas.
+                  </p>
+                )}
               </div>
             </div>
 
