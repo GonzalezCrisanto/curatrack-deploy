@@ -308,7 +308,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               .select('*')
               .in('case_id', caseIds)
               .order('evolution_date', { ascending: false })
-              .order('evolution_time', { ascending: false, nullsFirst: false });
+              .order('evolution_time', { ascending: false, nullsFirst: false })
+              .order('created_at', { ascending: false });
             for (const e of (evoRows || []) as any[]) {
               const ev: Evolution = {
                 id: e.id,

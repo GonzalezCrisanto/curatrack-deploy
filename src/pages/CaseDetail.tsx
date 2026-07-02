@@ -1468,10 +1468,10 @@ export default function CaseDetail() {
             </div>
 
             {!aiLoading && woundCase.aiSummary && (
-              <div className="shrink-0 border-t border-border/50 bg-background px-4 sm:px-6 py-3 flex flex-wrap gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <div className="shrink-0 border-t border-border/50 bg-background px-4 sm:px-6 py-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 <Button
                   variant="outline"
-                  className="font-body h-11 flex-1 sm:flex-none"
+                  className="font-body h-11 w-full sm:w-auto sm:flex-none"
                   onClick={async () => {
                     if (!woundCase.aiSummary) return;
                     try {
@@ -1486,13 +1486,13 @@ export default function CaseDetail() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="font-body h-11 flex-1 sm:flex-none"
+                  className="font-body h-11 w-full sm:w-auto sm:flex-none"
                   onClick={() => openCaseSummaryPrintWindow()}
                 >
                   <Printer className="mr-1.5 h-4 w-4" /> Imprimir
                 </Button>
                 <Button
-                  className="font-body h-11 flex-1 sm:flex-none"
+                  className="font-body h-11 w-full sm:w-auto sm:flex-none"
                   onClick={() => {
                     if (openCaseSummaryPrintWindow()) {
                       toast.info('Elegí "Guardar como PDF" en el diálogo de impresión.');
@@ -1503,7 +1503,7 @@ export default function CaseDetail() {
                 </Button>
                 <Button
                   variant="ghost"
-                  className="font-body h-11"
+                  className="font-body h-11 w-full sm:w-auto"
                   onClick={() => setCaseSummaryOpen(false)}
                 >
                   Cerrar

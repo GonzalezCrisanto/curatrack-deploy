@@ -185,9 +185,9 @@ export function PatientConsentCard({ patientId, patientName, patientDni }: Patie
           ) : (
             <p className="text-xs font-body text-muted-foreground italic">No hay consentimiento informado registrado para este paciente.</p>
           )}
-          <div className="flex justify-center gap-2">
-            <Button variant="outline" size="sm" className="font-body flex-1" onClick={openDialog}>
-              <FileText className="h-4 w-4 mr-1" />
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" size="sm" className="font-body flex-1 h-auto min-h-9 whitespace-normal py-2 leading-tight" onClick={openDialog}>
+              <FileText className="h-4 w-4 mr-1 shrink-0" />
               {consent ? 'Actualizar consentimiento informado' : 'Registrar consentimiento informado'}
             </Button>
             {consent && (

@@ -18,9 +18,6 @@ export interface EvolutionSignatureInfo {
 }
 
 export function exportPatientPdf(patient: Patient, turnos: Turno[], signatureMap?: Record<string, EvolutionSignatureInfo>) {
-  const win = window.open('', '_blank');
-  if (!win) return;
-
   const statusLabels: Record<string, string> = {
     activo: 'Activo',
     en_mejoria: 'En mejoría',
@@ -174,10 +171,42 @@ export function exportPatientPdf(patient: Patient, turnos: Turno[], signatureMap
     Documento confidencial — Uso exclusivo del equipo de salud
   </div>
 
-  <script>window.onload = () => window.print();</script>
 </body>
 </html>`;
 
-  win.document.write(html);
-  win.document.close();
+  printHtmlInHiddenFrame(html);
+}
+
+/**
+ * Prints HTML without navigating away from the app or opening a new tab/window.
+ * Renders the document inside a hidden iframe and triggers print on it.
+ */
+function printHtmlInHiddenFrame(html: string) {
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  const cleanup = () => {
+    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+  };
+
+  iframe.onload = () => {
+    const win = iframe.contentWindow;
+    if (!win) { cleanup(); return; }
+    win.focus();
+    win.print();
+    // Give the print dialog time to open before removing the iframe.
+    setTimeout(cleanup, 1000);
+  };
+
+  const doc = iframe.contentDocument;
+  if (!doc) { cleanup(); return; }
+  doc.open();
+  doc.write(html);
+  doc.close();
 }
