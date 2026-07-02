@@ -5,11 +5,12 @@ import { useApp } from '@/context/AppContext';
 import { useSponsor } from '@/context/SponsorContext';
 import { useAppRole } from '@/hooks/useAppRole';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Activity, LogOut, Menu, Settings, Package, ShoppingCart } from 'lucide-react';
+import { LogOut, Menu, Settings, Package, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { CartDrawer } from '@/components/marketplace/CartDrawer';
 import { useCart } from '@/context/CartContext';
+import { featureFlags } from '@/config/featureFlags';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,8 +61,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     : currentUser?.role === 'sponsor'
       ? 'Sponsor'
       : 'Profesional';
-  const isProfessional = role === 'professional';
-  const showSponsorSubtle = isProfessional && !!sponsor;
 
   return (
     <SidebarProvider>
@@ -73,45 +72,31 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               <SidebarTrigger className="md:hidden" aria-label="Abrir menú lateral">
                 <Menu className="h-4 w-4" />
               </SidebarTrigger>
-              <button
-                onClick={() => navigate(role === 'sponsor' ? '/panel-sponsor' : '/dashboard')}
-                className="flex items-center gap-2 rounded-md px-1 py-1 hover:bg-accent/40 transition-colors"
-              >
-                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-                  <Activity className="h-4 w-4 text-primary" />
-                </span>
-                <div className="leading-tight text-left">
-                  <p className="font-display text-sm font-semibold tracking-tight">CuraTrack</p>
-                  {showSponsorSubtle && (
-                    <p className="font-body text-[10px] text-muted-foreground">
-                      para programa {sponsor.sponsor_name}
-                    </p>
-                  )}
-                </div>
-              </button>
             </div>
             <div className="flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="relative">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="relative h-9 w-9"
-                      onClick={() => navigate('/cart')}
-                      aria-label="Solicitudes de reposición pendientes"
-                    >
-                      <ShoppingCart className="h-4 w-4" />
-                      {itemCount > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
-                          {itemCount > 99 ? '99+' : itemCount}
-                        </span>
-                      )}
-                    </Button>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>Solicitudes de reposición pendientes</TooltipContent>
-              </Tooltip>
+              {featureFlags.showCartButton && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="relative">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="relative h-9 w-9"
+                        onClick={() => navigate('/cart')}
+                        aria-label="Solicitudes de reposición pendientes"
+                      >
+                        <ShoppingCart className="h-4 w-4" />
+                        {itemCount > 0 && (
+                          <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
+                            {itemCount > 99 ? '99+' : itemCount}
+                          </span>
+                        )}
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Solicitudes de reposición pendientes</TooltipContent>
+                </Tooltip>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="h-9 px-1.5 gap-2">
@@ -128,15 +113,19 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                     </p>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/orders')}>
-                    <Package className="mr-2 h-4 w-4" />
-                    Mis Pedidos
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/settings')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Configuración
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  {featureFlags.showOrdersNav && (
+                    <DropdownMenuItem onClick={() => navigate('/orders')}>
+                      <Package className="mr-2 h-4 w-4" />
+                      Mis Pedidos
+                    </DropdownMenuItem>
+                  )}
+                  {featureFlags.showSettingsNav && (
+                    <DropdownMenuItem onClick={() => navigate('/settings')}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      Configuración
+                    </DropdownMenuItem>
+                  )}
+                  {(featureFlags.showOrdersNav || featureFlags.showSettingsNav) && <DropdownMenuSeparator />}
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                     <LogOut className="mr-2 h-4 w-4" />
                     Cerrar sesión

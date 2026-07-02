@@ -23,7 +23,7 @@ import { Evolution, Photo, professionals, getStatusLabel, woundStatuses, odorOpt
 import { getPatientAge, formatPatientAge } from '@/lib/age';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getEvolutionArea } from '@/lib/patientStatus';
-import { getActiveTurnoForCase, formatNextControl } from '@/lib/appointments';
+import { getActiveTurnoForPatient, formatNextControl } from '@/lib/appointments';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
@@ -298,7 +298,7 @@ export default function CaseDetail() {
         };
       });
 
-    const activeTurno = getActiveTurnoForCase(turnos, woundCase.id);
+    const activeTurno = getActiveTurnoForPatient(turnos, patient.id);
 
     return {
       paciente: `${patient.firstName} ${patient.lastName}`,
@@ -373,10 +373,18 @@ export default function CaseDetail() {
 
     let savedEvoId = payload.id;
     if (editingEvo) {
-      await updateEvolution(patient.id, woundCase.id, payload);
+      const ok = await updateEvolution(patient.id, woundCase.id, payload);
+      if (!ok) {
+        toast.error('No se pudo guardar la evolución. Revisá la conexión e intentá nuevamente.');
+        return;
+      }
     } else {
       const dbId = await addEvolution(patient.id, woundCase.id, payload);
-      if (dbId) savedEvoId = dbId;
+      if (!dbId) {
+        toast.error('No se pudo registrar la curación. Revisá la conexión e intentá nuevamente.');
+        return;
+      }
+      savedEvoId = dbId;
     }
 
     // Save the professional's signature for new evolutions
@@ -399,8 +407,12 @@ export default function CaseDetail() {
     if (closeCase) {
       const closedAt = new Date().toISOString().split('T')[0];
       const closedPayload: Evolution = { ...payload, closedAt, id: savedEvoId };
-      await updateEvolution(patient.id, woundCase.id, closedPayload);
-      await updateCase(patient.id, { ...woundCase, status: 'resuelto' });
+      const evoOk = await updateEvolution(patient.id, woundCase.id, closedPayload);
+      const caseOk = await updateCase(patient.id, { ...woundCase, status: 'resuelto' });
+      if (!evoOk || !caseOk) {
+        toast.error('No se pudo cerrar el caso. Revisá la conexión e intentá nuevamente.');
+        return;
+      }
       toast.success('Curación registrada correctamente con firma y consentimiento. Caso cerrado.');
       setEvoDialogOpen(false);
       setCloseConfirmOpen(false);
@@ -691,7 +703,7 @@ export default function CaseDetail() {
             const db = `${b.date || ''}T${b.time || '00:00'}`;
             return db < da ? -1 : db > da ? 1 : 0;
           });
-          const activeTurno = getActiveTurnoForCase(turnos, woundCase.id);
+          const activeTurno = getActiveTurnoForPatient(turnos, patient.id);
           const activeEvos = sorted.filter(e => !e.closedAt);
           const closedEvos = sorted.filter(e => !!e.closedAt);
 
@@ -1370,6 +1382,7 @@ export default function CaseDetail() {
         {/* Photo viewer */}
         <Dialog open={!!photoViewer} onOpenChange={() => setPhotoViewer(null)}>
           <DialogContent className="max-w-3xl p-2">
+            <DialogTitle className="sr-only">Foto clínica de la evolución</DialogTitle>
             <img src={photoViewer || ''} alt="Foto clínica" className="w-full rounded-lg" />
           </DialogContent>
         </Dialog>
@@ -1456,13 +1469,6 @@ export default function CaseDetail() {
 
             {!aiLoading && woundCase.aiSummary && (
               <div className="shrink-0 border-t border-border/50 bg-background px-4 sm:px-6 py-3 flex flex-wrap gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                <Button
-                  variant="outline"
-                  className="font-body h-11 flex-1 sm:flex-none"
-                  onClick={generateAISummary}
-                >
-                  <RefreshCw className="mr-1.5 h-4 w-4" /> Regenerar
-                </Button>
                 <Button
                   variant="outline"
                   className="font-body h-11 flex-1 sm:flex-none"

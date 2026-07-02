@@ -116,6 +116,7 @@ function findOffenders(): Offender[] {
       // Skip dialogs and known intentional scrollers (table, dialog content, etc.)
       const role = el.getAttribute('role');
       if (role === 'dialog' || el.closest('[role="dialog"]')) continue;
+      if (el.hasAttribute('data-intentional-scroll') || el.closest('[data-intentional-scroll]')) continue;
       results.push({
         el,
         reasons: [

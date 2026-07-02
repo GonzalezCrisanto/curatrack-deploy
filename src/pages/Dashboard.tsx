@@ -500,11 +500,18 @@ export default function Dashboard() {
   if (isProfessionalView) {
     const todayIso = toISO(new Date());
     const patientById = new Map(patients.map((p) => [p.id, p]));
+    // A turno covers the whole patient visit now, so its "status" badge shows
+    // the most severe active wound of the patient rather than one specific case.
+    const mostSevereActiveCase = (patient?: (typeof patients)[number]) =>
+      patient?.cases
+        .filter(c => c.status !== 'resuelto')
+        .sort((a, b) => statusPriority(a.status) - statusPriority(b.status))[0];
+
     const todayAgenda = activeTurnos
       .filter((t) => t.date === todayIso)
       .map((t) => {
         const patient = patientById.get(t.patientId);
-        const woundCase = patient?.cases.find((c) => c.id === t.caseId);
+        const woundCase = t.caseId ? patient?.cases.find((c) => c.id === t.caseId) : mostSevereActiveCase(patient);
         return {
           key: t.id,
           time: t.time || '',
@@ -533,7 +540,7 @@ export default function Dashboard() {
 
     const allAppointments = activeTurnos.map((t) => {
       const patient = patientById.get(t.patientId);
-      const woundCase = patient?.cases.find((c) => c.id === t.caseId);
+      const woundCase = t.caseId ? patient?.cases.find((c) => c.id === t.caseId) : mostSevereActiveCase(patient);
       return {
         key: t.id,
         date: t.date,
@@ -555,12 +562,12 @@ export default function Dashboard() {
       .filter((a) => a.date === selectedIso)
       .sort((a, b) => a.time.localeCompare(b.time));
 
-    const openNewCuration = (patientId: string, caseId: string) => {
+    const openNewCuration = (patientId: string) => {
       const patient = patients.find((p) => p.id === patientId);
       if (!patient) return;
       if (patient.cases.length === 1) {
         navigate(
-          `/curation/new?patientId=${encodeURIComponent(patientId)}&caseId=${encodeURIComponent(caseId)}&step=2`,
+          `/curation/new?patientId=${encodeURIComponent(patientId)}&caseId=${encodeURIComponent(patient.cases[0].id)}&step=2`,
         );
       } else {
         navigate(`/curation/new?patientId=${encodeURIComponent(patientId)}`);
@@ -619,7 +626,7 @@ export default function Dashboard() {
                     {todayAgenda.map((a) => (
                       <li key={a.key}>
                         <button
-                          onClick={() => openNewCuration(a.patientId, a.caseId)}
+                          onClick={() => openNewCuration(a.patientId)}
                           className="flex min-h-12 w-full items-center gap-3 py-2 text-left hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-2"
                         >
                           <span className="w-14 shrink-0 font-mono text-sm font-semibold text-primary">
@@ -733,7 +740,7 @@ export default function Dashboard() {
                         {selectedDayAgenda.map((a) => (
                           <li key={a.key}>
                             <button
-                              onClick={() => navigate(`/patients/${a.patientId}/cases/${a.caseId}`)}
+                              onClick={() => navigate(a.caseId ? `/patients/${a.patientId}/cases/${a.caseId}` : `/patients/${a.patientId}`)}
                               className="flex min-h-12 w-full items-center gap-3 py-2 text-left hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-2"
                             >
                               <span className="w-14 shrink-0 font-mono text-sm font-semibold text-primary">
@@ -868,14 +875,7 @@ export default function Dashboard() {
                   !patients.find(p => p.id === turnoSelectedPatient?.id)?.cases.length
                 }
                 onClick={async () => {
-                  const patient = patients.find(p => p.id === turnoSelectedPatient!.id);
-                  const targetCase =
-                    patient?.cases.find(
-                      c => c.status === 'activo' || c.status === 'critico' || c.status === 'en_mejoria',
-                    ) ?? patient?.cases[0];
-                  if (!targetCase) return;
                   const turnoId = await createTurno({
-                    caseId: targetCase.id,
                     patientId: turnoSelectedPatient!.id,
                     date: turnoDate,
                     time: turnoTime,

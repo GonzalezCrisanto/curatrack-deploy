@@ -402,9 +402,12 @@ export default function NewCuration() {
       const sizeText = (evo.woundLength && evo.woundWidth)
         ? `Tamaño: ${evo.woundLength} x ${evo.woundWidth} cm${evoWoundArea ? ` (Área: ${evoWoundArea} cm²)` : ''}`
         : '';
+      const hasExudate = evo.exudateAmount !== 'Sin exudado';
       const description = [
         `Dolor EVA ${evo.pain}/10`,
-        `Exudado: ${evo.exudateAmount} / ${evo.exudateType} / ${evo.exudateColor}`,
+        hasExudate
+          ? `Exudado: ${evo.exudateAmount} / ${evo.exudateType} / ${evo.exudateColor}`
+          : `Exudado: ${evo.exudateAmount}`,
         `Olor: ${evo.odor}`,
         `Infección: ${evo.infection}`,
         sizeText,
@@ -429,8 +432,8 @@ export default function NewCuration() {
         pain_level: typeof evo.pain === 'number' ? evo.pain : null,
         odor: evo.odor || null,
         exudate_amount: evo.exudateAmount || null,
-        exudate_type: evo.exudateType || null,
-        exudate_color: evo.exudateColor || null,
+        exudate_type: hasExudate ? (evo.exudateType || null) : null,
+        exudate_color: hasExudate ? (evo.exudateColor || null) : null,
         wound_length: evo.woundLength !== '' ? Number(evo.woundLength) : null,
         wound_width: evo.woundWidth !== '' ? Number(evo.woundWidth) : null,
         wound_depth: evo.woundDepth !== '' ? Number(evo.woundDepth) : null,
@@ -596,8 +599,8 @@ export default function NewCuration() {
 
           {/* Stepper */}
           <Card className="border-border/60">
-            <CardContent className="p-3">
-              <div className="flex items-center gap-1 overflow-x-auto">
+            <CardContent className="p-3 relative">
+              <div className="flex items-center gap-1 overflow-x-auto" data-intentional-scroll>
                 {STEPS.map((s, i) => {
                   const active = step === s.n;
                   const done = step > s.n;
@@ -624,6 +627,7 @@ export default function NewCuration() {
                   );
                 })}
               </div>
+              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-card to-transparent sm:hidden" />
             </CardContent>
           </Card>
 
@@ -703,7 +707,10 @@ export default function NewCuration() {
                   <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre o DNI..." className="pl-9 font-body" />
                 </div>
-                <div className={`grid md:grid-cols-2 gap-2 max-h-96 overflow-auto rounded-lg transition-colors ${stepAttempted && !patientId ? 'ring-2 ring-destructive ring-offset-2' : ''}`}>
+                <div
+                  className={`grid md:grid-cols-2 gap-2 max-h-96 overflow-auto rounded-lg transition-colors ${stepAttempted && !patientId ? 'ring-2 ring-destructive ring-offset-2' : ''}`}
+                  data-intentional-scroll
+                >
                   {filteredPatients.map(p => {
                     const active = p.cases.find(c => c.status !== 'resuelto');
                     const selected = patientId === p.id;
@@ -943,15 +950,23 @@ export default function NewCuration() {
                     { k: 'exudateAmount', label: 'Exudado: cantidad', opts: ['Sin exudado','Escaso','Moderado','Abundante'] },
                     { k: 'exudateType', label: 'Exudado: tipo', opts: ['Seroso','Serosanguinolento','Sanguinolento','Purulento','Fibrinoso'] },
                     { k: 'exudateColor', label: 'Exudado: color', opts: ['Transparente','Amarillo','Verde','Rojo','Marrón'] },
-                  ].map((f) => (
+                  ].map((f) => {
+                    const isExudateDetail = f.k === 'exudateType' || f.k === 'exudateColor';
+                    const disabled = isExudateDetail && evo.exudateAmount === 'Sin exudado';
+                    return (
                     <div key={f.k}>
                       <Label className="font-body text-sm">{f.label}</Label>
-                      <Select value={(evo as any)[f.k]} onValueChange={v => setEvo({ ...evo, [f.k]: v } as any)}>
-                        <SelectTrigger className="font-body text-base"><SelectValue /></SelectTrigger>
+                      <Select
+                        value={disabled ? '' : (evo as any)[f.k]}
+                        onValueChange={v => setEvo({ ...evo, [f.k]: v } as any)}
+                        disabled={disabled}
+                      >
+                        <SelectTrigger className="font-body text-base"><SelectValue placeholder={disabled ? 'N/A' : undefined} /></SelectTrigger>
                         <SelectContent>{f.opts.map(o => <SelectItem key={o} value={o} className="capitalize">{o}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -1037,7 +1052,7 @@ export default function NewCuration() {
                       </div>
                     </div>
                   ) : (
-                    <div className="aspect-video rounded-lg border-2 border-dashed border-border/60 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary/50 hover:bg-primary/5 transition-colors">
+                    <div className="aspect-video min-h-[160px] rounded-lg border-2 border-dashed border-border/60 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary/50 hover:bg-primary/5 transition-colors">
                       <Camera className="h-8 w-8" />
                       <span className="font-body text-sm">Adjuntar foto</span>
                     </div>
@@ -1126,7 +1141,7 @@ export default function NewCuration() {
                         <div className="col-span-4 md:col-span-2">
                           <Input value={s.unit} onChange={e => updateSupply(s.id, { unit: e.target.value })} className="h-8 text-sm" placeholder="u" />
                         </div>
-                        <Button type="button" variant="ghost" size="icon" className="col-span-12 md:col-span-3 h-8 w-8 ml-auto" onClick={() => removeSupply(s.id)}>
+                        <Button type="button" variant="ghost" size="icon" className="col-span-4 md:col-span-3 h-11 w-11 md:h-8 md:w-8 ml-auto" onClick={() => removeSupply(s.id)}>
                           <X className="h-4 w-4 text-muted-foreground" />
                         </Button>
                       </div>
@@ -1154,7 +1169,7 @@ export default function NewCuration() {
                   <div className="p-3 rounded-lg border border-border/60 bg-background">
                     <div className="font-body text-[10px] uppercase text-muted-foreground tracking-wide">Evolución</div>
                     <div className="font-body text-sm mt-1">{evo.date} {evo.time} · {evo.professional}</div>
-                    <div className="font-body text-sm text-muted-foreground">EVA {evo.pain}/10 · Exudado {evo.exudateAmount} / {evo.exudateType} · Inf. {evo.infection}</div>
+                    <div className="font-body text-sm text-muted-foreground">EVA {evo.pain}/10 · Exudado {evo.exudateAmount}{evo.exudateAmount !== 'Sin exudado' ? ` / ${evo.exudateType}` : ''} · Inf. {evo.infection}</div>
                   </div>
                 </div>
                 {supplies.length > 0 && (

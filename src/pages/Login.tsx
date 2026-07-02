@@ -12,6 +12,8 @@ import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, Mail, Sparkles, ShieldCheck, C
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { getUserAppRole } from '@/lib/appRole';
+import { featureFlags } from '@/config/featureFlags';
+import { cn } from '@/lib/utils';
 
 
 async function redirectByRole(navigate: (p: string) => void, fallback = '/dashboard') {
@@ -105,6 +107,7 @@ export default function Login() {
   // paint), so the correct colors show immediately with no flash and SponsorContext
   // resolves Convatec from localStorage. An explicit ?sponsor= override still wins.
   useState(() => {
+    if (!featureFlags.showDefaultConvatecBranding) return null;
     if (new URLSearchParams(window.location.search).has('sponsor')) return null;
     try { localStorage.setItem('active_sponsor_slug', 'convatec'); } catch { /* ignore */ }
     applyConvatecTheme();
@@ -300,19 +303,21 @@ export default function Login() {
                         <div className="font-body text-[10px] uppercase tracking-wider text-muted-foreground">Probá la app sin crear cuenta</div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className={cn("grid gap-2", featureFlags.showLabLoginButton ? "grid-cols-2" : "grid-cols-1")}>
                       <Button type="button" size="sm" disabled={loading}
                         onClick={() => handleDemoLogin(undefined, 'pro')}
-                        className="w-full font-body gap-1.5 text-xs">
+                        className="w-full h-11 font-body gap-1.5 text-xs">
                         <Stethoscope className="h-3.5 w-3.5" />
                         {loadingKey === 'pro' ? '...' : 'Profesional'}
                       </Button>
-                      <Button type="button" size="sm" disabled={loading}
-                        onClick={() => handleDemoLogin(undefined, 'admin')}
-                        className="w-full font-body gap-1.5 text-xs bg-slate-700 hover:bg-slate-800 text-white">
-                        <ShieldCheck className="h-3.5 w-3.5" />
-                        {loadingKey === 'admin' ? '...' : 'Laboratorio'}
-                      </Button>
+                      {featureFlags.showLabLoginButton && (
+                        <Button type="button" size="sm" disabled={loading}
+                          onClick={() => handleDemoLogin(undefined, 'admin')}
+                          className="w-full h-11 font-body gap-1.5 text-xs bg-slate-700 hover:bg-slate-800 text-white">
+                          <ShieldCheck className="h-3.5 w-3.5" />
+                          {loadingKey === 'admin' ? '...' : 'Laboratorio'}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>

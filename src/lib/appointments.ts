@@ -15,25 +15,28 @@ export const COMPLETADO_WINDOW_DAYS = 3;
 export type TurnoStatus = 'programado' | 'completado' | 'cancelado' | 'vencido';
 
 export type TurnoStatusInput = {
-  case_id: string;
+  patient_id: string;
   scheduled_date: string; // 'YYYY-MM-DD'
   scheduled_time?: string | null;
   status: 'programado' | 'cancelado';
 };
 
 export type CaseEvolutionInput = {
-  case_id: string;
+  patient_id: string;
   created_at: string; // ISO date or datetime
 };
 
 /**
  * Derives the on-read lifecycle status of a turno.
+ * A turno covers the whole patient visit (not a single wound), so it's
+ * considered fulfilled by an evolution logged for ANY of the patient's
+ * cases within the window — not just one specific case.
  * Pure function, no I/O: `today` defaults to `new Date()` but can be
  * injected for deterministic testing.
  */
 export function deriveTurnoStatus(
   turno: TurnoStatusInput,
-  caseEvolutions: CaseEvolutionInput[],
+  patientEvolutions: CaseEvolutionInput[],
   today: Date = new Date(),
 ): TurnoStatus {
   if (turno.status === 'cancelado') return 'cancelado';
@@ -41,8 +44,8 @@ export function deriveTurnoStatus(
   const scheduledDayStart = new Date(`${turno.scheduled_date}T00:00:00`);
   const windowMs = COMPLETADO_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
-  const hasQualifyingEvolution = caseEvolutions.some((evolution) => {
-    if (evolution.case_id !== turno.case_id) return false;
+  const hasQualifyingEvolution = patientEvolutions.some((evolution) => {
+    if (evolution.patient_id !== turno.patient_id) return false;
     const evolutionDate = new Date(evolution.created_at);
     const evolutionDayStart = new Date(
       evolutionDate.getFullYear(),
@@ -64,41 +67,41 @@ export function deriveTurnoStatus(
 
 export type SupersedeCandidate = {
   id: string;
-  caseId: string;
+  patientId: string;
   status: TurnoStatus;
 };
 
 /**
  * Given the current app-shape turnos (already carrying their derived status)
- * and a case_id, returns the ids of turnos for that case that are still
+ * and a patient_id, returns the ids of turnos for that patient that are still
  * unresolved (`programado` or `vencido`) and should be superseded/cancelled
- * before a new turno is created for the same case. `completado`/`cancelado`
+ * before a new turno is created for that patient. `completado`/`cancelado`
  * turnos are final/historical and are left untouched.
  */
 export function findTurnosToSupersede(
   existingTurnos: SupersedeCandidate[],
-  caseId: string,
+  patientId: string,
 ): string[] {
   return existingTurnos
-    .filter(t => t.caseId === caseId && (t.status === 'programado' || t.status === 'vencido'))
+    .filter(t => t.patientId === patientId && (t.status === 'programado' || t.status === 'vencido'))
     .map(t => t.id);
 }
 
 export type TurnoLookup = {
-  caseId: string;
+  patientId: string;
   date: string;
   time: string;
   status: TurnoStatus;
 };
 
 /**
- * Returns the case's currently active (unresolved) turno — the single
+ * Returns the patient's currently active (unresolved) turno — the single
  * upcoming/overdue appointment that represents "próximo control" for that
- * wound now that `turnos` is the source of truth for scheduling.
+ * patient's visit now that `turnos` is the source of truth for scheduling.
  */
-export function getActiveTurnoForCase<T extends TurnoLookup>(turnos: T[], caseId: string): T | undefined {
+export function getActiveTurnoForPatient<T extends TurnoLookup>(turnos: T[], patientId: string): T | undefined {
   return turnos
-    .filter(t => t.caseId === caseId && (t.status === 'programado' || t.status === 'vencido'))
+    .filter(t => t.patientId === patientId && (t.status === 'programado' || t.status === 'vencido'))
     .sort((a, b) => `${a.date}T${a.time || '00:00'}`.localeCompare(`${b.date}T${b.time || '00:00'}`))[0];
 }
 

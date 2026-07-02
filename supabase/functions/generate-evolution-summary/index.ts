@@ -46,8 +46,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const prompt = `Based on this wound evolution data: ${JSON.stringify(evolutionData, null, 2)}
 
@@ -63,24 +63,21 @@ Format the response in clear, professional Markdown using these exact section he
 
 Keep it concise (max ~250 words). Use bullet points where helpful. If a section has no relevant data, indicate "Sin alertas relevantes" or similar.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content:
-              "Eres un asistente clínico experto en cuidado de heridas complejas (úlceras por presión, pie diabético, heridas quirúrgicas). Generás resúmenes clínicos breves, prácticos y accionables para personal de enfermería en español rioplatense profesional.",
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{
+              text: "Eres un asistente clínico experto en cuidado de heridas complejas (úlceras por presión, pie diabético, heridas quirúrgicas). Generás resúmenes clínicos breves, prácticos y accionables para personal de enfermería en español rioplatense profesional.",
+            }],
           },
-          { role: "user", content: prompt },
-        ],
-      }),
-    });
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+        }),
+      },
+    );
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -89,22 +86,16 @@ Keep it concise (max ~250 words). Use bullet points where helpful. If a section 
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos de IA agotados. Recargá tu workspace para continuar." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Error del gateway de IA" }), {
+      console.error("Gemini API error:", response.status, t);
+      return new Response(JSON.stringify({ error: "Error del servicio de IA" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const data = await response.json();
-    const summary = data.choices?.[0]?.message?.content ?? "";
+    const summary = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
     return new Response(JSON.stringify({ summary }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

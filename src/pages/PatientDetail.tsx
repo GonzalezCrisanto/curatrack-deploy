@@ -43,6 +43,20 @@ const statusBadgeClass: Record<string, string> = {
   resuelto: 'bg-success/15 text-success border-success/40',
 };
 
+function turnoStatusLabel(status: string) {
+  if (status === 'completado') return 'Completado';
+  if (status === 'cancelado') return 'Cancelado';
+  if (status === 'vencido') return 'Vencido';
+  return 'Programado';
+}
+
+function turnoStatusBadgeClass(status: string) {
+  if (status === 'completado') return 'bg-success/10 text-success border-success/40';
+  if (status === 'cancelado') return 'bg-muted text-muted-foreground border-border';
+  if (status === 'vencido') return 'bg-destructive/10 text-destructive border-destructive/40';
+  return 'bg-warning/10 text-warning border-warning/40';
+}
+
 export default function PatientDetail() {
   const { patientId } = useParams();
   const navigate = useNavigate();
@@ -118,7 +132,6 @@ export default function PatientDetail() {
 
   // New appointment dialog state
   const [apptDialogOpen, setApptDialogOpen] = useState(false);
-  const [apptCaseId, setApptCaseId] = useState<string>('');
   const [apptDate, setApptDate] = useState<string>('');
   const [apptTime, setApptTime] = useState<string>('09:00');
   const [apptNotes, setApptNotes] = useState<string>('');
@@ -126,16 +139,14 @@ export default function PatientDetail() {
   // Compute conflicts for currently selected appointment date (must run before early return)
   // Includes both the current patient's own appointments and other patients' appointments.
   const apptConflicts = useMemo(() => {
-    if (!apptDate) return [] as { patientName: string; time: string; woundType: string; isCurrent: boolean }[];
+    if (!apptDate) return [] as { patientName: string; time: string; isCurrent: boolean }[];
     return turnos
       .filter(t => t.status !== 'cancelado' && t.date === apptDate)
       .map(t => {
         const p = patients.find(pp => pp.id === t.patientId);
-        const c = p?.cases.find(cc => cc.id === t.caseId);
         return {
           patientName: t.patientId === patientId ? 'Este paciente' : (p ? `${p.lastName}, ${p.firstName}` : ''),
           time: t.time || '',
-          woundType: c?.woundType || '',
           isCurrent: t.patientId === patientId,
         };
       });
@@ -179,8 +190,8 @@ export default function PatientDetail() {
   const sharedCount = 0;
 
   const handleSaveAppointment = async () => {
-    if (!apptCaseId || !apptDate) return;
-    await createTurno({ caseId: apptCaseId, patientId: patient.id, date: apptDate, time: apptTime, notes: apptNotes.trim() || undefined });
+    if (!apptDate) return;
+    await createTurno({ patientId: patient.id, date: apptDate, time: apptTime, notes: apptNotes.trim() || undefined });
     setApptDialogOpen(false);
     setApptNotes('');
   };
@@ -364,63 +375,29 @@ export default function PatientDetail() {
           )}
         </div>
 
-        {/* Calendario de Turnos del Paciente — un color por herida */}
+        {/* Calendario de Turnos del Paciente — un turno cubre toda la visita, no una herida en particular */}
         {(() => {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
 
           const activeCases = patient.cases.filter(c => c.status !== 'resuelto');
 
-          // Color palette: one HSL hue per wound (case)
-          const palette = [
-            'hsl(var(--primary))',
-            'hsl(var(--destructive))',
-            'hsl(var(--success))',
-            'hsl(var(--warning))',
-            'hsl(265 70% 55%)',
-            'hsl(180 60% 40%)',
-            'hsl(25 90% 55%)',
-            'hsl(330 75% 55%)',
-          ];
-          const caseColor: Record<string, string> = {};
-          activeCases.forEach((c, idx) => {
-            caseColor[c.id] = palette[idx % palette.length];
-          });
-
-          // Existing appointments grouped by case (from the turnos table, excluding cancelled)
-          const activeCaseIds = new Set(activeCases.map(c => c.id));
-          const patientTurnos = turnos.filter(t => t.patientId === patient.id && t.status !== 'cancelado');
-
-          const appointmentsByCase = patientTurnos
-            .filter(t => activeCaseIds.has(t.caseId) && new Date(t.date + 'T12:00:00') >= today)
-            .map(t => {
-              const c = activeCases.find(cc => cc.id === t.caseId)!;
-              return {
-                date: new Date(t.date + 'T12:00:00'),
-                caseId: t.caseId,
-                status: c.status,
-                woundType: c.woundType,
-                anatomicalLocation: c.anatomicalLocation,
-              };
-            });
+          // This patient's upcoming turnos (excluding cancelled)
+          const patientTurnos = turnos
+            .filter(t => t.patientId === patient.id && t.status !== 'cancelado' && new Date(t.date + 'T12:00:00') >= today)
+            .map(t => ({ date: new Date(t.date + 'T12:00:00'), dateIso: t.date, time: t.time, status: t.status }))
+            .sort((a, b) => a.date.getTime() - b.date.getTime());
 
           // Appointments from OTHER patients (to avoid scheduling clashes)
           const otherPatientsAppointments = turnos
             .filter(t => t.patientId !== patient.id && t.status !== 'cancelado' && new Date(t.date + 'T12:00:00') >= today)
-            .map(t => {
-              const p = patients.find(pp => pp.id === t.patientId);
-              const c = p?.cases.find(cc => cc.id === t.caseId);
-              return {
-                date: new Date(t.date + 'T12:00:00'),
-                time: t.time || '',
-                patientName: p ? `${p.lastName}, ${p.firstName}` : '',
-                woundType: c?.woundType || '',
-              };
-            });
+            .map(t => ({ date: new Date(t.date + 'T12:00:00') }));
           const otherDates = otherPatientsAppointments.map(a => a.date);
 
-          // Build dynamic modifiers: one modifier key per case
-          const modifiers: Record<string, Date[]> = { other: otherDates };
+          const modifiers: Record<string, Date[]> = {
+            other: otherDates,
+            own: patientTurnos.map(a => a.date),
+          };
           const modifiersStyles: Record<string, React.CSSProperties> = {
             other: {
               backgroundColor: 'hsl(var(--muted))',
@@ -429,65 +406,15 @@ export default function PatientDetail() {
               border: '1.5px solid hsl(var(--muted-foreground) / 0.4)',
               opacity: 0.7,
             },
-          };
-
-          // Group existing appointments by date to support multiple wounds per day
-          const apptByDate = new Map<string, { date: Date; caseIds: Set<string> }>();
-          appointmentsByCase.forEach(a => {
-            const ds = a.date.toISOString().split('T')[0];
-            if (!apptByDate.has(ds)) apptByDate.set(ds, { date: a.date, caseIds: new Set() });
-            apptByDate.get(ds)!.caseIds.add(a.caseId);
-          });
-
-          // Single-case days: one modifier per case (solid color)
-          activeCases.forEach(c => {
-            const dates = Array.from(apptByDate.values())
-              .filter(g => g.caseIds.size === 1 && g.caseIds.has(c.id))
-              .map(g => g.date);
-            if (dates.length > 0) {
-              const key = `case_${c.id}`;
-              modifiers[key] = dates;
-              modifiersStyles[key] = {
-                backgroundColor: caseColor[c.id],
-                color: '#fff',
-                borderRadius: '9999px',
-                fontWeight: 600,
-              };
-            }
-          });
-
-          // Multi-case days: one modifier per unique combo, with conic-gradient colors
-          const multiGroups = Array.from(apptByDate.values()).filter(g => g.caseIds.size > 1);
-          const multiBuckets = new Map<string, { dates: Date[]; ids: string[] }>();
-          multiGroups.forEach(g => {
-            const ids = Array.from(g.caseIds).sort();
-            const key = ids.join('|');
-            if (!multiBuckets.has(key)) multiBuckets.set(key, { dates: [], ids });
-            multiBuckets.get(key)!.dates.push(g.date);
-          });
-          let mIdx = 0;
-          multiBuckets.forEach(bucket => {
-            const key = `multi_${mIdx++}`;
-            modifiers[key] = bucket.dates;
-            const colors = bucket.ids.map(id => caseColor[id]).filter(Boolean);
-            const slice = 100 / colors.length;
-            const stops = colors
-              .map((col, i) => `${col} ${i * slice}% ${(i + 1) * slice}%`)
-              .join(', ');
-            modifiersStyles[key] = {
-              background: `conic-gradient(${stops})`,
+            own: {
+              backgroundColor: 'hsl(var(--primary))',
               color: '#fff',
               borderRadius: '9999px',
-              fontWeight: 700,
-              boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.15)',
-            };
-          });
+              fontWeight: 600,
+            },
+          };
 
-          const openNewAppointment = (preselectDate?: string, preselectCaseId?: string) => {
-            const caseId = preselectCaseId || activeCases[0]?.id || '';
-            setApptCaseId(caseId);
-
-            // Default date: 7 days ahead of today.
+          const openNewAppointment = (preselectDate?: string) => {
             const defaultDate = preselectDate
               || new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
             setApptDate(defaultDate);
@@ -512,7 +439,7 @@ export default function PatientDetail() {
                 </CardTitle>
                 <Button
                   size="sm"
-                  className="font-body"
+                  className="h-11 font-body"
                   onClick={() => openNewAppointment()}
                   disabled={activeCases.length === 0}
                 >
@@ -524,30 +451,16 @@ export default function PatientDetail() {
                   <div className="shrink-0">
                     <Calendar
                       mode="multiple"
-                      selected={appointmentsByCase.map(a => a.date)}
+                      selected={patientTurnos.map(a => a.date)}
                       className="p-3 pointer-events-auto rounded-lg border border-border/50"
                       modifiers={modifiers}
                       modifiersStyles={modifiersStyles}
                     />
-                    <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 px-1 w-full max-w-[280px]">
-                      {activeCases.map(c => (
-                        <div key={`leg-${c.id}`} className="flex items-center gap-1.5">
-                          <span
-                            className="h-3 w-3 rounded-full"
-                            style={{ backgroundColor: caseColor[c.id] }}
-                          />
-                          <span className="font-body text-xs text-muted-foreground">
-                            {c.anatomicalLocation || c.woundType}
-                          </span>
-                        </div>
-                      ))}
-                      {Array.from(apptByDate.values()).some(g => g.caseIds.size > 1) && (
+                    <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 px-1 w-full lg:max-w-[280px]">
+                      {patientTurnos.length > 0 && (
                         <div className="flex items-center gap-1.5">
-                          <span
-                            className="h-3 w-3 rounded-full"
-                            style={{ background: 'conic-gradient(hsl(var(--primary)) 0 50%, hsl(var(--destructive)) 50% 100%)' }}
-                          />
-                          <span className="font-body text-xs text-muted-foreground">Varias heridas</span>
+                          <span className="h-3 w-3 rounded-full bg-primary" />
+                          <span className="font-body text-xs text-muted-foreground">Turno de este paciente</span>
                         </div>
                       )}
                       {otherDates.length > 0 && (
@@ -561,34 +474,24 @@ export default function PatientDetail() {
 
                   <div className="flex-1 space-y-3">
                     <h3 className="font-body text-sm font-semibold text-muted-foreground">Próximos turnos programados</h3>
-                    {appointmentsByCase.length > 0 ? (() => {
-                      // Keep only the earliest upcoming appointment per case
-                      const nextByCase = new Map<string, typeof appointmentsByCase[number]>();
-                      [...appointmentsByCase]
-                        .sort((a, b) => a.date.getTime() - b.date.getTime())
-                        .forEach(ap => {
-                          if (!nextByCase.has(ap.caseId)) nextByCase.set(ap.caseId, ap);
-                        });
-                      return Array.from(nextByCase.values())
-                        .sort((a, b) => a.date.getTime() - b.date.getTime())
-                        .map((ap, i) => (
-                        <div
-                          key={`ap-${i}`}
-                          className="p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow cursor-pointer"
-                          style={{ borderLeft: `4px solid ${caseColor[ap.caseId]}` }}
-                          onClick={() => navigate(`/patients/${patient.id}/cases/${ap.caseId}`)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: caseColor[ap.caseId] }} />
-                              <span className="font-body text-sm font-semibold">{ap.date.toISOString().split('T')[0]}</span>
-                            </div>
-                            <Badge className={`font-body text-xs ${statusBadgeClass[ap.status]}`}>{getStatusLabel(ap.status)}</Badge>
+                    {patientTurnos.length > 0 ? patientTurnos.map((ap, i) => (
+                      <div
+                        key={`ap-${i}`}
+                        className="p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow cursor-pointer border-l-4 border-l-primary"
+                        onClick={() => navigate(`/patients/${patient.id}`)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+                            <span className="font-body text-sm font-semibold">{ap.dateIso}{ap.time ? ` · ${ap.time}` : ''}</span>
                           </div>
-                          <p className="font-body text-sm mt-1">{ap.woundType}{ap.anatomicalLocation ? ` · ${ap.anatomicalLocation}` : ''}</p>
+                          <Badge className={`font-body text-xs ${turnoStatusBadgeClass(ap.status)}`}>{turnoStatusLabel(ap.status)}</Badge>
                         </div>
-                      ));
-                    })() : (
+                        <p className="font-body text-sm mt-1 text-muted-foreground">
+                          {activeCases.length} herida{activeCases.length !== 1 ? 's' : ''} activa{activeCases.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    )) : (
                       <p className="font-body text-sm text-muted-foreground">No hay turnos programados.</p>
                     )}
 
@@ -599,30 +502,17 @@ export default function PatientDetail() {
           );
         })()}
 
-        
+
 
         {/* Case Form Dialog */}
         {/* New Appointment Dialog */}
         <Dialog open={apptDialogOpen} onOpenChange={setApptDialogOpen}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="heading-display text-lg">Nuevo turno</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 mt-2">
-              <div className="space-y-1.5">
-                <Label className="font-body text-sm">Herida</Label>
-                <Select value={apptCaseId} onValueChange={setApptCaseId}>
-                  <SelectTrigger className="font-body"><SelectValue placeholder="Seleccionar herida" /></SelectTrigger>
-                  <SelectContent>
-                    {patient.cases.filter(c => c.status !== 'resuelto').map(c => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.woundType}{c.anatomicalLocation ? ` · ${c.anatomicalLocation}` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="font-body text-sm">Fecha</Label>
                   <Input
@@ -688,7 +578,7 @@ export default function PatientDetail() {
                     <ul className="space-y-0.5">
                       {sorted.slice(0, 8).map((c, i) => (
                         <li key={i} className="font-body text-[11px] text-warning/90">
-                          • {c.time || '—'} · {c.patientName} ({c.woundType})
+                          • {c.time || '—'} · {c.patientName}
                         </li>
                       ))}
                       {sorted.length > 8 && (
@@ -705,7 +595,7 @@ export default function PatientDetail() {
               <Button variant="outline" onClick={() => setApptDialogOpen(false)} className="font-body">Cancelar</Button>
               <Button
                 onClick={handleSaveAppointment}
-                disabled={!apptCaseId || !apptDate || apptTakenTimes.has(apptTime)}
+                disabled={!apptDate || apptTakenTimes.has(apptTime)}
                 className="font-body"
               >
                 Guardar turno

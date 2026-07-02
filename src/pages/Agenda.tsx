@@ -31,17 +31,16 @@ export default function Agenda() {
   }, [patients]);
 
   const upcoming = useMemo(() => {
-    const items: { date: string; time?: string; patient: (typeof patients)[number]; caseId: string; woundType: string; status: Turno['status'] }[] = [];
+    const items: { date: string; time?: string; patient: (typeof patients)[number]; caseId: string | null; activeWoundCount: number; status: Turno['status'] }[] = [];
     turnos.forEach(t => {
       const patient = patientById[t.patientId];
       if (!patient) return;
-      const woundCase = patient.cases.find(c => c.id === t.caseId);
       items.push({
         date: t.date,
         time: t.time || undefined,
         patient,
         caseId: t.caseId,
-        woundType: woundCase?.woundType || '',
+        activeWoundCount: patient.cases.filter(c => c.status !== 'resuelto').length,
         status: t.status,
       });
     });
@@ -100,7 +99,7 @@ export default function Agenda() {
                   {items.map((it, i) => (
                     <button
                       key={i}
-                      onClick={() => navigate(`/patients/${it.patient.id}/cases/${it.caseId}`)}
+                      onClick={() => navigate(it.caseId ? `/patients/${it.patient.id}/cases/${it.caseId}` : `/patients/${it.patient.id}`)}
                       className="w-full flex items-center gap-3 p-3 rounded-md border border-border/60 hover:bg-accent/50 transition-colors text-left"
                     >
                       <div className="h-9 w-9 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
@@ -112,7 +111,9 @@ export default function Agenda() {
                           <span className="font-medium">{it.patient.lastName}, {it.patient.firstName}</span>
                           {it.time && <span className="text-muted-foreground">· {it.time}</span>}
                         </div>
-                        <div className="font-body text-xs text-muted-foreground truncate">{it.woundType}</div>
+                        <div className="font-body text-xs text-muted-foreground truncate">
+                          {it.activeWoundCount} herida{it.activeWoundCount !== 1 ? 's' : ''} activa{it.activeWoundCount !== 1 ? 's' : ''}
+                        </div>
                       </div>
                       <Badge variant="outline" className={`font-body text-[10px] uppercase shrink-0 ${turnoStatusChipClasses(it.status)}`}>
                         {turnoStatusLabel(it.status)}

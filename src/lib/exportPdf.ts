@@ -1,6 +1,6 @@
 import { Patient, getStatusLabel } from '@/data/demoData';
 import { formatPatientAge } from '@/lib/age';
-import { formatNextControl, getActiveTurnoForCase } from '@/lib/appointments';
+import { formatNextControl, getActiveTurnoForPatient } from '@/lib/appointments';
 import type { Turno } from '@/context/AppContext';
 
 export interface EvolutionSignatureInfo {
@@ -36,7 +36,7 @@ export function exportPatientPdf(patient: Patient, turnos: Turno[], signatureMap
   };
 
   const casesHtml = patient.cases.map(c => {
-    const activeTurno = getActiveTurnoForCase(turnos, c.id);
+    const activeTurno = getActiveTurnoForPatient(turnos, patient.id);
     return `
     <div class="case">
       <h2>${c.woundType} — ${c.anatomicalLocation}</h2>

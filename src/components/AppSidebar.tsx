@@ -23,6 +23,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useMemo, useState } from 'react';
+import { featureFlags } from '@/config/featureFlags';
 
 type SidebarItem = {
   title: string;
@@ -166,12 +167,12 @@ export function AppSidebar() {
   // Items per role
   const profClinical = filterByPermission(clinicalItems);
   const profSupplies = filterByPermission([
-    { title: 'Catálogo de Insumos', url: '/marketplace', icon: ShoppingBag, section: 'catalogo-clinico' },
-    { title: 'Mis Pedidos', url: '/orders', icon: Truck, section: 'solicitudes-reposicion' },
+    ...(featureFlags.showMarketplaceNav ? [{ title: 'Catálogo de Insumos', url: '/marketplace', icon: ShoppingBag, section: 'catalogo-clinico' as PermissionSection }] : []),
+    ...(featureFlags.showOrdersNav ? [{ title: 'Mis Pedidos', url: '/orders', icon: Truck, section: 'solicitudes-reposicion' as PermissionSection }] : []),
   ]);
   const profPlatform = filterByPermission([
     //{ title: 'Asistente clínico', url: '/assistant', icon: Sparkles, section: 'asistente-clinico' },
-    { title: 'Configuración', url: '/settings', icon: Settings, section: 'configuracion' },
+    ...(featureFlags.showSettingsNav ? [{ title: 'Configuración', url: '/settings', icon: Settings, section: 'configuracion' as PermissionSection }] : []),
   ]);
 
   const sponsorPanelCommercial = filterByPermission(sponsorCommercialItems);

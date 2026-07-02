@@ -110,7 +110,7 @@ function patientToRow(p: Patient, userId: string): Omit<PatientRow, 'id'> & { id
 interface TurnoRow {
   id: string;
   user_id: string;
-  case_id: string;
+  case_id: string | null;
   patient_id: string;
   scheduled_date: string;
   scheduled_time: string | null;
@@ -122,7 +122,7 @@ interface TurnoRow {
 
 export interface Turno {
   id: string;
-  caseId: string;
+  caseId: string | null;
   patientId: string;
   date: string;
   time: string;
@@ -167,16 +167,16 @@ interface AppContextType {
 
   // Cases & Evolutions
   addCase: (patientId: string, woundCase: WoundCase) => void;
-  updateCase: (patientId: string, woundCase: WoundCase) => Promise<void>;
+  updateCase: (patientId: string, woundCase: WoundCase) => Promise<boolean>;
   deleteCase: (patientId: string, caseId: string) => void;
   addEvolution: (patientId: string, caseId: string, evolution: Evolution) => Promise<string | null>;
   appendEvolutionToState: (patientId: string, caseId: string, evolution: Evolution) => void;
-  updateEvolution: (patientId: string, caseId: string, evolution: Evolution) => Promise<void>;
+  updateEvolution: (patientId: string, caseId: string, evolution: Evolution) => Promise<boolean>;
   deleteEvolution: (patientId: string, caseId: string, evolutionId: string) => void;
 
   // Turnos (appointments, synced with backend)
   turnos: Turno[];
-  createTurno: (input: { caseId: string; patientId: string; date: string; time?: string; notes?: string }) => Promise<string | null>;
+  createTurno: (input: { caseId?: string; patientId: string; date: string; time?: string; notes?: string }) => Promise<string | null>;
   updateTurno: (turno: Turno) => Promise<void>;
   cancelTurno: (id: string) => Promise<void>;
   deleteTurno: (id: string) => Promise<void>;
@@ -489,12 +489,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCasesByPatient(prev => ({ ...prev, [patientId]: [...(prev[patientId] || []), woundCase] }));
   }, []);
 
-  const updateCase = useCallback(async (patientId: string, woundCase: WoundCase) => {
+  const updateCase = useCallback(async (patientId: string, woundCase: WoundCase): Promise<boolean> => {
     setCasesByPatient(prev => ({
       ...prev,
       [patientId]: (prev[patientId] || []).map(c => c.id === woundCase.id ? woundCase : c),
     }));
-    if (!authUser) return;
+    if (!authUser) return false;
     const { error } = await supabase.from('wound_cases').update({
       wound_type: woundCase.woundType,
       anatomical_location: woundCase.anatomicalLocation || null,
@@ -504,7 +504,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ai_summary: woundCase.aiSummary || null,
       ai_summary_updated_at: woundCase.aiSummaryUpdatedAt || null,
     }).eq('id', woundCase.id).eq('user_id', authUser.id);
-    if (error) console.error('updateCase DB error', error);
+    if (error) {
+      console.error('updateCase DB error', error);
+      return false;
+    }
+    return true;
   }, [authUser?.id]);
 
   const deleteCase = useCallback((patientId: string, caseId: string) => {
@@ -531,7 +535,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         c.id === caseId ? { ...c, evolutions: [evolution, ...c.evolutions] } : c
       ),
     }));
-    if (!authUser) return tempId;
+    if (!authUser) return null;
     const { data, error } = await supabase.from('evolutions').insert({
       user_id: authUser.id,
       case_id: caseId,
@@ -567,7 +571,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }).select('id').single();
     if (error) {
       console.error('addEvolution DB error', error);
-      return tempId;
+      setCasesByPatient(prev => ({
+        ...prev,
+        [patientId]: (prev[patientId] || []).map(c =>
+          c.id === caseId ? { ...c, evolutions: c.evolutions.filter(e => e.id !== tempId) } : c
+        ),
+      }));
+      return null;
     }
     const dbId = (data as { id: string }).id;
     setCasesByPatient(prev => ({
@@ -581,14 +591,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return dbId;
   }, [authUser?.id]);
 
-  const updateEvolution = useCallback(async (patientId: string, caseId: string, evolution: Evolution) => {
+  const updateEvolution = useCallback(async (patientId: string, caseId: string, evolution: Evolution): Promise<boolean> => {
     setCasesByPatient(prev => ({
       ...prev,
       [patientId]: (prev[patientId] || []).map(c =>
         c.id === caseId ? { ...c, evolutions: c.evolutions.map(e => e.id === evolution.id ? evolution : e) } : c
       ),
     }));
-    if (!authUser) return;
+    if (!authUser) return false;
     const { error } = await supabase.from('evolutions').update({
       evolution_date: evolution.date,
       evolution_time: evolution.time || null,
@@ -620,7 +630,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       medical_order: evolution.medicalOrder || null,
       closed_at: evolution.closedAt || null,
     }).eq('id', evolution.id).eq('user_id', authUser.id);
-    if (error) console.error('updateEvolution DB error', error);
+    if (error) {
+      console.error('updateEvolution DB error', error);
+      return false;
+    }
+    return true;
   }, [authUser?.id]);
 
   const deleteEvolution = useCallback((patientId: string, caseId: string, evolutionId: string) => {
@@ -635,12 +649,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ---- Compose turnos (rows -> app shape, deriving lifecycle status) ----
   const turnos: Turno[] = useMemo(() => {
     return turnoRows.map(row => {
+      // A turno covers the patient's whole visit, so any evolution logged
+      // for any of the patient's cases within the window fulfills it.
       const evolutions: CaseEvolutionInput[] = (casesByPatient[row.patient_id] || [])
-        .filter(c => c.id === row.case_id)
-        .flatMap(c => c.evolutions.map(e => ({ case_id: c.id, created_at: e.date })));
+        .flatMap(c => c.evolutions.map(e => ({ patient_id: row.patient_id, created_at: e.date })));
       const status = deriveTurnoStatus(
         {
-          case_id: row.case_id,
+          patient_id: row.patient_id,
           scheduled_date: row.scheduled_date,
           scheduled_time: row.scheduled_time,
           status: row.status,
@@ -671,14 +686,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTurnoRows(prev => prev.map(r => r.id === id ? { ...r, status: 'cancelado' as const } : r));
   }, [authUser?.id]);
 
-  const createTurno = useCallback(async (input: { caseId: string; patientId: string; date: string; time?: string; notes?: string }): Promise<string | null> => {
+  const createTurno = useCallback(async (input: { caseId?: string; patientId: string; date: string; time?: string; notes?: string }): Promise<string | null> => {
     if (!authUser) return null;
 
     // Supersede any still-unresolved (programado/vencido) turno already
-    // scheduled for this case before creating a new one, so a case never
-    // accumulates duplicate/stale active turnos across multiple evolution
-    // closes. completado/cancelado turnos are final and left untouched.
-    const idsToSupersede = findTurnosToSupersede(turnos, input.caseId);
+    // scheduled for this patient before creating a new one, so a patient
+    // never accumulates duplicate/stale active turnos across multiple
+    // evolution closes. completado/cancelado turnos are final and left untouched.
+    const idsToSupersede = findTurnosToSupersede(turnos, input.patientId);
     for (const id of idsToSupersede) {
       try {
         await cancelTurno(id);
@@ -691,7 +706,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const insertable = {
       user_id: authUser.id,
-      case_id: input.caseId,
+      case_id: input.caseId ?? null,
       patient_id: input.patientId,
       scheduled_date: input.date,
       scheduled_time: input.time || null,
