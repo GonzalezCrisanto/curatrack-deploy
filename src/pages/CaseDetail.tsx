@@ -636,7 +636,7 @@ export default function CaseDetail() {
     <AppLayout>
       <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
         <div className="space-y-6 animate-fade-in">
-        <Button variant="outline" onClick={() => navigate(`/patients/${patient.id}`)} className="font-body text-sm border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
+        <Button variant="outline" onClick={() => navigate(`/patients/${patient.id}`)} className="font-body text-base border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver al paciente
         </Button>
 
@@ -644,12 +644,11 @@ export default function CaseDetail() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <h1 className="heading-display text-2xl">{woundCase.woundType}</h1>
-              <Badge className={`font-body text-xs ${statusBadgeClass[woundCase.status]}`}>
+              <h1 className="heading-display text-[26px]">{woundCase.woundType}</h1>
+              <Badge className={`font-body text-sm ${statusBadgeClass[woundCase.status]}`}>
                 {woundCase.status === 'resuelto' ? 'CERRADA ✅' : getStatusLabel(woundCase.status)}
               </Badge>
             </div>
-            <p className="font-body text-sm text-muted-foreground">{woundCase.anatomicalLocation} · {patient.firstName} {patient.lastName}</p>
           </div>
           <Button
             size="lg"
@@ -660,7 +659,7 @@ export default function CaseDetail() {
                 generateAISummary();
               }
             }}
-            className="font-body h-12 px-5 text-base font-semibold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md shrink-0"
+            className="font-body h-12 px-5 text-lg font-semibold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md shrink-0"
           >
             <Sparkles className="mr-2 h-5 w-5" />
             {woundCase.aiSummary ? 'Ver resumen con IA' : 'Generar resumen con IA'}
@@ -670,7 +669,7 @@ export default function CaseDetail() {
         {/* Case Info Grid */}
         <Card className="border-border/50">
           <CardHeader className="pb-3">
-            <CardTitle className="heading-display text-lg">Información del Caso</CardTitle>
+            <CardTitle className="heading-display text-xl">Información del Caso</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -678,8 +677,8 @@ export default function CaseDetail() {
                 <div key={d.label} className="flex items-start gap-2">
                   <d.icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                   <div>
-                    <p className="font-body text-xs text-muted-foreground">{d.label}</p>
-                    <p className="font-body text-sm">{d.value}</p>
+                    <p className="font-body text-sm text-muted-foreground">{d.label}</p>
+                    <p className="font-body text-base">{d.value}</p>
                   </div>
                 </div>
               ))}
@@ -689,7 +688,7 @@ export default function CaseDetail() {
 
         {/* Timeline */}
         <div className="flex items-center justify-between">
-          <h2 className="heading-display text-xl flex items-center gap-2">
+          <h2 className="heading-display text-[22px] flex items-center gap-2">
             <Clock className="h-5 w-5 text-primary" /> Evolución de la Herida
           </h2>
           <Button onClick={goToNewCurationStep2} className="font-body" size="sm">
@@ -750,14 +749,13 @@ export default function CaseDetail() {
                     <div className="flex items-start justify-between mb-3 gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-body text-sm font-semibold">{ev.date}</span>
-                          {ev.time && <span className="font-body text-xs text-muted-foreground">{ev.time} hs</span>}
-                          <Badge variant="outline" className="font-body text-xs">{ev.professional}</Badge>
+                          <span className="font-body text-base font-semibold">{ev.date}</span>
+                          {ev.time && <span className="font-body text-sm text-muted-foreground">{ev.time} hs</span>}
                           {evoStatus && (
-                            <Badge variant="secondary" className="font-body text-xs">{evoStatus}</Badge>
+                            <Badge variant="secondary" className="font-body text-sm">{evoStatus}</Badge>
                           )}
                           {isHistory && ev.closedAt && (
-                            <Badge className="font-body text-xs bg-success/15 text-success border-success/40 border">
+                            <Badge className="font-body text-sm bg-success/15 text-success border-success/40 border">
                               Cerrada · {ev.closedAt}
                             </Badge>
                           )}
@@ -768,7 +766,7 @@ export default function CaseDetail() {
                     {/* Quick metrics row */}
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-3">
                       {area != null && (
-                        <span className="inline-flex items-center gap-1 font-body text-xs">
+                        <span className="inline-flex items-center gap-1 font-body text-sm">
                           <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
                           <span className="tabular-nums font-medium">{area.toFixed(2)} cm²</span>
                           {trend === 'down' && <TrendingDown className="h-3.5 w-3.5 text-success" aria-label="Área disminuye" />}
@@ -777,12 +775,12 @@ export default function CaseDetail() {
                         </span>
                       )}
                       {tissueLabels.length > 0 && (
-                        <span className="inline-flex items-center gap-1 font-body text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1 font-body text-sm text-muted-foreground">
                           <Stethoscope className="h-3.5 w-3.5" /> {tissueLabels.slice(0, 3).join(', ')}{tissueLabels.length > 3 ? '…' : ''}
                         </span>
                       )}
                       {exudateLabel && (
-                        <span className="inline-flex items-center gap-1 font-body text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1 font-body text-sm text-muted-foreground">
                           <Droplets className="h-3.5 w-3.5" /> {exudateLabel}{exudateType ? ` · ${exudateType}` : ''}
                         </span>
                       )}
@@ -791,31 +789,31 @@ export default function CaseDetail() {
                     <div className="space-y-3">
                       {ev.description && (
                         <div>
-                          <p className="font-body text-xs text-muted-foreground mb-0.5">Descripción clínica</p>
-                          <p className="font-body text-sm">{ev.description}</p>
+                          <p className="font-body text-sm text-muted-foreground mb-0.5">Descripción clínica</p>
+                          <p className="font-body text-base whitespace-pre-line">{ev.description}</p>
                         </div>
                       )}
                       {ev.procedure && (
                         <div>
-                          <p className="font-body text-xs text-muted-foreground mb-0.5">Procedimiento</p>
-                          <p className="font-body text-sm">{ev.procedure}</p>
+                          <p className="font-body text-sm text-muted-foreground mb-0.5">Procedimiento</p>
+                          <p className="font-body text-base">{ev.procedure}</p>
                         </div>
                       )}
                       {ev.materials && (
                         <div>
-                          <p className="font-body text-xs text-muted-foreground mb-0.5 flex items-center gap-1"><Package className="h-3 w-3" /> Material de curación</p>
-                          <p className="font-body text-sm">{ev.materials}</p>
+                          <p className="font-body text-sm text-muted-foreground mb-0.5 flex items-center gap-1"><Package className="h-3 w-3" /> Material de curación</p>
+                          <p className="font-body text-base">{ev.materials}</p>
                         </div>
                       )}
                       {ev.observations && (
                         <div>
-                          <p className="font-body text-xs text-muted-foreground mb-0.5">Observaciones</p>
-                          <p className="font-body text-sm">{ev.observations}</p>
+                          <p className="font-body text-sm text-muted-foreground mb-0.5">Observaciones</p>
+                          <p className="font-body text-base">{ev.observations}</p>
                         </div>
                       )}
                       {/* AI summary moved to case header — no per-evolution button */}
                       {!isHistory && idx === 0 && activeTurno && (
-                        <div className="flex items-center gap-1 text-xs font-body text-muted-foreground">
+                        <div className="flex items-center gap-1 text-sm font-body text-muted-foreground">
                           <Clock className="h-3.5 w-3.5" /> Próximo control: {formatNextControl(activeTurno.date, activeTurno.time)}
                         </div>
                       )}
@@ -841,7 +839,7 @@ export default function CaseDetail() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="font-body text-xs mt-1"
+                          className="font-body text-sm mt-1"
                           onClick={() => setSigViewerEvoId(ev.id)}
                         >
                           <FileSignature className="h-3.5 w-3.5 mr-1.5" /> Ver firma responsable
@@ -883,11 +881,11 @@ export default function CaseDetail() {
             <Tabs defaultValue="active" className="w-full">
               <TabsList className="font-body">
                 <TabsTrigger value="active" className="font-body">
-                  Activas <Badge variant="secondary" className="ml-2 font-body text-xs">{activeEvos.length}</Badge>
+                  Activas <Badge variant="secondary" className="ml-2 font-body text-sm">{activeEvos.length}</Badge>
                 </TabsTrigger>
                 <TabsTrigger value="history" className="font-body">
                   <Archive className="mr-1.5 h-3.5 w-3.5" />
-                  Historial <Badge variant="secondary" className="ml-2 font-body text-xs">{closedEvos.length}</Badge>
+                  Historial <Badge variant="secondary" className="ml-2 font-body text-sm">{closedEvos.length}</Badge>
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="active" className="mt-4">
@@ -904,7 +902,7 @@ export default function CaseDetail() {
         <Dialog open={evoDialogOpen} onOpenChange={setEvoDialogOpen}>
           <DialogContent className="max-w-2xl w-full sm:max-w-2xl h-[100dvh] sm:h-auto sm:max-h-[90vh] p-0 gap-0 flex flex-col rounded-none sm:rounded-lg">
             <DialogHeader className="px-4 sm:px-6 pt-4 pb-3 border-b border-border/50 shrink-0">
-              <DialogTitle className="heading-display text-lg sm:text-xl">
+              <DialogTitle className="heading-display text-xl sm:text-[22px]">
                 {editingEvo ? 'Editar Evolución' : 'Nueva Evolución'}
               </DialogTitle>
             </DialogHeader>
@@ -913,18 +911,18 @@ export default function CaseDetail() {
               {/* Fecha de curación + hora */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fecha de curación</Label>
+                  <Label className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wide">Fecha de curación</Label>
                   <Input type="date" value={evoForm.healingDate} onChange={e => { setEField('healingDate', e.target.value); setEField('date', e.target.value); }} className="font-body h-11" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Hora</Label>
+                  <Label className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wide">Hora</Label>
                   <Input type="time" value={evoForm.time} onChange={e => setEField('time', e.target.value)} className="font-body h-11" />
                 </div>
               </div>
 
               {/* Profesional */}
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Profesional</Label>
+                <Label className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wide">Profesional</Label>
                 <Select value={evoForm.professional} onValueChange={v => setEField('professional', v)}>
                   <SelectTrigger className="font-body h-11"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -936,16 +934,16 @@ export default function CaseDetail() {
               {/* Tamaño de la herida */}
               <div className="space-y-2 rounded-lg border border-border/60 bg-muted/30 p-3">
                 <div className="flex items-baseline justify-between">
-                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tamaño de la herida (cm)</Label>
+                  <Label className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wide">Tamaño de la herida (cm)</Label>
                   {woundArea && (
-                    <span className="font-body text-xs font-semibold text-primary tabular-nums">
+                    <span className="font-body text-sm font-semibold text-primary tabular-nums">
                       Área: {woundArea} cm²
                     </span>
                   )}
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="space-y-1">
-                    <Label className="font-body text-[11px] text-muted-foreground">Largo</Label>
+                    <Label className="font-body text-[13px] text-muted-foreground">Largo</Label>
                     <Input
                       type="number" inputMode="decimal" step="0.1" min="0"
                       value={evoForm.woundLength}
@@ -954,7 +952,7 @@ export default function CaseDetail() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="font-body text-[11px] text-muted-foreground">Ancho</Label>
+                    <Label className="font-body text-[13px] text-muted-foreground">Ancho</Label>
                     <Input
                       type="number" inputMode="decimal" step="0.1" min="0"
                       value={evoForm.woundWidth}
@@ -963,7 +961,7 @@ export default function CaseDetail() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="font-body text-[11px] text-muted-foreground">Profundidad</Label>
+                    <Label className="font-body text-[13px] text-muted-foreground">Profundidad</Label>
                     <Input
                       type="number" inputMode="decimal" step="0.1" min="0"
                       value={evoForm.woundDepth}
@@ -976,7 +974,7 @@ export default function CaseDetail() {
 
               {/* Tipo de tejido — multi-select chips */}
               <div className="space-y-2">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de tejido presente</Label>
+                <Label className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wide">Tipo de tejido presente</Label>
                 <div className="flex flex-wrap gap-2">
                   {tissueTypeOptions.map(t => {
                     const active = evoForm.tissueTypes.includes(t.value);
@@ -986,7 +984,7 @@ export default function CaseDetail() {
                         type="button"
                         onClick={() => toggleTissue(t.value)}
                         className={cn(
-                          "min-h-11 px-4 rounded-full border font-body text-sm font-medium transition-all active:scale-95",
+                          "min-h-11 px-4 rounded-full border font-body text-base font-medium transition-all active:scale-95",
                           active
                             ? "bg-primary text-primary-foreground border-primary shadow-sm"
                             : "bg-background text-foreground border-border hover:border-primary/50"
@@ -1001,7 +999,7 @@ export default function CaseDetail() {
 
               {/* Tipo de borde — multi-select chips */}
               <div className="space-y-2">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo de borde</Label>
+                <Label className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wide">Tipo de borde</Label>
                 <div className="flex flex-wrap gap-2">
                   {edgeTypeOptions.map(t => {
                     const active = evoForm.edgeTypes.includes(t.value);
@@ -1011,7 +1009,7 @@ export default function CaseDetail() {
                         type="button"
                         onClick={() => toggleEdge(t.value)}
                         className={cn(
-                          "min-h-11 px-4 rounded-full border font-body text-sm font-medium transition-all active:scale-95",
+                          "min-h-11 px-4 rounded-full border font-body text-base font-medium transition-all active:scale-95",
                           active
                             ? "bg-primary text-primary-foreground border-primary shadow-sm"
                             : "bg-background text-foreground border-border hover:border-primary/50"
@@ -1027,9 +1025,9 @@ export default function CaseDetail() {
 
               <div className="space-y-2">
                 <div className="flex items-baseline justify-between">
-                  <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dolor (EVA)</Label>
+                  <Label className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wide">Dolor (EVA)</Label>
                   <span className={cn(
-                    "font-body text-sm font-bold tabular-nums px-2 py-0.5 rounded-md",
+                    "font-body text-base font-bold tabular-nums px-2 py-0.5 rounded-md",
                     evoForm.painLevel <= 3 && "bg-success/15 text-success",
                     evoForm.painLevel > 3 && evoForm.painLevel <= 6 && "bg-warning/15 text-warning",
                     evoForm.painLevel > 6 && "bg-destructive/15 text-destructive",
@@ -1041,14 +1039,14 @@ export default function CaseDetail() {
                   onValueChange={([v]) => setEField('painLevel', v)}
                   className="py-2"
                 />
-                <div className="flex justify-between font-body text-[10px] text-muted-foreground px-0.5">
+                <div className="flex justify-between font-body text-[12px] text-muted-foreground px-0.5">
                   <span>Sin dolor</span><span>Moderado</span><span>Insoportable</span>
                 </div>
               </div>
 
               {/* Olor — chips */}
               <div className="space-y-2">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Olor</Label>
+                <Label className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wide">Olor</Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {odorOptions.map(o => {
                     const active = evoForm.odor === o.value;
@@ -1058,7 +1056,7 @@ export default function CaseDetail() {
                         type="button"
                         onClick={() => setEField('odor', o.value)}
                         className={cn(
-                          "h-11 rounded-lg border font-body text-sm font-medium transition-all active:scale-95",
+                          "h-11 rounded-lg border font-body text-base font-medium transition-all active:scale-95",
                           active
                             ? "bg-primary text-primary-foreground border-primary shadow-sm"
                             : "bg-background text-foreground border-border hover:border-primary/50"
@@ -1073,12 +1071,12 @@ export default function CaseDetail() {
 
               {/* Exudado */}
               <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <Label className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
                   <Droplets className="h-3.5 w-3.5" /> Exudado
                 </Label>
 
                 <div className="space-y-1.5">
-                  <p className="font-body text-[11px] text-muted-foreground">Cantidad</p>
+                  <p className="font-body text-[13px] text-muted-foreground">Cantidad</p>
                   <div className="flex flex-wrap gap-2">
                     {exudateAmountOptions.map(o => {
                       const active = evoForm.exudateAmount === o.value;
@@ -1086,7 +1084,7 @@ export default function CaseDetail() {
                         <button key={o.value} type="button"
                           onClick={() => setEField('exudateAmount', active ? undefined : o.value)}
                           className={cn(
-                            "min-h-11 px-4 rounded-full border font-body text-sm font-medium transition-all active:scale-95",
+                            "min-h-11 px-4 rounded-full border font-body text-base font-medium transition-all active:scale-95",
                             active
                               ? "bg-primary text-primary-foreground border-primary shadow-sm"
                               : "bg-background text-foreground border-border hover:border-primary/50"
@@ -1098,7 +1096,7 @@ export default function CaseDetail() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <p className="font-body text-[11px] text-muted-foreground">Tipo</p>
+                  <p className="font-body text-[13px] text-muted-foreground">Tipo</p>
                   <div className="flex flex-wrap gap-2">
                     {exudateTypeOptions.map(o => {
                       const active = evoForm.exudateType === o.value;
@@ -1106,7 +1104,7 @@ export default function CaseDetail() {
                         <button key={o.value} type="button"
                           onClick={() => setEField('exudateType', active ? undefined : o.value)}
                           className={cn(
-                            "min-h-11 px-4 rounded-full border font-body text-sm font-medium transition-all active:scale-95",
+                            "min-h-11 px-4 rounded-full border font-body text-base font-medium transition-all active:scale-95",
                             active
                               ? "bg-primary text-primary-foreground border-primary shadow-sm"
                               : "bg-background text-foreground border-border hover:border-primary/50"
@@ -1118,7 +1116,7 @@ export default function CaseDetail() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <p className="font-body text-[11px] text-muted-foreground">Color</p>
+                  <p className="font-body text-[13px] text-muted-foreground">Color</p>
                   <div className="flex flex-wrap gap-2">
                     {exudateColorOptions.map(o => {
                       const active = evoForm.exudateColor === o.value;
@@ -1126,7 +1124,7 @@ export default function CaseDetail() {
                         <button key={o.value} type="button"
                           onClick={() => setEField('exudateColor', active ? undefined : o.value)}
                           className={cn(
-                            "min-h-11 px-3 rounded-full border font-body text-sm font-medium transition-all active:scale-95 inline-flex items-center gap-2",
+                            "min-h-11 px-3 rounded-full border font-body text-base font-medium transition-all active:scale-95 inline-flex items-center gap-2",
                             active
                               ? "bg-primary text-primary-foreground border-primary shadow-sm"
                               : "bg-background text-foreground border-border hover:border-primary/50"
@@ -1144,7 +1142,7 @@ export default function CaseDetail() {
               {/* Infección — progressive disclosure */}
               <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
                 <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="has-infection" className="font-body text-sm font-semibold flex items-center gap-1.5">
+                  <Label htmlFor="has-infection" className="font-body text-base font-semibold flex items-center gap-1.5">
                     <ShieldAlert className={cn("h-4 w-4", evoForm.hasInfectionSigns ? "text-destructive" : "text-muted-foreground")} />
                     ¿Presenta signos de infección?
                   </Label>
@@ -1166,7 +1164,7 @@ export default function CaseDetail() {
                             type="button"
                             onClick={() => setEField(f.key, !checked)}
                             className={cn(
-                              "min-h-11 px-3 rounded-lg border font-body text-sm text-left flex items-center justify-between gap-2 transition-all active:scale-[0.98]",
+                              "min-h-11 px-3 rounded-lg border font-body text-base text-left flex items-center justify-between gap-2 transition-all active:scale-[0.98]",
                               checked
                                 ? "bg-destructive/10 text-destructive border-destructive/40"
                                 : "bg-background text-foreground border-border hover:border-destructive/30"
@@ -1185,7 +1183,7 @@ export default function CaseDetail() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="font-body text-[11px] text-muted-foreground flex items-center gap-1">
+                      <Label className="font-body text-[13px] text-muted-foreground flex items-center gap-1">
                         <Thermometer className="h-3 w-3" /> Temperatura corporal (°C)
                       </Label>
                       <Input
@@ -1205,7 +1203,7 @@ export default function CaseDetail() {
 
               {/* Estado de evolución */}
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Estado de evolución</Label>
+                <Label className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wide">Estado de evolución</Label>
                 <Select value={evoForm.evolutionStatus} onValueChange={v => setEField('evolutionStatus', v)}>
                   <SelectTrigger className={cn(
                     "font-body h-11",
@@ -1227,11 +1225,11 @@ export default function CaseDetail() {
 
               {/* Descripción/procedimiento/materiales/observaciones */}
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Descripción clínica</Label>
+                <Label className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wide">Descripción clínica</Label>
                 <Textarea value={evoForm.description} onChange={e => setEField('description', e.target.value)} className="font-body" rows={3} />
               </div>
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Procedimiento realizado</Label>
+                <Label className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wide">Procedimiento realizado</Label>
                 <Textarea
                   value={evoForm.procedure}
                   onChange={e => setEField('procedure', e.target.value)}
@@ -1240,7 +1238,7 @@ export default function CaseDetail() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <Label className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
                   <Package className="h-3.5 w-3.5" /> Material de curación utilizado
                 </Label>
                 <Textarea
@@ -1251,14 +1249,14 @@ export default function CaseDetail() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Observaciones</Label>
+                <Label className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wide">Observaciones</Label>
                 <Textarea value={evoForm.observations} onChange={e => setEField('observations', e.target.value)} className="font-body" rows={2} />
               </div>
 
               {/* Orden médica */}
               <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
                 <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="req-order" className="font-body text-sm font-semibold flex items-center gap-1.5">
+                  <Label htmlFor="req-order" className="font-body text-base font-semibold flex items-center gap-1.5">
                     <FileText className={cn("h-4 w-4", evoForm.requiresMedicalOrder ? "text-primary" : "text-muted-foreground")} />
                     ¿Requiere orden médica?
                   </Label>
@@ -1271,7 +1269,7 @@ export default function CaseDetail() {
 
                 {evoForm.requiresMedicalOrder && (
                   <div className="space-y-2 pt-1 animate-fade-in">
-                    <Label className="font-body text-[11px] text-muted-foreground">Detalle de la orden médica</Label>
+                    <Label className="font-body text-[13px] text-muted-foreground">Detalle de la orden médica</Label>
                     <Textarea
                       value={evoForm.medicalOrder}
                       onChange={e => setEField('medicalOrder', e.target.value)}
@@ -1293,7 +1291,7 @@ export default function CaseDetail() {
 
               {/* Fotos */}
               <div className="space-y-2">
-                <Label className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fotos</Label>
+                <Label className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wide">Fotos</Label>
                 <div className="flex gap-2">
                   <input ref={evoCameraInput} type="file" accept="image/*" capture="environment" className="hidden"
                     onChange={e => { handleFileUpload(e.target.files); e.target.value = ''; }} />
@@ -1391,22 +1389,22 @@ export default function CaseDetail() {
         <Dialog open={!!sigViewerEvoId} onOpenChange={() => setSigViewerEvoId(null)}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle className="heading-display text-lg">Firma del profesional responsable</DialogTitle>
+              <DialogTitle className="heading-display text-xl">Firma del profesional responsable</DialogTitle>
             </DialogHeader>
             {sigViewerEvoId && evoSignatures[sigViewerEvoId] && (
               <div className="space-y-2">
-                <p className="font-body text-sm">
+                <p className="font-body text-base">
                   <span className="text-muted-foreground">Profesional:</span> {evoSignatures[sigViewerEvoId].professionalName}
                 </p>
                 {evoSignatures[sigViewerEvoId].signedAt && (
-                  <p className="font-body text-sm">
+                  <p className="font-body text-base">
                     <span className="text-muted-foreground">Fecha:</span> {new Date(evoSignatures[sigViewerEvoId].signedAt as string).toLocaleString('es-AR')}
                   </p>
                 )}
                 {evoSignatures[sigViewerEvoId].signatureUrl ? (
                   <img src={evoSignatures[sigViewerEvoId].signatureUrl as string} alt="Firma del profesional" className="w-full rounded-lg border border-border/60 bg-muted/20" />
                 ) : (
-                  <p className="font-body text-sm text-muted-foreground text-center py-6">Sin firma registrada</p>
+                  <p className="font-body text-base text-muted-foreground text-center py-6">Sin firma registrada</p>
                 )}
               </div>
             )}
@@ -1420,7 +1418,7 @@ export default function CaseDetail() {
               <DialogTitle className="heading-display flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" /> Resumen con IA — {woundCase.woundType}
               </DialogTitle>
-              <p className="font-body text-sm text-muted-foreground mt-1">
+              <p className="font-body text-base text-muted-foreground mt-1">
                 {patient.firstName} {patient.lastName}
                 {woundCase.anatomicalLocation ? ` · ${woundCase.anatomicalLocation}` : ''}
                 {' · '}{woundCase.evolutions.length} evolución{woundCase.evolutions.length === 1 ? '' : 'es'} considerada{woundCase.evolutions.length === 1 ? '' : 's'}
@@ -1432,19 +1430,19 @@ export default function CaseDetail() {
               {aiLoading && (
                 <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="font-body text-sm">Generando resumen clínico con todos los datos del caso…</p>
+                  <p className="font-body text-base">Generando resumen clínico con todos los datos del caso…</p>
                 </div>
               )}
               {!aiLoading && aiError && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
-                  <p className="font-body text-sm text-destructive">{aiError}</p>
+                  <p className="font-body text-base text-destructive">{aiError}</p>
                   <Button size="sm" variant="outline" onClick={generateAISummary} className="font-body">
                     <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Reintentar
                   </Button>
                 </div>
               )}
               {!aiLoading && !aiError && woundCase.aiSummary && (
-                <div className="font-body text-sm leading-relaxed text-foreground/90 prose prose-sm max-w-none prose-headings:font-display prose-headings:text-foreground prose-strong:text-foreground prose-li:my-0.5 prose-p:my-2 prose-ul:my-2 prose-ol:my-2">
+                <div className="font-body text-base leading-relaxed text-foreground/90 prose prose-sm max-w-none prose-headings:font-display prose-headings:text-foreground prose-strong:text-foreground prose-li:my-0.5 prose-p:my-2 prose-ul:my-2 prose-ol:my-2">
                   <ReactMarkdown>{woundCase.aiSummary}</ReactMarkdown>
                 </div>
               )}
@@ -1452,8 +1450,8 @@ export default function CaseDetail() {
                 <div className="text-center py-12 space-y-4">
                   <Sparkles className="h-10 w-10 text-primary/60 mx-auto" />
                   <div className="space-y-1">
-                    <p className="font-body text-base font-semibold">Aún no se generó un resumen para este caso.</p>
-                    <p className="font-body text-sm text-muted-foreground">
+                    <p className="font-body text-lg font-semibold">Aún no se generó un resumen para este caso.</p>
+                    <p className="font-body text-base text-muted-foreground">
                       Generá un resumen clínico que contemple todas las evoluciones registradas.
                     </p>
                   </div>
@@ -1461,7 +1459,7 @@ export default function CaseDetail() {
                     <Sparkles className="mr-1.5 h-4 w-4" /> Generar resumen con IA
                   </Button>
                   {woundCase.evolutions.length === 0 && (
-                    <p className="font-body text-xs text-muted-foreground">Registrá al menos una evolución antes de generar el resumen.</p>
+                    <p className="font-body text-sm text-muted-foreground">Registrá al menos una evolución antes de generar el resumen.</p>
                   )}
                 </div>
               )}

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -8,9 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SignaturePad } from '@/components/SignaturePad';
-import { FileText, AlertTriangle, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
@@ -45,13 +43,6 @@ interface ConsentRow {
   signed_at: string | null;
   signature_url: string | null;
 }
-
-const statusConfig: Record<string, { label: string; icon: React.ReactNode; variant: 'default' | 'destructive' | 'outline' | 'secondary' }> = {
-  accepted: { label: 'Consentimiento aceptado', icon: <CheckCircle2 className="h-4 w-4 text-success" />, variant: 'default' },
-  rejected: { label: 'Consentimiento rechazado', icon: <XCircle className="h-4 w-4 text-destructive" />, variant: 'destructive' },
-  partial: { label: 'Consentimiento parcial', icon: <AlertTriangle className="h-4 w-4 text-warning" />, variant: 'secondary' },
-  pending: { label: 'Consentimiento pendiente', icon: <Clock className="h-4 w-4 text-muted-foreground" />, variant: 'outline' },
-};
 
 export function PatientConsentCard({ patientId, patientName, patientDni }: PatientConsentCardProps) {
   const { currentUser } = useApp();
@@ -159,8 +150,6 @@ export function PatientConsentCard({ patientId, patientName, patientDni }: Patie
     }
   };
 
-  const cfg = statusConfig[consent?.status || 'pending'] || statusConfig.pending;
-
   if (loading) return null;
 
   return (
@@ -170,9 +159,6 @@ export function PatientConsentCard({ patientId, patientName, patientDni }: Patie
           <CardTitle className="heading-display text-sm flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" />
             Consentimiento informado
-            <Badge variant={cfg.variant} className="ml-auto text-[10px] flex items-center gap-1">
-              {cfg.icon} {cfg.label}
-            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">

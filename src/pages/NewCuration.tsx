@@ -415,7 +415,7 @@ export default function NewCuration() {
         `Tejido: ${evo.tissue}`,
         `Bordes: ${evo.edges}`,
         `Perilesional: ${evo.perilesional}`,
-      ].filter(Boolean).join('. ');
+      ].filter(Boolean).join('\n');
 
       const nextControlTime = evo.nextControl ? normalizeAppointmentTime(evo.nextControlTime) : '';
       const baseEvolutionPayload = {

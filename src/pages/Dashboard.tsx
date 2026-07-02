@@ -69,20 +69,6 @@ function statusPriority(status?: string) {
   return 3;
 }
 
-function statusLabel(status?: string) {
-  if (status === 'critico') return 'Crítico';
-  if (status === 'activo') return 'Activo';
-  if (status === 'en_mejoria') return 'En mejoría';
-  return 'Estable';
-}
-
-function statusChipClasses(status?: string) {
-  if (status === 'critico') return 'bg-destructive/10 text-destructive border-destructive/40';
-  if (status === 'activo') return 'bg-warning/10 text-warning border-warning/40';
-  if (status === 'en_mejoria') return 'bg-success/10 text-success border-success/40';
-  return 'bg-muted text-muted-foreground border-border';
-}
-
 export default function Dashboard() {
   const { patients, currentUserName, patientsLoading, turnos, createTurno } = useApp();
   const { sponsor } = useSponsor();
@@ -594,12 +580,12 @@ export default function Dashboard() {
                   <Button
                     key={label}
                     size="lg"
-                    className="h-20 flex-col gap-1 text-sm font-semibold shadow-sm active:scale-[0.99]"
+                    className="h-16 w-full justify-between text-xl font-semibold shadow-sm active:scale-[0.99] px-5"
                     style={sponsor?.primary_color ? { backgroundColor: sponsor.primary_color } : undefined}
                     onClick={onClick}
                   >
-                    <Icon className="h-5 w-5" />
                     {label}
+                    <Icon className="h-5 w-5 shrink-0" />
                   </Button>
                 ))}
               </div>
@@ -632,11 +618,7 @@ export default function Dashboard() {
                           <span className="w-14 shrink-0 font-mono text-sm font-semibold text-primary">
                             {a.time || '--:--'}
                           </span>
-                          <span className="flex-1 truncate text-sm font-medium">{a.patientName}</span>
-                          <span className="hidden truncate text-xs text-muted-foreground sm:inline">{a.address || 'Sin domicilio'}</span>
-                          <Badge variant="outline" className={`text-xs ${statusChipClasses(a.status)}`}>
-                            {statusLabel(a.status)}
-                          </Badge>
+                          <span className="flex-1 truncate text-base font-medium">{a.patientName}</span>
                         </button>
                       </li>
                     ))}
@@ -694,11 +676,10 @@ export default function Dashboard() {
                             onClick={() => navigate(`/patients/${p.id}`)}
                             className="flex min-h-12 w-full flex-col gap-1 py-2 px-2 text-left rounded-md hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-row sm:items-center sm:gap-3"
                           >
-                            <span className="flex-1 truncate text-sm font-medium">{name}</span>
+                            <span className="flex-1 truncate text-base font-medium">{name}</span>
                             <span className="flex-1 truncate text-sm text-muted-foreground">
                               {p.address || 'Sin domicilio'}
                             </span>
-                            <span className="truncate text-sm text-muted-foreground">{p.phone || 'Sin teléfono'}</span>
                           </button>
                         </li>
                       );
@@ -746,11 +727,7 @@ export default function Dashboard() {
                               <span className="w-14 shrink-0 font-mono text-sm font-semibold text-primary">
                                 {a.time || '--:--'}
                               </span>
-                              <span className="flex-1 truncate text-sm font-medium">{a.patientName}</span>
-                              <span className="hidden truncate text-xs text-muted-foreground sm:inline">{a.address || 'Sin domicilio'}</span>
-                              <Badge variant="outline" className={`text-xs ${statusChipClasses(a.status)}`}>
-                                {statusLabel(a.status)}
-                              </Badge>
+                              <span className="flex-1 truncate text-base font-medium">{a.patientName}</span>
                             </button>
                           </li>
                         ))}

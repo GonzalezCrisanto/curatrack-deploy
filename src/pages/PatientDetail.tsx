@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { exportPatientPdf } from '@/lib/exportPdf';
 import {
-  WoundCase, Photo, woundTypes, woundStatuses, getStatusLabel, professionals,
+  WoundCase, Photo, woundTypes, getStatusLabel, professionals,
 } from '@/data/demoData';
 import { ROLE_LABEL_SHORT } from '@/data/demoUsers';
 import { Calendar } from '@/components/ui/calendar';
@@ -201,14 +201,14 @@ export default function PatientDetail() {
       <div className="bg-muted/30 rounded-xl p-4 md:p-6 lg:p-8 flex-1">
         <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <Button variant="outline" onClick={() => navigate('/dashboard')} className="font-body text-sm border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
+          <Button variant="outline" onClick={() => navigate('/dashboard')} className="font-body text-base border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary shadow-sm">
             <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Dashboard
           </Button>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="font-body" onClick={openPatientEdit}>
+          <div className="flex flex-col gap-2">
+            <Button variant="outline" size="sm" className="font-body text-base" onClick={openPatientEdit}>
               <Edit className="mr-2 h-4 w-4" /> Editar paciente
             </Button>
-            <Button variant="outline" size="sm" className="font-body" onClick={() => exportPatientPdf(patient, turnos)}>
+            <Button variant="outline" size="sm" className="font-body text-base" onClick={() => exportPatientPdf(patient, turnos)}>
               <FileDown className="mr-2 h-4 w-4" /> Exportar Historia Clínica
             </Button>
           </div>
@@ -217,7 +217,7 @@ export default function PatientDetail() {
         {/* Patient header (name + pill) */}
         <div className="flex items-center gap-3">
           <div className="min-w-0">
-            <h1 className="heading-display text-2xl truncate">{patient.lastName}, {patient.firstName}</h1>
+            <h1 className="heading-display text-[26px] truncate">{patient.lastName}, {patient.firstName}</h1>
           </div>
           {/* owner badge removed as requested */}
         </div>
@@ -226,62 +226,80 @@ export default function PatientDetail() {
         <Card className="border-border/50">
           <CardContent className="space-y-4 pt-6 pb-4">
             <div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <p className="font-body text-lg font-semibold truncate" title={patient.address}>{patient.address || '—'}</p>
+              <div className="grid grid-cols-1 gap-3 items-start">
+                {patient.address ? (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(patient.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-start gap-2 rounded-md -mx-2 px-2 py-1 hover:bg-accent/40 active:scale-[0.99] transition-colors"
+                  >
+                    <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <p className="font-body text-xl font-semibold text-primary underline-offset-2 hover:underline">{patient.address}</p>
+                  </a>
+                ) : (
+                  <div className="flex items-start gap-2 px-2 py-1">
+                    <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <p className="font-body text-xl font-semibold">—</p>
                   </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <p className="font-body text-lg font-semibold truncate" title={patient.phone}>{patient.phone || '—'}</p>
+                )}
+                {patient.phone ? (
+                  <a
+                    href={`tel:${patient.phone.replace(/[^\d+]/g, '')}`}
+                    className="flex items-start gap-2 rounded-md -mx-2 px-2 py-1 hover:bg-accent/40 active:scale-[0.99] transition-colors"
+                  >
+                    <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <p className="font-body text-xl font-semibold text-primary underline-offset-2 hover:underline">{patient.phone}</p>
+                  </a>
+                ) : (
+                  <div className="flex items-start gap-2 px-2 py-1">
+                    <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <p className="font-body text-xl font-semibold">—</p>
                   </div>
-                </div>
+                )}
               </div>
               <Separator className="my-4" />
 
               {/* Secondary personal data */}
-              <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2 text-sm text-muted-foreground">
+              <div className="mt-4 grid grid-cols-1 gap-y-3 text-base text-muted-foreground">
                 <div>
-                  <p className="font-body text-[11px] uppercase tracking-wide">Edad</p>
+                  <p className="font-body text-[13px] uppercase tracking-wide">Edad</p>
                   <p className="font-body">{formatPatientAge(patient)}</p>
                 </div>
                 <div>
-                  <p className="font-body text-[11px] uppercase tracking-wide">DNI / Documento</p>
+                  <p className="font-body text-[13px] uppercase tracking-wide">DNI / Documento</p>
                   <p className="font-body">{patient.dni || '—'}</p>
                 </div>
                 <div>
-                  <p className="font-body text-[11px] uppercase tracking-wide">Email</p>
+                  <p className="font-body text-[13px] uppercase tracking-wide">Email</p>
                   <p className="font-body">{patient.email || '—'}</p>
                 </div>
                 <div>
-                  <p className="font-body text-[11px] uppercase tracking-wide">Fecha de ingreso</p>
+                  <p className="font-body text-[13px] uppercase tracking-wide">Fecha de ingreso</p>
                   <p className="font-body">{patient.admissionDate || '—'}</p>
                 </div>
               </div>
             </div>
 
             {/* Datos clínicos */}
-            <div className="pt-3 border-t border-border/50 grid sm:grid-cols-2 gap-3">
+            <div className="pt-3 border-t border-border/50 grid grid-cols-1 gap-3">
               <div>
-                <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground mb-0.5">Antecedentes y comorbilidades</p>
-                <p className="font-body text-sm leading-snug">{patient.diagnosis || <span className="text-muted-foreground italic">Sin datos</span>}</p>
+                <p className="font-body text-[13px] uppercase tracking-wide text-muted-foreground mb-0.5">Antecedentes y comorbilidades</p>
+                <p className="font-body text-base leading-snug">{patient.diagnosis || <span className="text-muted-foreground italic">Sin datos</span>}</p>
               </div>
               <div>
-                <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground mb-0.5 flex items-center gap-1">
+                <p className="font-body text-[13px] uppercase tracking-wide text-muted-foreground mb-0.5 flex items-center gap-1">
                   <ShieldAlert className="h-3 w-3" /> Alergias
                 </p>
-                <p className="font-body text-sm leading-snug">{patient.allergies || <span className="text-muted-foreground italic">Sin alergias registradas</span>}</p>
+                <p className="font-body text-base leading-snug">{patient.allergies || <span className="text-muted-foreground italic">Sin alergias registradas</span>}</p>
               </div>
             </div>
 
             {/* Datos administrativos y contacto */}
             {(patient.insurance || patient.emergencyContactName || patient.emergencyContactPhone || patient.treatingDoctorName || patient.treatingDoctorPhone) && (
               <div className="pt-3 border-t border-border/50">
-                <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Datos administrativos y contacto</p>
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
+                <p className="font-body text-[13px] uppercase tracking-wide text-muted-foreground mb-1.5">Datos administrativos y contacto</p>
+                <div className="grid grid-cols-1 gap-y-3">
                   {patient.treatingDoctorName && <InfoRow icon={<UserCog className="h-3.5 w-3.5" />} label="Médico tratante" value={patient.treatingDoctorName} />}
                   {patient.treatingDoctorPhone && <InfoRow icon={<Phone className="h-3.5 w-3.5" />} label="Tel. médico" value={patient.treatingDoctorPhone} />}
                   {patient.insurance && <InfoRow icon={<BadgeCheck className="h-3.5 w-3.5" />} label="Obra social / Cobertura" value={patient.insurance} />}
@@ -294,28 +312,11 @@ export default function PatientDetail() {
             {/* Notas generales */}
             {patient.observations && (
               <div className="pt-3 border-t border-border/50">
-                <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground mb-0.5">Notas generales</p>
-                <p className="font-body text-sm leading-snug">{patient.observations}</p>
+                <p className="font-body text-[13px] uppercase tracking-wide text-muted-foreground mb-0.5">Notas generales</p>
+                <p className="font-body text-base leading-snug">{patient.observations}</p>
               </div>
             )}
 
-            {/* Resumen de Casos / Heridas integrado */}
-            <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-border/50">
-              <div className="flex items-baseline gap-2">
-                <span className="heading-display text-2xl text-primary leading-none">{patient.cases.length}</span>
-                <span className="font-body text-xs text-muted-foreground">Casos / Heridas</span>
-              </div>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {woundStatuses.map(s => {
-                  const count = patient.cases.filter(c => c.status === s.value).length;
-                  return count > 0 ? (
-                    <Badge key={s.value} className={`font-body text-[11px] py-0 px-2 ${statusBadgeClass[s.value]}`}>
-                      {s.label} · {count}
-                    </Badge>
-                  ) : null;
-                })}
-              </div>
-            </div>
           </CardContent>
         </Card>
 
@@ -324,7 +325,7 @@ export default function PatientDetail() {
 
         {/* Casos / Heridas */}
         <div className="flex items-center justify-between">
-          <h2 className="heading-display text-xl">Heridas</h2>
+          <h2 className="heading-display text-[22px]">Heridas</h2>
           <Button onClick={() => { setEditingWound(null); setWoundFormOpen(true); }} className="font-body" size="sm">
             <Plus className="mr-2 h-4 w-4" /> Nueva Herida
           </Button>
@@ -340,13 +341,13 @@ export default function PatientDetail() {
               <CardContent className="p-4 flex items-center justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <h3 className="font-body text-sm font-semibold">{c.woundType}</h3>
-                    <Badge className={`font-body text-xs ${statusBadgeClass[c.status]}`}>
+                    <h3 className="font-body text-base font-semibold">{c.woundType}</h3>
+                    <Badge className={`font-body text-sm ${statusBadgeClass[c.status]}`}>
                       {c.status === 'resuelto' ? 'CERRADA ✅' : getStatusLabel(c.status)}
                     </Badge>
                   </div>
-                  <p className="font-body text-xs text-muted-foreground">{c.anatomicalLocation}</p>
-                  <div className="flex items-center gap-3 mt-2 text-xs font-body text-muted-foreground">
+                  <p className="font-body text-sm text-muted-foreground">{c.anatomicalLocation}</p>
+                  <div className="flex items-center gap-3 mt-2 text-sm font-body text-muted-foreground">
                     <span>Inicio: {c.startDate}</span>
                     <span>{c.evolutions.length} evoluciones</span>
                   </div>
@@ -433,7 +434,7 @@ export default function PatientDetail() {
           return (
             <Card className="border-border/50">
               <CardHeader className="pb-3 flex flex-row items-center justify-between gap-3 flex-wrap">
-                <CardTitle className="heading-display text-lg flex items-center gap-2">
+                <CardTitle className="heading-display text-xl flex items-center gap-2">
                   <CalendarClock className="h-5 w-5 text-primary" />
                   Calendario de Controles
                 </CardTitle>
@@ -460,20 +461,20 @@ export default function PatientDetail() {
                       {patientTurnos.length > 0 && (
                         <div className="flex items-center gap-1.5">
                           <span className="h-3 w-3 rounded-full bg-primary" />
-                          <span className="font-body text-xs text-muted-foreground">Turno de este paciente</span>
+                          <span className="font-body text-sm text-muted-foreground">Turno de este paciente</span>
                         </div>
                       )}
                       {otherDates.length > 0 && (
                         <div className="flex items-center gap-1.5">
                           <span className="h-3 w-3 rounded-full bg-muted border border-muted-foreground/40" />
-                          <span className="font-body text-xs text-muted-foreground">Otro paciente</span>
+                          <span className="font-body text-sm text-muted-foreground">Otro paciente</span>
                         </div>
                       )}
                     </div>
                   </div>
 
                   <div className="flex-1 space-y-3">
-                    <h3 className="font-body text-sm font-semibold text-muted-foreground">Próximos turnos programados</h3>
+                    <h3 className="font-body text-base font-semibold text-muted-foreground">Próximos turnos programados</h3>
                     {patientTurnos.length > 0 ? patientTurnos.map((ap, i) => (
                       <div
                         key={`ap-${i}`}
@@ -483,11 +484,11 @@ export default function PatientDetail() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="h-2.5 w-2.5 rounded-full bg-primary" />
-                            <span className="font-body text-sm font-semibold">{ap.dateIso}{ap.time ? ` · ${ap.time}` : ''}</span>
+                            <span className="font-body text-base font-semibold">{ap.dateIso}{ap.time ? ` · ${ap.time}` : ''}</span>
                           </div>
-                          <Badge className={`font-body text-xs ${turnoStatusBadgeClass(ap.status)}`}>{turnoStatusLabel(ap.status)}</Badge>
+                          <Badge className={`font-body text-sm ${turnoStatusBadgeClass(ap.status)}`}>{turnoStatusLabel(ap.status)}</Badge>
                         </div>
-                        <p className="font-body text-sm mt-1 text-muted-foreground">
+                        <p className="font-body text-base mt-1 text-muted-foreground">
                           {activeCases.length} herida{activeCases.length !== 1 ? 's' : ''} activa{activeCases.length !== 1 ? 's' : ''}
                         </p>
                       </div>
@@ -756,8 +757,8 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
     <div className="flex items-start gap-1.5 min-w-0">
       <div className="text-muted-foreground mt-0.5 shrink-0">{icon}</div>
       <div className="min-w-0">
-        <p className="font-body text-[11px] uppercase tracking-wide text-muted-foreground leading-tight">{label}</p>
-        <p className="font-body text-sm leading-snug truncate" title={value}>{value}</p>
+        <p className="font-body text-[13px] uppercase tracking-wide text-muted-foreground leading-tight">{label}</p>
+        <p className="font-body text-base leading-snug truncate" title={value}>{value}</p>
       </div>
     </div>
   );

@@ -176,10 +176,6 @@ export default function Login() {
 
       if (target && kind !== 'admin') await setSponsorBySlug(target.slug, true);
 
-      toast({
-        title: kind === 'sponsor' ? 'Sesión laboratorio iniciada' : kind === 'admin' ? 'Sesión administrador iniciada' : 'Sesión profesional iniciada',
-        description: kind === 'admin' ? 'Acceso total a la plataforma.' : target ? `Demo de ${target.sponsor_name}` : 'Cuenta de prueba activada.',
-      });
       if (kind === 'sponsor') navigate('/panel-sponsor');
       else await redirectByRole(navigate);
     } catch (err) {
