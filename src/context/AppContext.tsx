@@ -228,6 +228,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSession(data.session);
       setAuthUser(data.session?.user ?? null);
       setAuthReady(true);
+    }).catch(() => {
+      // Stale/invalid refresh token left over in storage (e.g. after a
+      // Supabase project rotation) — drop it so the app falls back to /login
+      // instead of hanging on the loading skeleton.
+      supabase.auth.signOut();
+      setSession(null);
+      setAuthUser(null);
+      setAuthReady(true);
     });
 
     return () => { sub.subscription.unsubscribe(); };
