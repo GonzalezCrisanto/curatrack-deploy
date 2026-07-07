@@ -30,6 +30,7 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { isDemoMode } from '@/config/demoMode';
 
 import ReactMarkdown from 'react-markdown';
 import { marked } from 'marked';
@@ -320,6 +321,41 @@ export default function CaseDetail() {
   const generateAISummary = async () => {
     setAiLoading(true);
     setAiError(null);
+
+    if (isDemoMode()) {
+      // Demo deployments never call the real edge function — a canned
+      // summary keeps the loading state feeling real without any AI cost.
+      setTimeout(() => {
+        const canned = `## Resumen clínico generado (modo demo)
+
+**Paciente:** ${patient.firstName} ${patient.lastName}
+**Diagnóstico de base:** ${patient.diagnosis || 'No especificado'}
+**Herida:** ${woundCase.woundType}${woundCase.anatomicalLocation ? ` — ${woundCase.anatomicalLocation}` : ''}
+
+### Evolución general
+El caso muestra una evolución clínica favorable a lo largo del seguimiento, con disminución progresiva del tamaño de la lesión y mejoría del lecho de la herida. El tejido de granulación predomina sobre las áreas previamente cubiertas por fibrina, y no se registran signos actuales de infección.
+
+### Puntos clave
+- Reducción sostenida del exudado y del dolor referido por el paciente.
+- Bordes de la herida con tendencia a la epitelización.
+- Buena adherencia al plan de curaciones indicado.
+
+### Recomendación
+Continuar con el esquema de curaciones vigente y reevaluar en el próximo control programado. Ante cualquier signo de alarma (aumento de dolor, exudado purulento o fiebre), contactar al equipo tratante.
+
+---
+*Este resumen fue generado automáticamente en modo demo con fines ilustrativos y no reemplaza el criterio clínico profesional.*`;
+        updateCase(patient.id, {
+          ...woundCase,
+          aiSummary: canned,
+          aiSummaryUpdatedAt: new Date().toISOString(),
+        });
+        setAiLoading(false);
+        toast.success('Resumen clínico generado');
+      }, 800);
+      return;
+    }
+
     try {
       const { data, error } = await supabase.functions.invoke('generate-evolution-summary', {
         body: { evolutionData: buildCasePromptData() },

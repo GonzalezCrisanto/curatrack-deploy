@@ -11,6 +11,8 @@ import {
   type CaseEvolutionInput,
 } from '@/lib/appointments';
 import type { AppRole } from '@/lib/appRole';
+import { isDemoMode } from '@/config/demoMode';
+import { DemoAppContext } from '@/context/DemoAppProvider';
 
 // ============================================================================
 // PHASE 1 BACKEND MIGRATION
@@ -142,7 +144,7 @@ export interface CurrentUser {
   institution?: string;
 }
 
-interface AppContextType {
+export interface AppContextType {
   // Auth
   isLoggedIn: boolean;
   authReady: boolean;
@@ -782,7 +784,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useApp() {
-  const ctx = useContext(AppContext);
-  if (!ctx) throw new Error('useApp must be inside AppProvider');
+  // In demo mode only <DemoAppProvider> is mounted (see App.tsx), so this
+  // context stays null there — both hooks are always called to respect the
+  // rules of hooks, and isDemoMode() picks which value is actually used.
+  const demoCtx = useContext(DemoAppContext);
+  const prodCtx = useContext(AppContext);
+  const ctx = isDemoMode() ? demoCtx : prodCtx;
+  if (!ctx) throw new Error('useApp must be inside AppProvider or DemoAppProvider');
   return ctx;
 }

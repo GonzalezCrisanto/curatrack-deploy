@@ -5,6 +5,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/context/AppContext";
+import { DemoAppProvider } from "@/context/DemoAppProvider";
+import { isDemoMode } from "@/config/demoMode";
 import { CartProvider } from "@/context/CartContext";
 import { SponsorProvider } from "@/context/SponsorContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -34,6 +36,10 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Demo deployments (VITE_DEMO_MODE=true or ?demo=1) skip real Supabase writes —
+// see src/context/DemoAppProvider.tsx. Both providers expose the same useApp() shape.
+const AppStateProvider = isDemoMode() ? DemoAppProvider : AppProvider;
+
 // React Router doesn't reset scroll position on navigation — without this,
 // a new page opens wherever the previous page's scroll happened to be.
 function ScrollToTop() {
@@ -48,15 +54,15 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <SponsorProvider>
-        <AppProvider>
+        <AppStateProvider>
           <CartProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
               <ScrollToTop />
               <Routes>
-                <Route path="/" element={<Navigate to="/login" replace />} />
-                <Route path="/login" element={<Login />} />
+                <Route path="/" element={<Navigate to={isDemoMode() ? '/dashboard' : '/login'} replace />} />
+                <Route path="/login" element={isDemoMode() ? <Navigate to="/dashboard" replace /> : <Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
 
@@ -105,7 +111,7 @@ const App = () => (
               </Routes>
             </BrowserRouter>
           </CartProvider>
-        </AppProvider>
+        </AppStateProvider>
       </SponsorProvider>
     </TooltipProvider>
   </QueryClientProvider>

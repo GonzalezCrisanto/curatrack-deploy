@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Users, UserPlus, Activity, PlusCircle, Calendar, ShoppingBag,
-  Truck, Briefcase, BarChart3, Sparkles, FileText, Settings, Package, ClipboardList, UserCog,
+  Truck, Briefcase, BarChart3, Sparkles, FileText, Settings, Package, ClipboardList, UserCog, RotateCcw,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useApp } from '@/context/AppContext';
@@ -10,6 +10,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -22,8 +23,11 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { useContext, useMemo, useState } from 'react';
 import { featureFlags } from '@/config/featureFlags';
+import { isDemoMode } from '@/config/demoMode';
+import { DemoAppContext } from '@/context/DemoAppProvider';
 
 type SidebarItem = {
   title: string;
@@ -91,6 +95,8 @@ export function AppSidebar() {
   const isAdmin = role === 'ADMIN';
   const isSponsor = role === 'SPONSOR';
   const isProfessional = role === 'CLINICIAN';
+  const demoCtx = useContext(DemoAppContext);
+  const showDemoReset = isDemoMode() && !!demoCtx;
 
   const filterByPermission = (items: SidebarItem[]) => items.filter((item) => can(item.section));
 
@@ -253,6 +259,19 @@ export function AppSidebar() {
         )}
         {isAdmin && filterByPermission(adminItems).length > 0 && renderGroup('Administración', filterByPermission(adminItems))}
       </SidebarContent>
+      {showDemoReset && (
+        <SidebarFooter className="border-t border-sidebar-border/60 p-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => demoCtx?.resetDemo()}
+            className="w-full font-body text-xs h-9 gap-1.5"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            {!collapsed && <span>Reiniciar demo</span>}
+          </Button>
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }
